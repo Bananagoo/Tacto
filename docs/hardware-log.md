@@ -11,3 +11,26 @@ Format:
 - Measured:
 - Decision:
 ```
+
+## 2026-11-21, mouse, tested by Ananya 
+- Passed: `webhid` driver connects in Chrome and fires pulses from `web/haptics-test.html`.
+- Failed: `haptic-web` driver does not connect. Nothing listens on 127.0.0.1:41443 because Logi Options+ and the Haptic Web plugin are not installed on this laptop.
+- Measured: nothing yet. Waveform feel (0 to 14) and the fastest separate-tick rate are still to do.
+- Decision: use `webhid` for now; the plugin stays optional.
+
+## 2026-11-21, mouse wheel, tested by Ananya Maheshwari
+- Passed: pulse rate rises with the voltage in the dev harness (mock mode, `webhid`).
+- Failed: scrolling up lowered the voltage (direction reversed on this laptop).
+- Decision: flipped the sign in `web/src/App.tsx` (`-=` to `+=` on `event.deltaY`). This assumes macOS natural scrolling is on. Recheck the direction on the demo laptop; if it is reversed there, either turn natural scrolling off for the mouse or flip the sign back.
+
+## 2026-11-21, mouse waveform for `tick`, tested by Ananya Maheshwari
+- Decision: `tick` = waveform 0, chosen by feel on `webhid`. `nudge` (2), `short` (13) and `success` (7) are still placeholders.
+- Not measured yet: `MAX_PULSE_HZ` (still the placeholder 12), and whether the plugin's index 0 feels the same as webhid's.
+
+## 2026-11-21, mouse waveform for `tick` (revised), tested by Ananya Maheshwari
+- Decision: `tick` = 3, confirmed by feel on `webhid` after trying 0 and 6. The plugin calls index 3 `damp_collision`; webhid ids are not confirmed against those names.
+- Still open: `MAX_PULSE_HZ` (placeholder 12), and `nudge` (2), `short` (13), `success` (7) placeholders.
+
+## 2026-11-21, mouse tick rate, tested by Ananya Maheshwari
+- Failed: the mock's top rate (about 8 Hz at full voltage) felt a bit too quick with `tick` = 3.
+- Decision: `MAX_PULSE_HZ` lowered from 12 to 6 in `web/src/haptics/usePulse.ts`. This is a feel choice, not a measured limit of the mouse. Above about 6 V the mock's rate is held at 6 Hz, so higher voltage stops changing the tick rate.
