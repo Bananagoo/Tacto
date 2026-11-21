@@ -90,3 +90,10 @@ Format:
 - Passed: with hue deciding which piece colour a pixel is, the same two wires read 82% and 83% wire with 9% and 0% open switch, in a later frame where the light had changed (paper 184 against 164) and the wires were paler still. All 15 pieces kept the readings they had.
 - Not tested: a real open switch beside real wires after the change (none was on the mat); only rendered values for it.
 - Kit note: to this camera the cyan piece is the nearest colour to the blue one. A colour further from blue for the open switch would give more room.
+
+## 2026-11-22, a hand over the mat changing the pieces, reported by Katherine
+- Passed: the current is felt on the mouse through the live state page ("its working", Katherine). Which piece, rate and strength were not written down.
+- Failed: with a hand moving over the mat, pieces came and went ("my hand is getting mistaken for components moving").
+- Measured: in 12 seconds with a hand in view but still, the tracker found the hand in 174 of 202 frames and the stable reading did not change once. The failure itself was not caught on camera.
+- Decision, from the three ways it can happen (all reproduced on rendered frames, none yet confirmed as the cause on the desk): the hand is now the whole shape round its joints plus the forearm running off the page, not 16 mm round each joint; what it covered stays covered for half a second after it is last seen; while a hand is about any change needs 8 agreeing frames, not 3; and a segment reads empty only where flat bare paper shows, so a sleeve holds what is under it.
+- Not tested: any of this with a real hand.

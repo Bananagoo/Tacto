@@ -17,6 +17,7 @@ import threading
 import time
 from collections.abc import Callable
 
+import cv2
 import numpy as np
 
 from ..lab import MatView
@@ -33,12 +34,42 @@ from .stable import StableReadings
 from .tracker import MatTracker
 
 # TODO(Katie): tune with a real hand on the real mat.
-# A segment whose middle is this close to any point of a hand counts as covered by it.
-HAND_COVERS_MM = 16.0
+# The tracker gives 21 joints, not the hand's outline. The hand is taken to be the shape
+# stretched round them, this much wider all round: fingers are thick and joints jitter.
+HAND_MARGIN_MM = 14.0
+# The arm is not tracked at all. It is taken to run on from the wrist, away from the
+# fingers, as wide as the knuckles, off the edge of the page.
+FOREARM_MM = 400.0
+WRIST, INDEX_KNUCKLE, MIDDLE_KNUCKLE, LITTLE_KNUCKLE = 0, 5, 9, 17
+# A fast hand is lost for a few frames at a time. What it covered stays covered this long
+# after it was last seen there, so those frames cannot change anything under it.
+HAND_LINGER_S = 0.5
+# While a hand is about, a change anywhere needs this many agreeing frames, not three:
+# shadows and the edges of a moving hand reach further than its outline.
+FRAMES_TO_CHANGE_NEAR_HAND = 8
 # A fingertip this far outside the dot grid (in grid widths) is not over the mat.
 FINGER_MARGIN = 0.12
 FRAME_TIMEOUT_S = 0.5
 TIMING_SMOOTHING = 0.9
+
+
+def _hand_and_arm(joints: dict[int, tuple[float, float]]) -> np.ndarray:
+    """The page area a hand and its arm lie over, from the hand's joints in page
+    millimetres: the points of a shape to stretch a hull round."""
+    points = list(joints.values())
+    needed = (WRIST, INDEX_KNUCKLE, MIDDLE_KNUCKLE, LITTLE_KNUCKLE)
+    if all(joint in joints for joint in needed):
+        wrist = np.array(joints[WRIST])
+        up_the_arm = wrist - np.array(joints[MIDDLE_KNUCKLE])
+        length = float(np.linalg.norm(up_the_arm))
+        half_width = math.dist(joints[INDEX_KNUCKLE], joints[LITTLE_KNUCKLE]) / 2
+        if length > 1e-6 and half_width > 1e-6:
+            up_the_arm /= length
+            across = np.array([-up_the_arm[1], up_the_arm[0]]) * half_width
+            elbow = wrist + up_the_arm * FOREARM_MM
+            points += [tuple(wrist + across), tuple(wrist - across)]
+            points += [tuple(elbow + across), tuple(elbow - across)]
+    return np.float32(points)
 
 
 class CameraMatSource:
@@ -66,6 +97,7 @@ class CameraMatSource:
         self._lock = threading.Lock()
         self._view = MatView(mat_visible=False)
         self._placed: tuple[Placed, ...] = ()
+        self._covered_until: dict[str, float] = {}
         self._timings_ms: dict[str, float] = {}
         self._frames_seen = 0
         self._seen: dict = {"corners_seen": [], "position_confirmed": False}
@@ -144,14 +176,22 @@ class CameraMatSource:
 
         finger: tuple[float, float] | None = None
         if flattened is not None and self._tracker.confirmed:
-            covered: set[str] = set()
+            now = self._clock()
             if self._hands is not None and frame.ndim == 3 and frame.shape[2] == 3:
-                hands = self._hands.hands(frame, round(self._clock() * 1000))
-                finger, covered = self._locate(hands, flattened.frame_to_page)
+                hands = self._hands.hands(frame, round(now * 1000))
+                finger, under_hand = self._locate(hands, flattened.frame_to_page)
+                for segment in under_hand:
+                    self._covered_until[segment] = now + HAND_LINGER_S
                 lap("hand")
+            self._covered_until = {s: t for s, t in self._covered_until.items() if t >= now}
             readings = self._reader.read(flattened)
             lap("read")
-            self._placed = to_placed(self._stable.update(readings, covered), self._mat)
+            stable = self._stable.update(
+                readings,
+                self._covered_until,
+                frames_to_change=FRAMES_TO_CHANGE_NEAR_HAND if self._covered_until else None,
+            )
+            self._placed = to_placed(stable, self._mat)
             lap("smooth")
 
         with self._lock:
@@ -171,25 +211,22 @@ class CameraMatSource:
         self, hands: list[dict], frame_to_page: np.ndarray
     ) -> tuple[tuple[float, float] | None, set[str]]:
         """The pointing fingertip as a mat position, and the segments any hand is over."""
-        points_mm: list[tuple[float, float]] = []
+        outlines: list[np.ndarray] = []
         tips: list[tuple[float, float]] = []
         for hand in hands:
+            joints: dict[int, tuple[float, float]] = {}
             for number, (x_px, y_px) in enumerate(hand["points"]):
                 x, y, w = frame_to_page @ np.array([x_px, y_px, 1.0])
                 if abs(w) < 1e-12:
                     continue
-                points_mm.append((x / w, y / w))
+                joints[number] = (float(x / w), float(y / w))
                 if number == INDEX_TIP:
                     tips.append(
                         frame_point_to_mat(frame_to_page, self._geometry, self._mat, x_px, y_px)
                     )
-        covered: set[str] = set()
-        if points_mm:
-            for a, b in segments(self._mat):
-                (ax, ay), (bx, by) = self._geometry.dot_mm(a), self._geometry.dot_mm(b)
-                middle = ((ax + bx) / 2, (ay + by) / 2)
-                if any(math.dist(middle, point) <= HAND_COVERS_MM for point in points_mm):
-                    covered.add(Placed("wire", a, b).id)
+            if joints:
+                outlines.append(_hand_and_arm(joints))
+        covered = self._under(outlines)
         over_mat = [
             tip
             for tip in tips
@@ -200,3 +237,28 @@ class CameraMatSource:
             return None, covered
         # Two hands over the mat: the one nearer its middle is the one pointing.
         return min(over_mat, key=lambda tip: math.dist(tip, (0.5, 0.5))), covered
+
+    def _under(self, outlines: list[np.ndarray]) -> set[str]:
+        """The segments any of the hands and arms lie over."""
+        covered: set[str] = set()
+        hulls = [cv2.convexHull(outline) for outline in outlines]
+        for a, b in segments(self._mat):
+            (ax, ay), (bx, by) = self._geometry.dot_mm(a), self._geometry.dot_mm(b)
+            # The stretch of the segment its patch is cut from: the middle and both ends.
+            along = [(ax + (bx - ax) * t, ay + (by - ay) * t) for t in (0.2, 0.5, 0.8)]
+            for hull, outline in zip(hulls, outlines, strict=True):
+                if len(hull) >= 3:
+                    near = any(
+                        cv2.pointPolygonTest(hull, point, True) >= -HAND_MARGIN_MM
+                        for point in along
+                    )
+                else:  # a hand seen as one point or a line: no shape to stretch
+                    near = any(
+                        math.dist(point, tuple(joint)) <= HAND_MARGIN_MM
+                        for point in along
+                        for joint in outline
+                    )
+                if near:
+                    covered.add(Placed("wire", a, b).id)
+                    break
+        return covered

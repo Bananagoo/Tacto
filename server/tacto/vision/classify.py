@@ -56,6 +56,19 @@ MAX_COLOUR_DISTANCE = 45.0
 HUE_FIRST_WEIGHT = 0.25
 # A pixel with less colour than this is paper, a shadow, a printed dot or black ink.
 NEUTRAL_CHROMA = 14.0
+# "Empty" means bare paper can be seen, not just that no piece colour can. A sleeve or an
+# arm is as pale as paper, and a piece under one must hold, not vanish. Paper is flat;
+# cloth and skin are not. So a patch is empty only if this much of it is paper-pale ...
+EMPTY_PAPER_FRACTION = 0.75
+# ... and those pixels are smooth: the lightness of paper pixels a few apart differs
+# little on average (CIELAB units). Camera noise on paper gives 2 to 3 and the edge of a
+# shadow across the patch adds 2; ribbed wool, lit and shadowed, gives 10 or more.
+EMPTY_MAX_ROUGHNESS = 5.5
+ROUGHNESS_STEP_PX = 3
+# A colourless pixel is black ink below this share of the way from the black square to white
+# paper, and paper above it. On the desk black read 5 and paper in an arm's shadow 55 to
+# 80, so the line sits well below half way.
+INK_BELOW = 0.3
 # Each battery half must be at least this much of the patch for the two to be a battery.
 BATTERY_HALF_FRACTION = 0.1
 # A reference square is believed only if it is one even colour ...
@@ -241,19 +254,50 @@ def label_pixels(lab: np.ndarray, palette: Palette) -> np.ndarray:
         nearest_by_hue[closer] = by_hue[closer]
     labels = np.where(near_any, nearest, _OTHER)
     neutral = chroma < NEUTRAL_CHROMA
-    # Halfway between the black square and white paper: darker is ink, lighter is paper.
-    dark = flat[:, 0] < (palette.lab[_NEGATIVE, 0] + 100.0) / 2
+    # Ink is close to the black square; paper in a deep shadow is not. The line is drawn
+    # this share of the way from the black square up to white paper.
+    black = float(palette.lab[_NEGATIVE, 0])
+    dark = flat[:, 0] < black + INK_BELOW * (100.0 - black)
     labels = np.where(neutral, np.where(dark, _NEGATIVE, _PAPER), labels)
     return labels.reshape(lab.shape[:2])
 
 
 def classify_patch(lab_patch: np.ndarray, palette: Palette, colours: PieceColours) -> Reading:
     """What one patch shows. The patch is CIELAB (see `to_lab`) and runs from dot a to dot b."""
-    return classify_labels(label_pixels(lab_patch, palette), colours)
+    return classify_labels(label_pixels(lab_patch, palette), lab_patch[:, :, 0], colours)
 
 
-def classify_labels(labels: np.ndarray, colours: PieceColours) -> Reading:
-    """What one patch shows, from its pixels' labels (see `label_pixels`)."""
+def classify_labels(labels: np.ndarray, lightness: np.ndarray, colours: PieceColours) -> Reading:
+    """What one patch shows, from its pixels' labels (see `label_pixels`) and lightness."""
+    reading = _piece_in(labels, colours)
+    if reading.piece != "empty":
+        return reading
+    # No piece: but is that bare paper, or something lying over the segment?
+    paper = labels == _PAPER
+    if paper.sum() < EMPTY_PAPER_FRACTION * labels.size:
+        return Reading("unsure", reading.cover)
+    if _roughness(lightness, paper) > EMPTY_MAX_ROUGHNESS:
+        return Reading("unsure", reading.cover)
+    return reading
+
+
+def _roughness(lightness: np.ndarray, where: np.ndarray) -> float:
+    """How uneven the lightness is among the pixels marked `where`: the mean difference
+    between two of them a few pixels apart, along the patch or across it, whichever is
+    more. One edge crossing the patch (a shadow) barely moves it; a pattern does."""
+    step = ROUGHNESS_STEP_PX
+    worst = 0.0
+    for near, far, both in (
+        (lightness[:, :-step], lightness[:, step:], where[:, :-step] & where[:, step:]),
+        (lightness[:-step, :], lightness[step:, :], where[:-step, :] & where[step:, :]),
+    ):
+        if both.any():
+            worst = max(worst, float(np.abs(near - far)[both].mean()))
+    return worst
+
+
+def _piece_in(labels: np.ndarray, colours: PieceColours) -> Reading:
+    """The piece whose colour fills enough of the patch, "unsure", or "empty" for none."""
     fraction = np.bincount(labels.ravel(), minlength=_OTHER + 1) / labels.size
 
     best: PieceClass = "empty"
@@ -304,12 +348,11 @@ class MatReader:
         stacked = np.stack(list(patches.values()))
         count, height, width = stacked.shape[:3]
         lab = to_lab(stacked.reshape(count * height, width, 3), paper)
-        labels = label_pixels(lab, self.palette)
+        labels = label_pixels(lab, self.palette).reshape(count, height, width)
+        lightness = lab[:, :, 0].reshape(count, height, width)
         return {
-            segment: classify_labels(patch_labels, self._colours)
-            for segment, patch_labels in zip(
-                patches, labels.reshape(count, height, width), strict=True
-            )
+            segment: classify_labels(labels[index], lightness[index], self._colours)
+            for index, segment in enumerate(patches)
         }
 
 

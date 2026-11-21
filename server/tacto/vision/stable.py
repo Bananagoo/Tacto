@@ -27,9 +27,16 @@ class StableReadings:
         self._candidate: dict[str, tuple[tuple, int]] = {}
 
     def update(
-        self, readings: dict[str, Reading], covered: Collection[str] = ()
+        self,
+        readings: dict[str, Reading],
+        covered: Collection[str] = (),
+        *,
+        frames_to_change: int | None = None,
     ) -> dict[str, Reading]:
-        """Take one frame's readings. `covered` are segments a hand is over. Returns `current`."""
+        """Take one frame's readings. `covered` are segments a hand is over.
+        `frames_to_change` asks for more agreeing frames than usual for this frame's
+        changes, for when a hand is about. Returns `current`."""
+        needed = frames_to_change or self._needed
         for segment, reading in readings.items():
             if reading.piece == "unsure" or segment in covered:
                 # Not evidence for anything, and not evidence against a change under way.
@@ -42,7 +49,7 @@ class StableReadings:
                 continue
             candidate, count = self._candidate.get(segment, (None, 0))
             count = count + 1 if candidate == seen else 1
-            if count >= self._needed:
+            if count >= needed:
                 self._candidate.pop(segment, None)
                 self.current[segment] = reading
             else:

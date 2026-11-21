@@ -94,3 +94,13 @@ def test_segments_are_independent():
         "1,0-2,0": "bulb",
         "2,0-3,0": "empty",
     }
+
+
+def test_more_frames_can_be_asked_for_while_a_hand_is_about():
+    stable = StableReadings()
+    for _ in range(FRAMES_TO_CHANGE + 2):
+        stable.update({"0,0-1,0": WIRE}, frames_to_change=FRAMES_TO_CHANGE + 4)
+    assert "0,0-1,0" not in stable.current
+    for _ in range(2):
+        stable.update({"0,0-1,0": WIRE}, frames_to_change=FRAMES_TO_CHANGE + 4)
+    assert piece(stable.current["0,0-1,0"]) == "wire"

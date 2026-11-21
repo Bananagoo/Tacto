@@ -133,8 +133,11 @@ def test_a_hand_off_the_mat_is_no_fingertip(mat):
 
 
 def test_a_piece_under_the_hand_holds_while_it_is_hidden(mat):
+    # Changed 22 Nov 2026: what a hand covered now stays covered for half a second after
+    # the hand is last seen, so this test runs on its own clock and waits that out.
+    clock = [0.0]
     hand = Hand()
-    source = CameraMatSource(mat, NoFrames(), hands=hand)
+    source = CameraMatSource(mat, NoFrames(), hands=hand, clock=lambda: clock[0])
     feed(source, loop(mat).photograph(TILTED))
     geometry = source._geometry
     middle = tuple(np.mean([geometry.dot_mm((2, 3)), geometry.dot_mm((3, 3))], axis=0))
@@ -149,7 +152,9 @@ def test_a_piece_under_the_hand_holds_while_it_is_hidden(mat):
     feed(source, hidden.photograph(TILTED), 20)
     assert Placed("bulb", (2, 3), (3, 3)) in source.view().placed
     hand.at_px = None
-    feed(source, hidden.photograph(TILTED))
+    for _ in range(24):
+        clock[0] += 1 / 24
+        source.step(hidden.photograph(TILTED))
     assert Placed("bulb", (2, 3), (3, 3)) not in source.view().placed
 
 
@@ -190,3 +195,108 @@ def test_the_reader_thread_takes_frames_from_a_folder_like_a_camera(mat, tmp_pat
     report = source.report()
     assert report["frames"] >= FRAMES_TO_CHANGE and report["squares_seen"] == 7
     assert set(report["stage_ms"]) == {"flatten", "read", "smooth"}
+
+
+# ---------- a whole hand and arm, not twenty-one points ----------
+
+
+class RealHand:
+    """A hand tracker reporting a right hand lying flat on the page, fingers pointing up
+    the page, with its wrist at `wrist_mm`. None is no hand. Shaped like a real one: about
+    80 mm across the knuckles and 180 mm from wrist to middle fingertip."""
+
+    # Millimetres from the wrist: (across, towards the fingertips), per MediaPipe point.
+    SHAPE = [
+        (0, 0), (-30, 25), (-48, 50), (-58, 75), (-65, 95),  # wrist, thumb
+        (-28, 95), (-30, 130), (-31, 152), (-32, 170),  # index
+        (-5, 100), (-5, 138), (-5, 162), (-5, 182),  # middle
+        (16, 95), (18, 130), (19, 152), (20, 168),  # ring
+        (36, 85), (40, 112), (42, 130), (44, 145),  # little
+    ]  # fmt: skip
+
+    def __init__(self) -> None:
+        self.wrist_mm: tuple[float, float] | None = None
+
+    def hands(self, frame, t_ms):
+        if self.wrist_mm is None:
+            return []
+        x, y = self.wrist_mm
+        points = [list(frame_position(TILTED, (x + dx, y - dy))) for dx, dy in self.SHAPE]
+        return [{"handedness": "Right", "points": points}]
+
+
+def without_the_bulb(mat) -> Scene:
+    return (
+        Scene(mat, squares=True)
+        .lay("battery", (2, 2), (3, 2), positive="a")
+        .lay("wire", (2, 2), (2, 3))
+        .lay("switch_closed", (3, 2), (3, 3))
+    )
+
+
+BULB = Placed("bulb", (2, 3), (3, 3))  # its middle is at (106.5, 119) mm on the page
+
+
+def test_a_piece_under_the_palm_holds_though_no_joint_is_near_it(mat):
+    hand = RealHand()
+    source = CameraMatSource(mat, NoFrames(), hands=hand)
+    feed(source, loop(mat).photograph(TILTED))
+    # The bulb's middle is 50 mm up from the wrist, in the middle of the palm: over 25 mm
+    # from the wrist, the thumb's base and every knuckle.
+    hand.wrist_mm = (106.5, 169.0)
+    feed(source, without_the_bulb(mat).photograph(TILTED), 30)
+    assert BULB in source.view().placed
+
+
+def test_a_piece_under_the_forearm_holds(mat):
+    hand = RealHand()
+    source = CameraMatSource(mat, NoFrames(), hands=hand)
+    feed(source, loop(mat).photograph(TILTED))
+    # The hand is reaching past the bulb: the wrist is 60 mm beyond it, towards the top of
+    # the page, so the bulb lies under the arm.
+    hand.wrist_mm = (106.5, 59.0)
+    feed(source, without_the_bulb(mat).photograph(TILTED), 30)
+    assert BULB in source.view().placed
+
+
+def test_a_hand_lost_for_a_few_frames_still_covers_what_it_covered(mat):
+    clock = [0.0]
+    hand = RealHand()
+    source = CameraMatSource(mat, NoFrames(), hands=hand, clock=lambda: clock[0])
+    feed(source, loop(mat).photograph(TILTED))
+    hidden = without_the_bulb(mat).photograph(TILTED)
+    for frame in range(60):
+        clock[0] += 1 / 24
+        # A moving hand: the tracker loses it for five frames in every eight.
+        hand.wrist_mm = (106.5, 169.0) if frame % 8 < 3 else None
+        source.step(hidden)
+    assert BULB in source.view().placed
+
+
+def test_once_the_hand_has_gone_the_mat_is_read_again(mat):
+    clock = [0.0]
+    hand = RealHand()
+    source = CameraMatSource(mat, NoFrames(), hands=hand, clock=lambda: clock[0])
+    feed(source, loop(mat).photograph(TILTED))
+    hidden = without_the_bulb(mat).photograph(TILTED)
+    hand.wrist_mm = (106.5, 169.0)
+    for _ in range(10):
+        clock[0] += 1 / 24
+        source.step(hidden)
+    hand.wrist_mm = None
+    for _ in range(40):
+        clock[0] += 1 / 24
+        source.step(hidden)
+    assert BULB not in source.view().placed
+
+
+def test_a_piece_laid_far_from_the_hand_still_appears_while_the_hand_is_there(mat):
+    clock = [0.0]
+    hand = RealHand()
+    source = CameraMatSource(mat, NoFrames(), hands=hand, clock=lambda: clock[0])
+    hand.wrist_mm = (106.5, 169.0)
+    frame = loop(mat).lay("resistor", (6, 1), (7, 1)).photograph(TILTED)
+    for _ in range(24):
+        clock[0] += 1 / 24
+        source.step(frame)
+    assert Placed("resistor", (6, 1), (7, 1)) in source.view().placed

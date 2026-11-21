@@ -115,8 +115,45 @@ def test_a_battery_is_red_beside_black_and_its_red_end_is_positive(colours):
 
 
 def test_black_alone_is_not_a_piece_and_red_alone_is_not_yet_a_battery(colours):
-    assert read_patch(colours, ((0, 0, 0), 0.8)).piece == "empty"
+    # Changed 22 Nov 2026: black over most of a patch used to read "empty". It is not bare
+    # paper either (a dark sleeve, a shadowed arm), so the last answer is kept.
+    assert read_patch(colours, ((0, 0, 0), 0.8)).piece == "unsure"
     assert read_patch(colours, (bgr("battery_positive"), 0.9)).piece == "unsure"
+
+
+def knit(light: tuple[int, int, int], dark: tuple[int, int, int]) -> np.ndarray:
+    """A patch of ribbed cloth as CIELAB: stripes of one pale colour, lit and in shadow."""
+    patch = np.full((PATCH_WIDTH_PX, PATCH_LENGTH_PX, 3), light, np.uint8)
+    patch[:, ::4] = dark
+    patch[:, 1::4] = dark
+    return to_lab(patch, WHITE)
+
+
+@pytest.mark.parametrize(
+    "what, light, dark",
+    [
+        ("a cream sleeve", (205, 220, 232), (140, 155, 170)),
+        ("a white sleeve", (240, 240, 240), (150, 150, 150)),
+        ("a grey sleeve", (160, 160, 160), (90, 90, 90)),
+    ],
+)
+def test_cloth_over_a_segment_is_unsure_not_empty(what, light, dark, colours):
+    """A sleeve has no piece colour and is as pale as paper, but paper is flat and cloth
+    is not: a piece under an arm must hold, not vanish."""
+    reading = classify_patch(knit(light, dark), printed_palette(colours), colours)
+    assert reading.piece == "unsure", what
+
+
+def test_bare_paper_is_empty_in_shadow_and_with_camera_noise(colours):
+    rng = np.random.default_rng(3)
+    for level in (255, 200, 150):
+        noisy = np.clip(rng.normal(level, 5.0, (PATCH_WIDTH_PX, PATCH_LENGTH_PX, 3)), 0, 255)
+        patch = to_lab(noisy.astype(np.uint8), WHITE)
+        assert classify_patch(patch, printed_palette(colours), colours).piece == "empty", level
+
+
+def test_a_sliver_of_the_next_piece_does_not_stop_a_segment_reading_empty(colours):
+    assert read_patch(colours, (bgr("wire"), 0.1)).piece == "empty"
 
 
 def test_two_colours_in_one_patch_read_as_the_larger(colours):
