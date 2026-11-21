@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from sqlalchemy import func
+from sqlalchemy import event, func
 from sqlmodel import Session, select
 from store_samples import make_lesson, make_step
 
@@ -107,6 +107,21 @@ def test_saving_the_same_lesson_twice_leaves_no_orphan_rows(engine, lessons):
     assert count(engine, LessonStepRow) == len(lesson.steps)
     assert count(engine, ConceptRow) == len(lesson.concepts)
     assert count(engine, ConceptPrerequisiteRow) == sum(len(c.requires) for c in lesson.concepts)
+
+
+def test_saving_an_unchanged_lesson_writes_nothing(engine, lessons):
+    # The server reseeds on every start; an unchanged file must not churn the database.
+    lessons.save(make_lesson())
+    statements: list[str] = []
+    event.listen(
+        engine,
+        "before_cursor_execute",
+        lambda _conn, _cursor, statement, *_rest: statements.append(statement.split()[0].upper()),
+    )
+
+    lessons.save(make_lesson())
+
+    assert statements and set(statements) == {"SELECT"}
 
 
 def test_replacing_a_lesson_leaves_no_orphan_rows(engine, lessons):
