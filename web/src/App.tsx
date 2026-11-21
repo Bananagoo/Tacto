@@ -1,23 +1,29 @@
-// The product shell. The lesson view (bench, tutor panel, concept map) is added in the
-// next build wave; until then this shows the connection and the tutor's current line.
+// Layout only: the bench on the left, the tutor and the concept map on the right, the
+// status bar along the bottom. Each piece reads what it needs from the store itself.
 
-import { useTacto, useTactoConnection } from './useTacto'
-
-// Server-chosen haptic effects are wired up together with the product's haptics.
-const ignoreHaptic = () => {}
+import { Bench } from './bench/Bench'
+import { HapticsProvider } from './haptics/HapticsContext'
+import { Instrument } from './Instrument'
+import { ConceptMap } from './ui/ConceptMap'
+import { StatusBar } from './ui/StatusBar'
+import { TutorPanel } from './ui/TutorPanel'
 
 export default function App() {
-  useTactoConnection(ignoreHaptic)
-  const { connected, state } = useTacto()
-
   return (
-    <main className="mx-auto flex h-full max-w-3xl flex-col justify-center gap-4 p-8">
-      <h1 className="text-4xl font-semibold">Tacto</h1>
-      <p className="text-2xl opacity-80">
-        {connected
-          ? state?.tutor.prompt || 'Waiting for the lesson to start.'
-          : 'Connecting to the Tacto server…'}
-      </p>
-    </main>
+    <HapticsProvider>
+      <Instrument />
+      {/* Wide (the projector): everything fits the screen with no scrolling. Narrow: the
+          pieces stack and the page scrolls. */}
+      <div className="flex min-h-full flex-col gap-4 p-4 lg:h-full lg:p-6">
+        <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[3fr_2fr] lg:grid-rows-[minmax(0,1fr)]">
+          <Bench />
+          <div className="flex min-h-0 flex-col gap-4">
+            <TutorPanel />
+            <ConceptMap />
+          </div>
+        </main>
+        <StatusBar />
+      </div>
+    </HapticsProvider>
   )
 }

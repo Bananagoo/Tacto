@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { create } from 'zustand'
 import type { ClientMessage, HapticPattern, ServerMessage, State } from './contract'
 
@@ -16,6 +16,13 @@ export const useTacto = create<Store>(() => ({
 
 /** Open the WebSocket once, at the top of the app. Reconnects on its own. */
 export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
+  // Kept in a ref so that a new handler (for example after the mouse connects and the
+  // haptics driver changes) does not close and reopen the socket.
+  const onHapticRef = useRef(onHaptic)
+  useEffect(() => {
+    onHapticRef.current = onHaptic
+  }, [onHaptic])
+
   useEffect(() => {
     let socket: WebSocket | null = null
     let retry: ReturnType<typeof setTimeout> | undefined
@@ -32,11 +39,14 @@ export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
       socket.onmessage = (event) => {
         const msg = JSON.parse(event.data) as ServerMessage
         if (msg.type === 'state') useTacto.setState({ state: msg })
-        else if (msg.type === 'haptic') onHaptic(msg.pattern)
+        else if (msg.type === 'haptic') onHapticRef.current(msg.pattern)
       }
       socket.onclose = () => {
+        // A socket closed by the cleanup below reports late, possibly after its replacement
+        // has opened; it must not mark the new connection as lost.
+        if (closed) return
         useTacto.setState({ connected: false })
-        if (!closed) retry = setTimeout(open, 500)
+        retry = setTimeout(open, 500)
       }
     }
 
@@ -45,6 +55,7 @@ export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
       closed = true
       clearTimeout(retry)
       socket?.close()
+      useTacto.setState({ connected: false })
     }
-  }, [onHaptic])
+  }, [])
 }
