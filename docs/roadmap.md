@@ -12,7 +12,7 @@ Twenty different layouts read correctly under venue lighting with a hand moving 
 |---|---|---|
 | 1 | State contract, JSON schema, recorded sample, replay mock | Done. `contract/`, `make mock` |
 | 2 | Mat flattening: four corner markers to a homography | Done on rendered images (30 tests, incl. blur, dim, tilt, upside down). Not yet on real paper |
-| 2b | Hold the mat's position while a hand covers a corner marker (`vision/tracker.py`); manual exposure and a focus lock (`vision/exposure.py`) | Built, 21 Nov. Tracker tested on rendered images. On the real desk manual exposure fixed the burnt-out paper; the focus lock and the tracker have not been tried by a person yet |
+| 2b | Hold the mat's position while a hand covers a corner marker (`vision/tracker.py`); manual exposure (`vision/exposure.py`) | Built, 21 Nov. Tracker tested on rendered images. On the real desk manual exposure fixed the burnt-out paper. Focus cannot be locked on this camera (see `docs/hardware-log.md`) |
 | 3 | Segment patches: one fixed-size crop per dot-to-dot segment | Done on rendered images. `vision/patches.py` |
 | 4 | Classification per segment: HSV colour baseline, then a small classifier | Colour baseline done on rendered images with the proposed colours (`vision/classify.py`, `kit/pieces.yaml`): 20 of 20 layouts in each of 10 views. The trained classifier waits for real patches (step 5) |
 | 5 | Capture tool: labelled patches from the real camera given a known layout; held-out layouts; per-class accuracy | Not started |

@@ -37,8 +37,6 @@ export interface Exposure {
   camera_found: boolean
   manual: boolean
   gain: number
-  /** False holds the lens where it is: lock it once the mat is sharp. */
-  autofocus: boolean
 }
 
 export async function getExposure(): Promise<Exposure> {
@@ -47,15 +45,11 @@ export async function getExposure(): Promise<Exposure> {
   return (await response.json()) as Exposure
 }
 
-export async function setExposure(
-  manual: boolean,
-  gain: number,
-  autofocus: boolean,
-): Promise<Exposure> {
+export async function setExposure(manual: boolean, gain: number): Promise<Exposure> {
   const response = await fetch('/api/dev/camera/exposure', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ manual, gain, autofocus }),
+    body: JSON.stringify({ manual, gain }),
   })
   if (!response.ok) throw new Error(`server answered ${response.status}`)
   return (await response.json()) as Exposure

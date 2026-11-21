@@ -54,3 +54,9 @@ Format:
 - Measured: gain 60 clipped 17% of the frame; gain 150 clipped 46%. Exposure time 20 gave a near-black picture; 60, 156 and 400 gave the same brightness.
 - Not tested: whether the setting survives unplugging the camera; the same numbers with the camera mounted above the mat.
 - Decision: the server sets manual exposure, gain 0, every time it opens the camera. The bench has a gain slider.
+
+## 2026-11-21, camera focus, measured by script (Claude)
+- Setup: as the exposure entry above, components scattered on the mat. Sharpness is the variance of the Laplacian of the 1080p frame.
+- Failed: focus cannot be locked. With autofocus on, the mat settled at sharpness 70 to 95 and 3 or 4 corner markers were read. Each time autofocus was turned off (`auto-focus=false`, three times) sharpness fell to about 7 within a second and no marker was read; turning it back on recovered in about 2 seconds. The camera offers no focus distance control.
+- Failed: with autofocus on, hands on the laptop in front of the camera pull the focus off the mat (sharpness 3 to 8, no markers) for as long as they stay there.
+- Decision: autofocus stays on; the server switches it on whenever it opens the camera. Keep near objects (the laptop, hands on its trackpad) out of the camera's view. Readings must hold through soft frames.

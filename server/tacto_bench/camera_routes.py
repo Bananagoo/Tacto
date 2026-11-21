@@ -4,7 +4,7 @@ GET /dev/cameras         camera names by index, and which are open
 GET /dev/camera/stream   live MJPEG; overlay=aruco,hand draws or reports what was found;
                          flat=1 shows the mat squared up, as the reader sees it
 GET /dev/camera/status   what the stream last saw: fps, size, markers, fingertips
-GET /dev/camera/exposure   the LogiInsight camera's exposure (manual or auto, gain) and autofocus
+GET /dev/camera/exposure   how the LogiInsight camera is exposing: manual or auto, and gain
 POST /dev/camera/exposure  set it; it is applied again each time the camera is opened
 
 A camera is open only while someone is watching its stream.

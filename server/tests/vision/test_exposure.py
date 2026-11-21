@@ -99,10 +99,9 @@ def test_gain_outside_the_camera_range_is_refused(gain):
         exposure.Exposure(manual=True, gain=gain)
 
 
-def test_locking_focus_turns_autofocus_off_and_is_read_back():
-    tool = FakeTool()
-    exposure.apply(exposure.Exposure(autofocus=False), tool)
-    assert tool.controls["auto-focus"] == "false"
-    assert exposure.read(tool) == exposure.Exposure(manual=True, gain=0, autofocus=False)
-    exposure.apply(exposure.Exposure(autofocus=True), tool)
-    assert tool.controls["auto-focus"] == "true"
+def test_autofocus_is_switched_back_on_whatever_else_is_set():
+    # Off parks the lens where the mat is a blur, so nothing may leave it off.
+    for setting in (exposure.Exposure(manual=True, gain=10), exposure.Exposure(manual=False)):
+        tool = FakeTool({"auto-focus": "false"})
+        exposure.apply(setting, tool)
+        assert tool.controls["auto-focus"] == "true"

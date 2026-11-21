@@ -265,7 +265,7 @@ def test_status_combines_what_every_viewer_saw(client):
 
 
 def test_exposure_routes_set_and_report_the_camera(client, monkeypatch):
-    camera_now: dict[str, int | str] = {"auto-exposure-mode": 8, "gain": 0, "auto-focus": "true"}
+    camera_now: dict[str, int | str] = {"auto-exposure-mode": 8, "gain": 0, "auto-focus": "false"}
 
     def tool(args: list[str]) -> tuple[int, str]:
         lines = []
@@ -287,15 +287,14 @@ def test_exposure_routes_set_and_report_the_camera(client, monkeypatch):
         "camera_found": True,
         "manual": False,
         "gain": 0,
-        "autofocus": True,
     }
 
-    setting = {"manual": True, "gain": 25, "autofocus": False}
+    setting = {"manual": True, "gain": 25}
     after = client.post("/dev/camera/exposure", json=setting).json()
     assert after == {"available": True, "camera_found": True, **setting}
-    assert camera_now["auto-focus"] == "false"
+    assert camera_now["auto-focus"] == "true"
     assert camera_now["auto-exposure-mode"] == exposure.MANUAL_MODE
-    assert exposure.wanted() == exposure.Exposure(manual=True, gain=25, autofocus=False)
+    assert exposure.wanted() == exposure.Exposure(manual=True, gain=25)
 
     assert (
         client.post("/dev/camera/exposure", json={"manual": True, "gain": 300}).status_code == 422

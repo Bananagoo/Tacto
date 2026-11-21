@@ -53,7 +53,7 @@ Run from the repo root.
 | `server/tacto/lesson.py`, `lessons/` | Lesson steps as data; each completes from the circuit |
 | `server/tacto/taps.py` | A switch tap is a half-second fingertip dwell |
 | `server/tacto/mat.py`, `kit/mats/` | The mat: grid size and dot spacing as data |
-| `server/tacto/vision/` | Camera, exposure and focus lock, hand tracking, corner markers, flattening, holding the mat's position (`tracker.py`), the printable mat |
+| `server/tacto/vision/` | Camera, manual exposure, hand tracking, corner markers, flattening, holding the mat's position (`tracker.py`), the printable mat |
 | `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the hand-set mat, the camera bench |
 | `web/devtools/` | Tooling pages for the vision lane (camera bench, haptics test page) |
 

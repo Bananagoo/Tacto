@@ -46,8 +46,8 @@ export default function CameraPanel() {
       .catch(() => setExposureState(null))
   }, [running, nonce])
 
-  const changeExposure = (manual: boolean, gain: number, autofocus: boolean) => {
-    setExposure(manual, gain, autofocus)
+  const changeExposure = (manual: boolean, gain: number) => {
+    setExposure(manual, gain)
       .then(setExposureState)
       .catch(() => setExposureState(null))
   }
@@ -170,9 +170,7 @@ export default function CameraPanel() {
               <input
                 type="checkbox"
                 checked={exposure.manual}
-                onChange={(e) =>
-                  changeExposure(e.target.checked, exposure.gain, exposure.autofocus)
-                }
+                onChange={(e) => changeExposure(e.target.checked, exposure.gain)}
               />
               Manual (ignores the background)
             </label>
@@ -184,17 +182,9 @@ export default function CameraPanel() {
                 max={255}
                 value={exposure.gain}
                 disabled={!exposure.manual}
-                onChange={(e) => changeExposure(true, Number(e.target.value), exposure.autofocus)}
+                onChange={(e) => changeExposure(true, Number(e.target.value))}
               />
               <span className="w-8 tabular-nums">{exposure.gain}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={!exposure.autofocus}
-                onChange={(e) => changeExposure(exposure.manual, exposure.gain, !e.target.checked)}
-              />
-              Lock focus (tick once the mat is sharp)
             </label>
           </>
         ) : (

@@ -1,13 +1,13 @@
-"""Manual exposure and a focus lock for the LogiInsight camera.
+"""Manual exposure for the LogiInsight camera, and autofocus kept on.
 
 Left on auto, the camera exposes for the whole scene: on a dark desk or floor the white
 mat burns out, the dots vanish and the corner markers stop being read. In manual mode
 the camera no longer looks at the background at all.
 
-Autofocus has the same kind of trouble: a hand reaching over the desk is nearer than the
-paper, the lens follows it and the whole mat goes soft. The camera has no focus distance
-to set, only autofocus on or off, so the lock is: wait until the mat is sharp, then turn
-autofocus off.
+Focus cannot be locked. The camera has no focus distance to set, only autofocus on or
+off, and off does not hold the lens: it parks it where the mat is a blur (measured twice
+on 21 Nov 2026: sharpness 80 to 95 with autofocus on, 7 within a second of turning it
+off). So autofocus is switched on every time, in case something left it off.
 
 OpenCV cannot set either on macOS (every `capture.set` is refused), so the settings go
 through the uvc-util command-line tool, built by `make camera-tool`. Without the tool,
@@ -42,9 +42,6 @@ Runner = Callable[[list[str]], tuple[int, str]]
 class Exposure(BaseModel):
     manual: bool = True
     gain: int = Field(DEFAULT_GAIN, ge=0, le=255)
-    # False holds the lens where it is. On by default: locking is only right once the
-    # mat is in focus, which a person has to see (the bench shows a sharpness number).
-    autofocus: bool = True
 
 
 # What the camera should be set to whenever it is opened. The bench changes it.
@@ -78,9 +75,7 @@ def _run_tool(args: list[str]) -> tuple[int, str]:
 
 def read(run: Runner | None = None) -> Exposure | None:
     """What the camera is set to now. None when the tool or the camera is missing."""
-    code, output = (run or _run_tool)(
-        ["-V", DEVICE, "-g", "auto-exposure-mode", "-g", "gain", "-g", "auto-focus"]
-    )
+    code, output = (run or _run_tool)(["-V", DEVICE, "-g", "auto-exposure-mode", "-g", "gain"])
     if code != 0:
         return None
     values: dict[str, str] = {}
@@ -91,7 +86,6 @@ def read(run: Runner | None = None) -> Exposure | None:
         return Exposure(
             manual=int(values["auto-exposure-mode"]) == MANUAL_MODE,
             gain=int(values["gain"]),
-            autofocus=values["auto-focus"] != "false",
         )
     except (KeyError, ValueError):
         return None
@@ -114,7 +108,7 @@ def apply(setting: Exposure | None = None, run: Runner | None = None) -> bool:
         }
     else:
         controls = {"gain": 0, "auto-exposure-mode": AUTO_MODE}
-    controls["auto-focus"] = "true" if _wanted.autofocus else "false"
+    controls["auto-focus"] = "true"
     args = ["-V", DEVICE]
     for name, value in controls.items():
         args += ["-s", f"{name}={value}"]
