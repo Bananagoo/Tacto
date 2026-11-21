@@ -92,7 +92,7 @@ export function Bench({ children }: { children?: ReactNode }) {
         connected={connected}
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
-      {probing && <Readout reading={reading} />}
+      <Readout reading={reading} />
       <Toolbar probing={probing} onToggle={toggleProbe} />
       {children}
     </figure>
