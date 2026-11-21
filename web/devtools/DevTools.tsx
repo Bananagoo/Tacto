@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import CameraPanel from './camera/CameraPanel'
 import HapticTestPage from './haptics/HapticTestPage'
+import StatePanel from './state/StatePanel'
 
 const TOOLS = [
   {
@@ -18,6 +19,8 @@ const TOOLS = [
     ),
   },
   { hash: '#haptics', label: 'Haptics', render: () => <HapticTestPage /> },
+  // The live state message drawn plainly. Works with make dev, make manual and make mock.
+  { hash: '#state', label: 'Live state', render: () => <StatePanel /> },
 ]
 
 export default function DevTools() {
