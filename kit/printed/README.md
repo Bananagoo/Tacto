@@ -10,6 +10,21 @@ The same geometry as `make kit` (`kit/mats/circuits-101.yaml`, `server/tacto/vis
 - Dots are grey (150, 150, 150), 1.8 mm across.
 - Four black corner markers, 20 mm square, 8 mm in from each edge.
 
+## `mat-with-reference.pdf`
+
+Added 21 Nov. The same mat (dots, markers and bar in the same places) with six 12 mm colour squares along the top edge, 8 mm from the top, between the two upper markers. The camera can read them in every frame to learn what each colour looks like under the light of the moment.
+
+| Square, left edge at | Colour (R, G, B) | Piece sheet has |
+|---|---|---|
+| 72.5 mm | blue (32, 64, 192) | (30, 70, 210) |
+| 100.5 mm | green (24, 160, 72) | (20, 165, 50) |
+| 128.5 mm | yellow (255, 230, 0) | (255, 225, 0) |
+| 156.5 mm | magenta (216, 27, 154) | (215, 0, 170) |
+| 184.5 mm | red (224, 32, 32) | (220, 20, 20) |
+| 212.5 mm | black (0, 0, 0) | (0, 0, 0) |
+
+Two gaps: there is no cyan square for the open switch, and the squares are close to the pieces' colours but not the same values.
+
 ## `components-v3.pdf`
 
 Printed pieces with a symbol on each, not plain card. Every piece is 25 mm long, so it leaves 1.5 mm free at each dot, and 9 mm wide at its ends; most have a wider middle.
