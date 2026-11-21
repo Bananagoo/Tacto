@@ -47,9 +47,30 @@ function drawnCopy(svg: SVGSVGElement): SVGSVGElement {
   return copy
 }
 
+// A picture made from an svg cannot load other files, so each drawing in it (the battery) is
+// written into it as data.
+async function inlineImages(copy: SVGSVGElement): Promise<void> {
+  const images = Array.from(copy.querySelectorAll('image'))
+  await Promise.all(
+    images.map(async (image) => {
+      const href = image.getAttribute('href')
+      if (!href || href.startsWith('data:')) return
+      const blob = await (await fetch(href)).blob()
+      const data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(blob)
+      })
+      image.setAttribute('href', data)
+    }),
+  )
+}
+
 /** Turn the mat's svg into a PNG and download it. Rejects if the browser cannot draw it. */
-export function saveScreenshot(svg: SVGSVGElement): Promise<void> {
+export async function saveScreenshot(svg: SVGSVGElement): Promise<void> {
   const copy = drawnCopy(svg)
+  await inlineImages(copy)
   const url = URL.createObjectURL(
     new Blob([new XMLSerializer().serializeToString(copy)], { type: 'image/svg+xml' }),
   )
