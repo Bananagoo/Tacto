@@ -25,6 +25,15 @@ PAGE_DPI = 150
 FRAME_WIDTH_PX, FRAME_HEIGHT_PX = 1920, 1080
 DESK_GREY = (90, 90, 90)
 SKIN = (140, 170, 210)
+# Card as a camera sees it (BGR): not pure colours. The proposed set in kit/pieces.yaml.
+CARD = {
+    "wire": (38, 36, 35),
+    "battery": (48, 44, 196),
+    "bulb": (52, 205, 232),
+    "resistor": (186, 96, 34),
+    "switch": (72, 152, 46),
+}
+CARD_WIDTH_MM = 12.0
 
 PointMm = tuple[float, float]
 PointPx = tuple[float, float]
@@ -108,6 +117,37 @@ class Scene:
     def __init__(self, mat: Mat) -> None:
         self._geometry = PrintGeometry.for_mat(mat)
         self.page = render_mat(mat, dpi=PAGE_DPI)
+
+    def place(
+        self,
+        piece: str,
+        a: tuple[int, int],
+        b: tuple[int, int],
+        *,
+        width_mm: float = CARD_WIDTH_MM,
+        offset_mm: PointMm = (0.0, 0.0),
+        turn_deg: float = 0.0,
+        colour: tuple[int, int, int] | None = None,
+    ) -> Scene:
+        """Lay a card strip in the gap between two dots, as carelessly as asked."""
+        (ax, ay), (bx, by) = self._geometry.dot_mm(a), self._geometry.dot_mm(b)
+        centre = np.array([(ax + bx) / 2 + offset_mm[0], (ay + by) / 2 + offset_mm[1]])
+        angle = np.arctan2(by - ay, bx - ax) + np.radians(turn_deg)
+        along = np.array([np.cos(angle), np.sin(angle)]) * (self._geometry.dot_pitch_mm / 2)
+        across = np.array([-np.sin(angle), np.cos(angle)]) * (width_mm / 2)
+        corners = [
+            centre - along - across,
+            centre + along - across,
+            centre + along + across,
+            centre - along + across,
+        ]
+        cv2.fillPoly(
+            self.page,
+            [np.int32([page_px((float(x), float(y))) for x, y in corners])],
+            colour or CARD[piece],
+            cv2.LINE_AA,
+        )
+        return self
 
     def cover(self, centre_mm: PointMm, radius_mm: float) -> Scene:
         """A hand over part of the page."""

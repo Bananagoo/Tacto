@@ -1,0 +1,23 @@
+# How the camera tells the card pieces apart: one colour per piece type.
+#
+# TODO(kit owner): PROPOSED colours, not final. Change them here to match the card
+# you actually cut; no code changes. Pick colours far apart in hue and unlike skin.
+#
+# hue_deg is a range of hue on the colour wheel in degrees, read clockwise:
+# red 0, yellow 60, green 120, cyan 180, blue 240, magenta 300. A range may pass
+# through 0, so [340, 15] is red.
+
+pieces:
+  wire: dark                        # black card: told by darkness, not hue
+  battery: { hue_deg: [340, 15] }   # red
+  bulb: { hue_deg: [40, 70] }       # yellow
+  resistor: { hue_deg: [200, 255] } # blue
+  switch: { hue_deg: [85, 165] }    # green
+
+# A pixel counts as coloured card only if it is at least this saturated (0 to 1).
+# Paper, shadows and the grey dots are far below; most skin is below too.
+min_saturation: 0.45
+# A pixel counts as black card if it is darker than this fraction of the paper's brightness.
+dark_below: 0.35
+# A segment holds a piece when this much of its patch is that piece's colour.
+cover_fraction: 0.5

@@ -11,12 +11,12 @@ camera frame (colour, 1080p, ~30 fps)
 flatten                                    vision/flatten.py
   │  find the four ArUco corner markers, fit a homography, warp to a square-on page
   ▼
-segment patches                            NOT BUILT
+segment patches                            vision/patches.py
   │  one fixed-size crop for every gap between neighbouring dots
   ▼
-classify each patch                        NOT BUILT
+classify each patch                        vision/classify.py, kit/pieces.yaml
   │  empty | wire | battery | bulb | resistor | switch
-  │  baseline: HSV colour per piece type; then a small classifier on our own patches
+  │  baseline: HSV colour per piece type (built); a small classifier on our own patches (not built)
   ▼
 stability                                  NOT BUILT
   │  a segment changes only after N frames agree; segments under a hand hold
@@ -84,4 +84,8 @@ Tooling may import the product; the product never imports tooling (`server/tests
 | Later solves | about 1 ms |
 | MediaPipe hand tracking | about 26 ms a frame at 1080p |
 
-Camera-path latency and accuracy are not measured yet.
+| Flatten one 1080p frame | median 3.7 ms |
+| Cut and classify all 93 segments | median 7.2 ms |
+| Colour baseline on rendered images | 20 of 20 random layouts right in each of 10 views (blur, dim, noise, tilt, half turn) |
+
+Nothing in the camera path has been measured on real paper yet.

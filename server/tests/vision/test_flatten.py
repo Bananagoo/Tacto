@@ -41,14 +41,16 @@ def test_the_flattened_image_is_the_page_square_on(view, mat, geometry):
     assert flattened.image.shape == (
         round(mm_to_px(PAGE_HEIGHT_MM, dpi=FLAT_DPI)),
         round(mm_to_px(PAGE_WIDTH_MM, dpi=FLAT_DPI)),
+        3,
     )
+    grey = cv2.cvtColor(flattened.image, cv2.COLOR_BGR2GRAY)
     for dot in all_dots(mat):
         x_mm, y_mm = geometry.dot_mm(dot)
         x_px, y_px = round(mm_to_px(x_mm, dpi=FLAT_DPI)), round(mm_to_px(y_mm, dpi=FLAT_DPI))
-        assert flattened.image[y_px, x_px] < 215, "a printed dot is where the mat says"
+        assert grey[y_px, x_px] < 215, "a printed dot is where the mat says"
         # Half a dot spacing away there is only paper.
         aside_px = round(mm_to_px(x_mm + geometry.dot_pitch_mm / 2, dpi=FLAT_DPI))
-        assert flattened.image[y_px, aside_px] > 225
+        assert grey[y_px, aside_px] > 225
 
 
 @pytest.mark.parametrize("corner", range(4))

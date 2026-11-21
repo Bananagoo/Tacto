@@ -12,8 +12,8 @@ Twenty different layouts read correctly under venue lighting with a hand moving 
 |---|---|---|
 | 1 | State contract, JSON schema, recorded sample, replay mock | Done. `contract/`, `make mock` |
 | 2 | Mat flattening: four corner markers to a homography | Done on rendered images (30 tests, incl. blur, dim, tilt, upside down). Not yet on real paper |
-| 3 | Segment patches: one fixed-size crop per dot-to-dot segment | Not started |
-| 4 | Classification per segment: HSV colour baseline, then a small classifier | Not started. Needs the piece colours |
+| 3 | Segment patches: one fixed-size crop per dot-to-dot segment | Done on rendered images. `vision/patches.py` |
+| 4 | Classification per segment: HSV colour baseline, then a small classifier | Colour baseline done on rendered images with the proposed colours (`vision/classify.py`, `kit/pieces.yaml`): 20 of 20 layouts in each of 10 views. The trained classifier waits for real patches (step 5) |
 | 5 | Capture tool: labelled patches from the real camera given a known layout; held-out layouts; per-class accuracy | Not started |
 | 6 | Stability: N consecutive frames; segments under a hand hold (MediaPipe landmarks as the mask) | Not started |
 | 7 | Graph and solver: open, short, DC current per piece, hand-worked tests | Done. One bulb, series, parallel, short across a bulb, bypassed bulb |

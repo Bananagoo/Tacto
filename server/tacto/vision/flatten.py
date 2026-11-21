@@ -22,14 +22,14 @@ from .print_geometry import (
     mm_to_px,
 )
 
-# Enough to keep a 0.7 mm pen line about three pixels wide, and no more than a 1080p
-# camera sees of an A4 page.
+# About what a 1080p camera sees of an A4 page that fills its frame: more would only
+# invent pixels. A 28 mm dot gap is 110 pixels long at this scale.
 FLAT_DPI = 100
 
 
 @dataclass(frozen=True)
 class Flattened:
-    image: np.ndarray  # the page, square-on, at FLAT_DPI; greyscale, the reader needs no colour
+    image: np.ndarray  # the page, square-on, at FLAT_DPI, in colour (BGR)
     frame_to_page: np.ndarray  # 3x3 homography, frame pixels -> page millimetres
 
 
@@ -55,7 +55,9 @@ def flatten(frame: np.ndarray, geometry: PrintGeometry) -> Flattened | None:
     flat_px_per_mm = mm_to_px(1.0, dpi=FLAT_DPI)
     page_to_flat = np.diag([flat_px_per_mm, flat_px_per_mm, 1.0])
     size_px = (round(PAGE_WIDTH_MM * flat_px_per_mm), round(PAGE_HEIGHT_MM * flat_px_per_mm))
-    image = cv2.warpPerspective(grey, page_to_flat @ frame_to_page, size_px, flags=cv2.INTER_LINEAR)
+    image = cv2.warpPerspective(
+        _as_colour(frame, grey), page_to_flat @ frame_to_page, size_px, flags=cv2.INTER_LINEAR
+    )
     return Flattened(image=image, frame_to_page=frame_to_page)
 
 
@@ -80,6 +82,15 @@ def frame_point_to_mat(
         (x / w - first_x_mm) / ((mat.cols - 1) * geometry.dot_pitch_mm),
         (y / w - first_y_mm) / ((mat.rows - 1) * geometry.dot_pitch_mm),
     )
+
+
+def _as_colour(frame: np.ndarray, grey: np.ndarray) -> np.ndarray:
+    """The frame as BGR. `grey` is the same frame as `_as_grey` made it."""
+    if frame.ndim == 3 and frame.shape[2] == 3:
+        return frame
+    if frame.ndim == 3 and frame.shape[2] == 4:
+        return cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+    return cv2.cvtColor(grey, cv2.COLOR_GRAY2BGR)
 
 
 def _as_grey(frame: np.ndarray) -> np.ndarray | None:
