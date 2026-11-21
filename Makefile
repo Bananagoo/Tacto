@@ -1,4 +1,4 @@
-.PHONY: setup dev bench server bench-server web check check-server check-web contract fmt test kit
+.PHONY: setup dev bench server bench-server web check check-server check-web contract sample mock fmt test kit
 
 setup:
 	cd server && uv sync
@@ -38,6 +38,14 @@ check-web:
 # Refresh contract/ (JSON schemas and example messages) after a contract change
 contract:
 	cd server && uv run python -m tacto.contract_export
+
+# Regenerate contract/sample-states.jsonl from the scripted run
+sample:
+	cd server && uv run python -m tacto_mock.sample
+
+# For the UI team: replay the recorded sample on ws://localhost:8000/ws. No hardware needed.
+mock:
+	cd server && uv run uvicorn tacto_mock.main:app --port 8000
 
 fmt:
 	cd server && uv run ruff check --select I --fix . && uv run ruff format .
