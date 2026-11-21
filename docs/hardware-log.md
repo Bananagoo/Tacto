@@ -45,3 +45,12 @@ Format:
 ## 2026-11-21, mouse strength and speed, tested by Katherine
 - Passed: on the haptics test page with `webhid` over the receiver, the speed slider changes the tick rate and the strength slider changes how strong the vibration feels. Both confirmed by hand.
 - Not measured yet: the preferred preset, the fastest rate that still feels like separate ticks, and the strength to use in the demo.
+
+## 2026-11-21, camera exposure, measured by script (Claude), picture checked by Katherine in the bench
+- Setup: camera on its stand facing the learner across the desk, mat on a grey table, dark floor behind, hall lighting. Camera held open, 1080p.
+- Failed: on auto-exposure the paper clipped (brightest 1% of pixels at 232 to 254 of 255) and 0 to 2 of the 4 corner markers were read.
+- Failed: OpenCV cannot change it on macOS. `capture.set` was refused for exposure, auto-exposure, brightness, gain and contrast.
+- Passed: `uvc-util` sees the camera (`LVNext`, 046d:094f) and sets `auto-exposure-mode=1` (manual). At gain 0, exposure time 156: brightest 1% at 187, nothing clipped, all 4 markers in 3 of 5 readings and 3 of 4 in the other two (hands were moving and autofocus was hunting).
+- Measured: gain 60 clipped 17% of the frame; gain 150 clipped 46%. Exposure time 20 gave a near-black picture; 60, 156 and 400 gave the same brightness.
+- Not tested: whether the setting survives unplugging the camera; the same numbers with the camera mounted above the mat.
+- Decision: the server sets manual exposure, gain 0, every time it opens the camera. The bench has a gain slider.

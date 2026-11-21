@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   cameraStatus,
+  getExposure,
+  setExposure,
   listCameras,
   streamUrl,
   type CameraInfo,
   type CameraStatus,
+  type Exposure,
   type Overlay,
 } from './api'
 
@@ -32,7 +35,21 @@ export default function CameraPanel() {
   const [view, setView] = useState<View>('mirror')
   const [status, setStatus] = useState<CameraStatus | null>(null)
   const [streamError, setStreamError] = useState('')
+  const [exposure, setExposureState] = useState<Exposure | null>(null)
   const image = useRef<HTMLImageElement>(null)
+
+  // Opening the camera applies the exposure, so read it again whenever a stream starts.
+  useEffect(() => {
+    getExposure()
+      .then(setExposureState)
+      .catch(() => setExposureState(null))
+  }, [running, nonce])
+
+  const changeExposure = (manual: boolean, gain: number) => {
+    setExposure(manual, gain)
+      .then(setExposureState)
+      .catch(() => setExposureState(null))
+  }
 
   const loadCameras = () => {
     listCameras()
@@ -138,6 +155,40 @@ export default function CameraPanel() {
             ))}
           </select>
         </label>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="opacity-60">Exposure</span>
+        {exposure?.available && exposure.camera_found ? (
+          <>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={exposure.manual}
+                onChange={(e) => changeExposure(e.target.checked, exposure.gain)}
+              />
+              Manual (ignores the background)
+            </label>
+            <label className="flex items-center gap-2">
+              Gain
+              <input
+                type="range"
+                min={0}
+                max={255}
+                value={exposure.gain}
+                disabled={!exposure.manual}
+                onChange={(e) => changeExposure(true, Number(e.target.value))}
+              />
+              <span className="w-8 tabular-nums">{exposure.gain}</span>
+            </label>
+          </>
+        ) : (
+          <span className="text-amber-300">
+            {exposure?.available
+              ? 'The LogiInsight camera is not plugged in.'
+              : 'Not available: run make camera-tool, then restart make bench.'}
+          </span>
+        )}
       </div>
 
       {listError && <p className="text-rose-400">{listError}</p>}

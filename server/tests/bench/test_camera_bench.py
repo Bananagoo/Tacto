@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from tacto.vision import camera, hands
+from tacto.vision import camera, exposure, hands
 from tacto_bench import camera_routes as routes
 from tacto_bench import overlays
 
@@ -259,3 +259,43 @@ def test_status_combines_what_every_viewer_saw(client):
         assert status["fingertips"][0]["x"] == 5
     finally:
         routes.hub.release(0)
+
+
+# ---------- exposure ----------
+
+
+def test_exposure_routes_set_and_report_the_camera(client, monkeypatch):
+    camera_now = {"auto-exposure-mode": 8, "gain": 0}
+
+    def tool(args: list[str]) -> tuple[int, str]:
+        lines = []
+        for flag, value in zip(args[::2], args[1::2], strict=True):
+            if flag == "-s":
+                name, number = value.split("=")
+                camera_now[name] = int(number)
+            elif flag == "-g":
+                lines.append(f"{value} = {camera_now[value]}")
+        return 0, "\n".join(lines)
+
+    monkeypatch.setattr(exposure, "_run_tool", tool)
+    monkeypatch.setattr(exposure, "_wanted", exposure.Exposure())
+    monkeypatch.setattr(exposure, "available", lambda: True)
+
+    before = client.get("/dev/camera/exposure").json()
+    assert before == {"available": True, "camera_found": True, "manual": False, "gain": 0}
+
+    after = client.post("/dev/camera/exposure", json={"manual": True, "gain": 25}).json()
+    assert after == {"available": True, "camera_found": True, "manual": True, "gain": 25}
+    assert camera_now["auto-exposure-mode"] == exposure.MANUAL_MODE
+    assert exposure.wanted() == exposure.Exposure(manual=True, gain=25)
+
+    assert (
+        client.post("/dev/camera/exposure", json={"manual": True, "gain": 300}).status_code == 422
+    )
+
+
+def test_exposure_route_without_the_tool_says_so(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(exposure, "TOOL", tmp_path / "uvc-util")
+    monkeypatch.setattr(exposure, "_wanted", exposure.Exposure())
+    body = client.get("/dev/camera/exposure").json()
+    assert body["available"] is False and body["camera_found"] is False

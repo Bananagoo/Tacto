@@ -18,6 +18,8 @@ from typing import Protocol
 import cv2
 import numpy as np
 
+from . import exposure
+
 FRAME_WIDTH = 1920
 FRAME_HEIGHT = 1080
 FPS_WINDOW_S = 2.0
@@ -42,6 +44,8 @@ def open_camera(index: int) -> Capture | None:
     # Size before format: the LogiInsight docs say the order matters.
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
+    # Every time, not once: nothing says the camera keeps the setting when it is replugged.
+    exposure.apply()
     return capture
 
 

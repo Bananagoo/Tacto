@@ -3,6 +3,8 @@
 GET /dev/cameras         camera names by index, and which are open
 GET /dev/camera/stream   live MJPEG; overlay=aruco,hand,mat draws or reports what was found
 GET /dev/camera/status   what the stream last saw: fps, size, markers, fingertips
+GET /dev/camera/exposure   how the LogiInsight camera is exposing: manual or auto, and gain
+POST /dev/camera/exposure  set it; it is applied again each time the camera is opened
 
 A camera is open only while someone is watching its stream.
 """
@@ -17,7 +19,7 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from tacto.vision import camera, hands
+from tacto.vision import camera, exposure, hands
 
 from . import overlays
 
@@ -43,6 +45,26 @@ def status(index: int = 0) -> dict:
     for analysis in list(worker.analyses.values()):
         seen.update(analysis)
     return {"open": True, "fps": worker.fps, "error": worker.error, **seen}
+
+
+def _exposure_report() -> dict:
+    now = exposure.read()
+    return {
+        "available": exposure.available(),
+        "camera_found": now is not None,
+        **(now or exposure.wanted()).model_dump(),
+    }
+
+
+@router.get("/camera/exposure")
+def get_exposure() -> dict:
+    return _exposure_report()
+
+
+@router.post("/camera/exposure")
+def set_exposure(setting: exposure.Exposure) -> dict:
+    exposure.apply(setting)
+    return _exposure_report()
 
 
 @router.get("/camera/stream")

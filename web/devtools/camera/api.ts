@@ -27,6 +27,30 @@ export interface CameraStatus {
   hand_error?: string
 }
 
+/** How the LogiInsight camera is exposing. `available` is false until `make camera-tool` has run. */
+export interface Exposure {
+  available: boolean
+  camera_found: boolean
+  manual: boolean
+  gain: number
+}
+
+export async function getExposure(): Promise<Exposure> {
+  const response = await fetch('/api/dev/camera/exposure')
+  if (!response.ok) throw new Error(`server answered ${response.status}`)
+  return (await response.json()) as Exposure
+}
+
+export async function setExposure(manual: boolean, gain: number): Promise<Exposure> {
+  const response = await fetch('/api/dev/camera/exposure', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ manual, gain }),
+  })
+  if (!response.ok) throw new Error(`server answered ${response.status}`)
+  return (await response.json()) as Exposure
+}
+
 export type Overlay = 'aruco' | 'hand'
 
 export async function listCameras(): Promise<CameraInfo[]> {

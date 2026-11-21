@@ -1,10 +1,27 @@
-.PHONY: setup dev bench server bench-server web check check-server check-web contract sample mock manual fmt test kit
+.PHONY: camera-tool setup dev bench server bench-server web check check-server check-web contract sample mock manual fmt test kit
 
 setup:
 	cd server && uv sync
 	cd web && pnpm install
 	@test -f .env || cp .env.example .env
+	-$(MAKE) camera-tool
 	@echo "Ready. Run: make manual"
+
+# uvc-util (MIT) sets the camera's exposure, which OpenCV cannot do on macOS. Pinned to a
+# commit; built into server/vendor/, which is not committed. See server/tacto/vision/exposure.py.
+UVC_UTIL_COMMIT := 8110da7025c95eea3096a7181af9a46c0cc7ac37
+UVC_UTIL_DIR := server/vendor/uvc-util
+
+camera-tool:
+	@if [ "$$(uname)" != "Darwin" ]; then echo "camera-tool: macOS only, skipped"; \
+	elif [ -x $(UVC_UTIL_DIR)/uvc-util ]; then echo "camera-tool: already built"; \
+	else rm -rf $(UVC_UTIL_DIR) && mkdir -p server/vendor \
+	  && git clone -q https://github.com/jtfrey/uvc-util.git $(UVC_UTIL_DIR) \
+	  && git -C $(UVC_UTIL_DIR) checkout -q $(UVC_UTIL_COMMIT) \
+	  && cd $(UVC_UTIL_DIR)/src \
+	  && cc -w -o ../uvc-util -framework IOKit -framework Foundation \
+	       uvc-util.m UVCController.m UVCType.m UVCValue.m \
+	  && echo "camera-tool: built $(UVC_UTIL_DIR)/uvc-util"; fi
 
 # The lab on the camera, with the web UI. The camera reader is not built yet: use make manual.
 dev:

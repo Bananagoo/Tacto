@@ -32,6 +32,7 @@ Run from the repo root.
 | Command | Does |
 |---|---|
 | `make setup` | Install server (uv) and web (pnpm) dependencies |
+| `make camera-tool` | Build `uvc-util` into `server/vendor/` (macOS, needs the network once). `make setup` runs it. Without it the camera stays on auto-exposure |
 | `make mock` | Replay the recorded sample on `ws://localhost:8000/ws`. No camera, mouse or solver needed |
 | `make manual` | The real lab on a mat you set by hand. Open `localhost:8000/manual` |
 | `make bench` | `make manual` plus the web dev tools (camera bench at `localhost:5173/devtools/`) |
