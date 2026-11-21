@@ -34,7 +34,7 @@ The server holds the truth. The browser renders it and reports what the learner 
 Server to web:
 
 - `state`, about 15 times a second: `circuit` (status, source voltage, parts, wires with currents), `probe` (fingertip position, what it touches, `pulse_hz`), `tutor` (challenge, phase, prompt, choices, zone), `learner` (concept → unseen | shaky | solid).
-- `haptic`, occasional: a one-off pattern the server chose, such as the tutor's `nudge`.
+- `haptic`, occasional: a one-off pattern the server chose, such as `short` when the circuit shorts.
 
 Web to server:
 

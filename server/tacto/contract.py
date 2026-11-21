@@ -23,7 +23,7 @@ Concept = str
 Mastery = Literal["unseen", "shaky", "solid"]
 Zone = Literal["too_easy", "productive", "stuck"]
 Phase = Literal["build", "predict", "test", "explain", "done"]
-HapticPattern = Literal["tick", "nudge", "short", "success"]
+HapticPattern = Literal["tick", "short"]
 
 
 # ---------- server -> web ----------
@@ -95,7 +95,7 @@ class State(BaseModel):
 
 
 class Haptic(BaseModel):
-    """One-off effect chosen by the server, e.g. the tutor's nudge."""
+    """One-off effect chosen by the server, e.g. `short` when the circuit shorts."""
 
     type: Literal["haptic"] = "haptic"
     pattern: HapticPattern

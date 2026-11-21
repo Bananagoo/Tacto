@@ -11,7 +11,7 @@ export type Concept = string
 export type Mastery = 'unseen' | 'shaky' | 'solid'
 export type Zone = 'too_easy' | 'productive' | 'stuck'
 export type Phase = 'build' | 'predict' | 'test' | 'explain' | 'done'
-export type HapticPattern = 'tick' | 'nudge' | 'short' | 'success'
+export type HapticPattern = 'tick' | 'short'
 
 // ---------- server -> web ----------
 
