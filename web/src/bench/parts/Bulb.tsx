@@ -1,46 +1,54 @@
+import ledBrightUrl from '../../assets/LedBright.png'
+import ledDimUrl from '../../assets/LedDim.png'
+import ledOffUrl from '../../assets/LedOff.png'
 import { Leads } from './Leads'
 
-const RADIUS = 36
-// The cross of the lamp symbol reaches the circle at 45 degrees.
-const CROSS = RADIUS * Math.SQRT1_2
-// How far the halo spreads at full brightness, as a multiple of the bulb's radius.
-const HALO_REACH = 1.5
+// The LED is drawn in a box this big and each picture is fitted into it, so the three never
+// jump about when one swaps for another.
+const BOX_WIDTH = 60
+const BOX_HEIGHT = 150
+// Room the LED takes on the wire, so the two leads stop short of it.
+const BODY_WIDTH = 40
+// Where the three pictures change, on the server's 0 to 1 brightness.
+// TODO(front end owner): tune by eye once real circuits run. Series bulbs sit at 0.25, a
+// single bulb or a parallel branch at 1.
+const OFF_BELOW = 0.02
+const BRIGHT_FROM = 0.6
 
 interface BulbProps {
   length: number
+  /** Which way the part's own axis turns the drawing, so the LED can be stood back upright. */
+  angleDeg: number
   /** 0 (off) to 1 (full), from the server. */
   brightness: number
 }
 
+function pictureFor(brightness: number): { url: string; words: string } {
+  const level = Number.isFinite(brightness) ? brightness : 0
+  if (level < OFF_BELOW) return { url: ledOffUrl, words: 'LED, off' }
+  if (level < BRIGHT_FROM) return { url: ledDimUrl, words: 'LED, dim' }
+  return { url: ledBrightUrl, words: 'LED, bright' }
+}
+
 /**
- * A lamp. Brightness shows as light, not hue: the fill and the halo fade in and the halo
- * grows, so a dim bulb, a bright one and a dark one read differently in greyscale too.
+ * A lamp, drawn as an LED in one of three pictures: off, dim or bright. Brightness shows in
+ * the picture's glow, and the three also differ in colour depth, so they read apart in
+ * greyscale. The LED always stands upright, whichever way its two dots run.
  */
-export function Bulb({ length, brightness }: BulbProps) {
-  const level = Number.isFinite(brightness) ? Math.min(1, Math.max(0, brightness)) : 0
+export function Bulb({ length, angleDeg, brightness }: BulbProps) {
+  const { url, words } = pictureFor(brightness)
   return (
     <>
-      <Leads length={length} bodyWidth={RADIUS * 2} />
-      <g transform={`translate(${length / 2} 0)`}>
-        {/* The transitions carry the glow from one state message to the next without a jump. */}
-        <circle
-          r={RADIUS}
-          className="fill-amber-300 stroke-none transition-[opacity,transform] duration-300 ease-out"
-          style={{ opacity: 0.4 * level, transform: `scale(${1 + HALO_REACH * level})` }}
-        />
-        {/* An opaque disc, so the dots and wires behind do not show through an unlit bulb. */}
-        <circle r={RADIUS} className="fill-[#0f1115] stroke-none" />
-        <circle
-          r={RADIUS}
-          className="fill-amber-200 stroke-none transition-opacity duration-300 ease-out"
-          style={{ opacity: level }}
-        />
-        <circle r={RADIUS} />
-        {/* On a lit bulb the pale strokes would vanish into the fill, so the cross goes dark. */}
-        <path
-          d={`M ${-CROSS} ${-CROSS} L ${CROSS} ${CROSS} M ${-CROSS} ${CROSS} L ${CROSS} ${-CROSS}`}
-          className={level > 0.5 ? 'stroke-stone-900' : undefined}
-          strokeWidth={4}
+      <Leads length={length} bodyWidth={BODY_WIDTH} />
+      <g transform={`translate(${length / 2} 0) rotate(${-angleDeg})`}>
+        <image
+          href={url}
+          x={-BOX_WIDTH / 2}
+          y={-BOX_HEIGHT / 2}
+          width={BOX_WIDTH}
+          height={BOX_HEIGHT}
+          preserveAspectRatio="xMidYMid meet"
+          aria-label={words}
         />
       </g>
     </>
