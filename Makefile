@@ -1,4 +1,4 @@
-.PHONY: setup dev bench server bench-server web check fmt test kit
+.PHONY: setup dev bench server bench-server web check check-server check-web contract fmt test kit
 
 setup:
 	cd server && uv sync
@@ -27,9 +27,17 @@ web:
 test:
 	cd server && uv run pytest -q
 
-check:
+check: check-server check-web
+
+check-server:
 	cd server && uv run ruff format --check . && uv run ruff check . && uv run pytest -q
+
+check-web:
 	cd web && pnpm exec prettier --check src devtools vite.config.ts && pnpm lint && pnpm build
+
+# Refresh contract/ (JSON schemas and example messages) after a contract change
+contract:
+	cd server && uv run python -m tacto.contract_export
 
 fmt:
 	cd server && uv run ruff check --select I --fix . && uv run ruff format .
