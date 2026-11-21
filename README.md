@@ -6,9 +6,10 @@ Built at LauzHack 2026.
 
 ## Quick start
 
-Needs [uv](https://docs.astral.sh/uv/), Node 20+ and [pnpm](https://pnpm.io/).
+Needs [uv](https://docs.astral.sh/uv/), Node 20+, [pnpm](https://pnpm.io/) and the ngspice library for the circuit solver.
 
 ```bash
+brew install libngspice   # macOS; the path goes in .env as NGSPICE_LIBRARY_PATH
 make setup     # installs server and web dependencies, creates .env
 make dev       # server on :8000, web on :5173
 ```
@@ -58,7 +59,7 @@ Paste one of these to start. Each session should stay in its own lane (table in 
 
 **Simulation and haptics**
 
-> I own the simulation and haptics lane. Read docs/tech-stack.md and docs/architecture.md. Build the DC solver in server/tacto/sim/ (networkx for open and short detection, NumPy nodal analysis) with tests for one bulb, two in series and two in parallel, each with the hand-worked answer in the docstring. Then the function that turns current at the fingertip into pulse_hz. I will run /hardware-check mouse in parallel.
+> I own the simulation and haptics lane. Read docs/tech-stack.md and docs/architecture.md. Build the DC solver in server/tacto/sim/ (networkx for open and short detection, ngspice through InSpice for the physics) with tests for one bulb, two in series and two in parallel, each with the hand-worked answer in the docstring. Then the function that turns current at the fingertip into pulse_hz. I will run /hardware-check mouse in parallel.
 
 **Front end**
 

@@ -30,7 +30,7 @@ Logi Hands Tracker ─ws─>   vision → circuit → solver → tutor     bench
 | Wire detection | Sample each dot-to-dot segment in the flattened image and threshold ink against paper | OpenCV (warp, adaptive threshold) | Printed wire strips with markers | **test**: 10 layouts read correctly |
 | Finger position | Logi Hands Tracker app, `index_tip` over `ws://127.0.0.1:8765` at ~30 Hz, mapped to the mat by a 4-touch calibration | Logitech's tracker app + its sample client | MediaPipe Hand Landmarker on our RGB frame | **test**: fingertip within one grid cell |
 | Circuit graph | `networkx` for connectivity, open-loop and short detection | networkx | — | verified by unit tests |
-| Circuit physics | Own DC solver, modified nodal analysis in NumPy | NumPy | CircuitJS1 in an iframe (GPL-2.0) | unit tests against hand-worked answers |
+| Circuit physics | ngspice through `InSpice` (operating-point analysis), behind one `solve()` function in `sim/solver.py`; open loops and shorts are caught by networkx before the engine is called | [InSpice](https://pypi.org/project/InSpice/) (GPL-3.0, maintained fork of PySpice) + `brew install libngspice`, with `NGSPICE_LIBRARY_PATH` set in `.env` | Own modified nodal analysis in NumPy (about 80 lines) behind the same function | **verified**: one bulb and two in series solved correctly on macOS arm64 with ngspice 47, 0.22 ms per solve; unit tests against hand-worked answers still to write |
 | Server and transport | FastAPI + uvicorn, one WebSocket, pydantic v2 models as the contract | FastAPI, pydantic | — | verified in the skeleton |
 | Web app | Vite + React + TypeScript, Tailwind, zustand store | Vite `react-ts` template | — | verified build in the skeleton |
 | Bench view | SVG parts in React, glow and motion with `motion` | `motion`; `@wokwi/elements` (MIT) as reference art for resistor and switch | Static images | **test**: glow follows the solver within 250 ms |
@@ -50,7 +50,6 @@ Logi Hands Tracker ─ws─>   vision → circuit → solver → tutor     bench
 
 ## Built ourselves, and why
 
-- **DC solver.** The Python options are a full SPICE binding (PySpice needs ngspice installed), a symbolic package (lcapy, slow per solve), or small unmaintained projects. Our circuits are a battery, bulbs, resistors and a switch; nodal analysis is about 80 lines and we can explain every line to a judge. AXA also scores novel work over "git clone".
 - **Wire reading.** No library reads pen lines on a dot grid. The grid makes it a per-segment darkness test.
 - **Tutor state machine and learner model.** Two small rules the team can state in one sentence. Knowledge-tracing libraries such as pyBKT fit parameters from large logs, which we do not have.
 - **Concept map.** Six fixed nodes do not justify a graph library.

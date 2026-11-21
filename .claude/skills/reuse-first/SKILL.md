@@ -34,4 +34,4 @@ Either way, tell the user in two lines what you chose and why. If the choice rep
 
 ## Already ruled out
 
-CircuitJS1 as the main simulator (GPL-2.0, iframe), PySpice and lcapy for the solver, LangChain or any agent framework, a database, the camera's face AI, Logi Gaze Tracker. Reasons are in `docs/tech-stack.md`.
+CircuitJS1 as the main simulator (GPL-2.0, iframe), PySpice (unmaintained; we use its fork InSpice) and lcapy for the solver, LangChain or any agent framework, a database, the camera's face AI, Logi Gaze Tracker. Reasons are in `docs/tech-stack.md`.
