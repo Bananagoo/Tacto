@@ -14,14 +14,17 @@ export function CameraCorner() {
   if (!onCamera || failed) return null
   return (
     // key: coming back from a dropped connection starts a fresh stream.
-    <figure key={String(connected)} className="shrink-0 overflow-hidden rounded-3xl bg-white/5">
+    <figure
+      key={String(connected)}
+      className="w-56 shrink-0 self-end overflow-hidden rounded-2xl bg-white/5"
+    >
       <img
         src="/api/camera/preview"
         alt="Live view of the desk"
         onError={() => setFailed(true)}
         className="aspect-video w-full object-cover"
       />
-      <figcaption className="px-4 py-2 text-lg text-stone-300">What the camera sees</figcaption>
+      <figcaption className="px-3 py-1 text-base text-stone-300">What the camera sees</figcaption>
     </figure>
   )
 }
