@@ -1,11 +1,9 @@
 import { useHaptics } from '../haptics/useHaptics'
 import { useTacto } from '../useTacto'
-import { canSpeak, useVoice } from '../voice/voiceStore'
 
-/** The instrument's readouts and switches: the server, the wheel's voltage, voice, the mouse. */
+/** The instrument's readouts and switches: the server and the mouse. */
 export function StatusBar() {
   const connected = useTacto((store) => store.connected)
-  const sourceVoltage = useTacto((store) => store.state?.circuit.source_voltage)
 
   return (
     <footer className="flex flex-wrap items-center justify-between gap-x-10 gap-y-3 rounded-3xl bg-white/5 px-8 py-4 text-2xl">
@@ -13,13 +11,6 @@ export function StatusBar() {
       <span className={connected ? 'text-stone-100' : 'font-bold text-amber-300'}>
         {connected ? '● Connected' : '○ Reconnecting…'}
       </span>
-      <span className="flex items-baseline gap-4">
-        <span className="text-stone-300">Voltage (scroll the wheel)</span>
-        <span className="text-5xl font-bold tabular-nums">
-          {sourceVoltage === undefined ? '–' : sourceVoltage.toFixed(1)} V
-        </span>
-      </span>
-      <VoiceSwitch />
       <MouseStatus />
     </footer>
   )
@@ -27,23 +18,6 @@ export function StatusBar() {
 
 const BUTTON =
   'cursor-pointer rounded-xl bg-white/15 px-5 py-2 font-semibold hover:bg-white/25 focus-visible:outline-4 focus-visible:outline-sky-300 disabled:cursor-default disabled:opacity-40'
-
-/** Turns the tutor's voice on and off. The lines are on screen either way. */
-function VoiceSwitch() {
-  const speaking = useVoice((store) => store.speaking)
-  const setSpeaking = useVoice((store) => store.setSpeaking)
-  if (!canSpeak) return null
-  return (
-    <button
-      type="button"
-      aria-pressed={speaking}
-      onClick={() => setSpeaking(!speaking)}
-      className={BUTTON}
-    >
-      {speaking ? '● Voice on' : '○ Voice off'}
-    </button>
-  )
-}
 
 const MOUSE_WORDS = {
   off: '○ Mouse not connected',

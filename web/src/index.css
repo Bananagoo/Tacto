@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* Bundled with the app, so the font loads with Wi-Fi off. */
+@import '@fontsource-variable/space-grotesk';
 
 @theme {
   /* An overloaded wire throbs. Faster and deeper than Tailwind's pulse, so it reads as alarm. */
@@ -21,5 +23,5 @@ body {
   margin: 0;
   background: #0f1115;
   color: #e8e6e1;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
 }
