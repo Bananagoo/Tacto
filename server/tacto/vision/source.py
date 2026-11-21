@@ -28,7 +28,7 @@ from .focus import FocusKeeper
 from .hands import INDEX_TIP
 from .live import FrameWaiter, HandFinder
 from .patches import segments
-from .print_geometry import PrintGeometry
+from .print_geometry import REFERENCE_SQUARES, PrintGeometry
 from .stable import StableReadings
 from .tracker import MatTracker
 
@@ -86,6 +86,12 @@ class CameraMatSource:
                 "mat_visible": self._view.mat_visible,
                 **self._seen,
                 "squares_seen": sum(self._reader.palette.seen),
+                # What each colour square reads as now (CIELAB, paper = 100, 0, 0). If two
+                # of these come close together, the reader will confuse those two pieces.
+                "squares": {
+                    name: [round(float(value), 1) for value in row]
+                    for name, row in zip(REFERENCE_SQUARES, self._reader.palette.lab, strict=True)
+                },
                 "focus_kicks": self._focus.kicks if self._focus else 0,
                 "pieces": len(self._view.placed),
                 "finger": self._view.finger,

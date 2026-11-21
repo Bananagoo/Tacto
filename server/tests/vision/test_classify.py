@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import pytest
 from vision_scenes import (
+    AS_THE_CAMERA_SEES_RGB,
     BLUE_CAST,
     PRINTED_KINDS,
     PRINTED_RGB,
@@ -357,3 +358,79 @@ def flatten_with(frame: np.ndarray, scene: Scene, geometry) -> np.ndarray:
 
     sharp = flatten(scene.photograph(TILTED), geometry)
     return warp(frame, sharp.frame_to_page).image
+
+
+# ---------- shadows, with the colours as the real camera sees them ----------
+# Reported on the real mat on 22 Nov 2026: after working well, wires began to read as
+# open switches. The squares are at the edge nearest the learner, under their arms.
+
+
+def camera_scene(mat) -> tuple[Scene, dict[str, str]]:
+    """One of each piece twice over, in the colours the demo camera sees."""
+    scene, expected = Scene(mat, squares=True, rgb=AS_THE_CAMERA_SEES_RGB), {}
+    for index, kind in enumerate(PRINTED_KINDS):
+        for a, b in (((index + 1, 2), (index + 2, 2)), ((index + 1, 3), (index + 1, 4))):
+            scene.lay(kind, a, b)
+            expected[seg(a, b)] = kind
+    return scene, expected
+
+
+def test_the_cameras_own_colours_read_right_in_even_light(mat, geometry, colours):
+    scene, expected = camera_scene(mat)
+    assert kinds(read(scene, TILTED, mat, geometry, colours)) == expected
+
+
+@pytest.mark.parametrize("light", [0.85, 0.7, 0.55])
+def test_a_shadow_over_the_squares_does_not_change_what_the_pieces_are(
+    light, mat, geometry, colours
+):
+    reader = MatReader(mat, geometry, colours)
+    scene, expected = camera_scene(mat)
+    read(scene, TILTED, mat, geometry, colours, reader=reader)
+    shaded, _ = camera_scene(mat)
+    shaded.shade((30.0, 0.0), (267.0, 26.0), light)  # an arm over the row of squares
+    for _ in range(5):  # the shadow stays: the references must not walk off with it
+        readings = read(shaded, TILTED, mat, geometry, colours, reader=reader)
+    assert kinds(readings) == expected
+
+
+@pytest.mark.parametrize("light", [0.85, 0.7, 0.55])
+def test_a_shadow_there_from_the_first_frame_does_not_either(light, mat, geometry, colours):
+    shaded, expected = camera_scene(mat)
+    shaded.shade((30.0, 0.0), (267.0, 26.0), light)
+    assert kinds(read(shaded, TILTED, mat, geometry, colours)) == expected
+
+
+@pytest.mark.parametrize("light", [0.85, 0.7, 0.55])
+def test_a_shadow_over_the_pieces_does_not_change_what_they_are(light, mat, geometry, colours):
+    scene, expected = camera_scene(mat)
+    scene.shade((30.0, 75.0), (267.0, 160.0), light)  # across the two rows of pieces
+    assert kinds(read(scene, TILTED, mat, geometry, colours)) == expected
+
+
+def test_a_shadow_creeping_over_the_squares_does_not_walk_the_references_away(
+    mat, geometry, colours
+):
+    reader = MatReader(mat, geometry, colours)
+    _, expected = camera_scene(mat)
+    for light in (1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55):
+        shaded, _ = camera_scene(mat)
+        shaded.shade((30.0, 0.0), (267.0, 26.0), light)
+        for _ in range(2):
+            readings = read(shaded, TILTED, mat, geometry, colours, reader=reader)
+        assert kinds(readings) == expected, f"at {light:.0%} light"
+
+
+def test_a_square_with_a_sleeve_beside_it_is_not_read(mat, geometry, colours):
+    reader = MatReader(mat, geometry, colours)
+    scene, _ = camera_scene(mat)
+    read(scene, TILTED, mat, geometry, colours, reader=reader)
+    before = reader.palette.lab.copy()
+    covered, expected = camera_scene(mat)
+    x, y = geometry.reference_square_centres_mm(mat.cols)["wire"]
+    # Something dark lying across the paper round the wire square, leaving the square bare.
+    covered.shade((x - 14.0, y - 14.0), (x - 7.0, y + 14.0), 0.2)
+    covered.shade((x + 7.0, y - 14.0), (x + 14.0, y + 14.0), 0.2)
+    readings = read(covered, TILTED, mat, geometry, colours, reader=reader)
+    assert np.array_equal(reader.palette.lab[0], before[0])
+    assert kinds(readings) == expected

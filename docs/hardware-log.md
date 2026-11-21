@@ -76,3 +76,9 @@ Format:
 - Measured: flatten 4.8 ms, read 26 ms a frame. Cover (share of the patch showing the piece's colour): 68 to 99%.
 - Failed earlier the same night: re-sending `auto-focus=true` while it was already on did not refocus a parked lens (three tries, sharpness stayed 8). Off, one second, on did. The kick now does that.
 - Not tested: more than one layout; hands over the mat; other lighting.
+
+## 2026-11-22, wires read as open switches, reported by Katherine
+- Passed first: with `make dev` and the live state page, the reader "worked super well" on the real mat (Katherine).
+- Failed: after a while wires (blue) began to read as open switches (cyan).
+- Not measured on the desk. Reproduced on rendered frames using the colours this camera sees: with the row of colour squares in shadow at 70% or 55% light, a wire read as an open switch. The squares are at the mat's edge nearest the learner, under their arms.
+- Decision: each square is now measured against the paper just round it instead of the whole page's paper, so a shadow over the squares divides out, and a square with something lying beside it is not read. Whether this was the cause on the desk is not confirmed until it is tried there. `GET /debug/reader` now lists what each square reads as.

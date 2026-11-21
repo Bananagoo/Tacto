@@ -61,6 +61,15 @@ SQUARE_BLACK_MAX_LIGHTNESS = 50.0
 SQUARE_MAX_JUMP = 20.0
 # The middle half of a square is sampled, clear of its edge and of a millimetre of misfit.
 SQUARE_SAMPLED_FRACTION = 0.5
+# A square is measured against the paper just round it, not the page's: the squares are at
+# the edge nearest the learner, and an arm's shadow over them must not change what colour
+# they are taken to be. The paper is looked for in a frame this far outside the square ...
+SQUARE_PAPER_FROM_MM = 1.5
+SQUARE_PAPER_TO_MM = 4.0
+# ... and must still look like paper: no darker than this share of the page's paper (a
+# shadow is, a sleeve is not), and nearly colourless once the page's colour is divided out.
+SQUARE_PAPER_MIN_LIGHT = 0.4
+SQUARE_PAPER_MAX_CHROMA = 12.0
 
 _NAMES: tuple[ColourName, ...] = REFERENCE_SQUARES  # type: ignore[assignment]
 _POSITIVE = _NAMES.index("battery_positive")
@@ -157,17 +166,33 @@ def read_squares(
     `page` is the flattened mat as the camera gave it; `paper` is its `paper_colour`."""
     px_per_mm = mm_to_px(1.0, dpi=FLAT_DPI)
     half_px = REFERENCE_SQUARE_MM * SQUARE_SAMPLED_FRACTION / 2 * px_per_mm
+    inner_px = (REFERENCE_SQUARE_MM / 2 + SQUARE_PAPER_FROM_MM) * px_per_mm
+    outer_px = (REFERENCE_SQUARE_MM / 2 + SQUARE_PAPER_TO_MM) * px_per_mm
+    height_px, width_px = page.shape[:2]
     lab, seen = previous.lab.copy(), list(previous.seen)
     for name, (x_mm, y_mm) in geometry.reference_square_centres_mm(mat.cols).items():
         index = _NAMES.index(name)
         x_px, y_px = x_mm * px_per_mm, y_mm * px_per_mm
+        left, right = round(x_px - outer_px), round(x_px + outer_px)
+        top, bottom = round(y_px - outer_px), round(y_px + outer_px)
+        if left < 0 or top < 0 or right > width_px or bottom > height_px:
+            continue
+        around = page[top:bottom, left:right]
+        # The frame of paper round the square: everything in the box but its middle.
+        ys, xs = np.mgrid[top:bottom, left:right]
+        frame = (np.abs(xs - x_px) > inner_px) | (np.abs(ys - y_px) > inner_px)
+        local_paper = np.maximum(np.median(around[frame], axis=0), 1.0).astype(np.float32)
+        as_lab = to_lab(local_paper[None, None, :], paper)[0, 0]
+        if (
+            float(local_paper.max() / paper.max()) < SQUARE_PAPER_MIN_LIGHT
+            or float(np.hypot(as_lab[1], as_lab[2])) > SQUARE_PAPER_MAX_CHROMA
+        ):
+            continue  # that is not paper round the square: something is lying there
         crop = page[
             round(y_px - half_px) : round(y_px + half_px),
             round(x_px - half_px) : round(x_px + half_px),
         ]
-        if crop.size == 0:
-            continue
-        pixels = to_lab(crop, paper).reshape(-1, 3)
+        pixels = to_lab(crop, local_paper).reshape(-1, 3)
         if float(pixels.std(axis=0).max()) > SQUARE_EVEN_WITHIN:
             continue
         sample = np.median(pixels, axis=0)

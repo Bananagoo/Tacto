@@ -44,6 +44,18 @@ PIECE_WIDTH_MM = 9.0
 PRINTED_KINDS = ("wire", "bulb", "resistor", "switch_closed", "switch_open", "battery")
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+# The same pieces as the demo camera saw them on 22 Nov 2026 at gain 0, scaled so the paper
+# is white (docs/hardware-log.md). Much closer together than the printed values: blue and
+# cyan are 22 degrees of hue apart, magenta and red 26. The hard case for the reader.
+AS_THE_CAMERA_SEES_RGB = {
+    "wire": (30, 62, 137),
+    "bulb": (255, 221, 56),
+    "resistor": (213, 32, 93),
+    "switch_closed": (27, 106, 63),
+    "switch_open": (2, 103, 170),
+    "battery_positive": (214, 45, 25),
+    "battery_negative": (44, 44, 44),
+}
 
 PointMm = tuple[float, float]
 PointPx = tuple[float, float]
@@ -130,10 +142,19 @@ def photograph(page: np.ndarray, view: View, *, seed: int = 0) -> np.ndarray:
 class Scene:
     """The mat page with the learner's changes on it."""
 
-    def __init__(self, mat: Mat, *, squares: bool = False) -> None:
-        """`squares` prints the reference colour squares along the top, as the v2 mat has."""
+    def __init__(self, mat: Mat, *, squares: bool = False, rgb: dict | None = None) -> None:
+        """`squares` prints the reference colour squares along the top, as the v2 mat has.
+        `rgb` gives the pieces and squares other colours than the printed ones."""
         self._geometry = PrintGeometry.for_mat(mat)
-        self.page = render_mat(mat, dpi=PAGE_DPI, colours=PRINTED_RGB if squares else None)
+        self._rgb = rgb or PRINTED_RGB
+        self.page = render_mat(mat, dpi=PAGE_DPI, colours=self._rgb if squares else None)
+
+    def shade(self, top_left_mm: PointMm, bottom_right_mm: PointMm, light: float) -> Scene:
+        """A shadow over part of the page: everything in the rectangle keeps `light` of its
+        brightness. Call it after laying the pieces it should fall on."""
+        (x0, y0), (x1, y1) = page_px(top_left_mm), page_px(bottom_right_mm)
+        self.page[y0:y1, x0:x1] = (self.page[y0:y1, x0:x1] * light).astype(np.uint8)
+        return self
 
     def lay(
         self,
@@ -170,7 +191,7 @@ class Scene:
             cv2.polylines(self.page, [line], False, colour, thickness, cv2.LINE_AA)
 
         def bgr(name: str) -> tuple[int, int, int]:
-            red, green, blue = PRINTED_RGB[name]
+            red, green, blue = self._rgb[name]
             return (blue, green, red)
 
         end = PIECE_LENGTH_MM / 2
