@@ -13,7 +13,7 @@ whatever the light, and in CIELAB, where equal distances look about equally diff
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -151,20 +151,24 @@ def printed_palette(colours: PieceColours) -> Palette:
 
 
 def read_squares(
-    lab_page: np.ndarray, geometry: PrintGeometry, mat: Mat, previous: Palette
+    page: np.ndarray, paper: np.ndarray, geometry: PrintGeometry, mat: Mat, previous: Palette
 ) -> Palette:
-    """The palette with every square that can be trusted in this frame read afresh."""
+    """The palette with every square that can be trusted in this frame read afresh.
+    `page` is the flattened mat as the camera gave it; `paper` is its `paper_colour`."""
     px_per_mm = mm_to_px(1.0, dpi=FLAT_DPI)
     half_px = REFERENCE_SQUARE_MM * SQUARE_SAMPLED_FRACTION / 2 * px_per_mm
     lab, seen = previous.lab.copy(), list(previous.seen)
     for name, (x_mm, y_mm) in geometry.reference_square_centres_mm(mat.cols).items():
         index = _NAMES.index(name)
         x_px, y_px = x_mm * px_per_mm, y_mm * px_per_mm
-        pixels = lab_page[
+        crop = page[
             round(y_px - half_px) : round(y_px + half_px),
             round(x_px - half_px) : round(x_px + half_px),
-        ].reshape(-1, 3)
-        if pixels.size == 0 or float(pixels.std(axis=0).max()) > SQUARE_EVEN_WITHIN:
+        ]
+        if crop.size == 0:
+            continue
+        pixels = to_lab(crop, paper).reshape(-1, 3)
+        if float(pixels.std(axis=0).max()) > SQUARE_EVEN_WITHIN:
             continue
         sample = np.median(pixels, axis=0)
         chroma = float(np.hypot(sample[1], sample[2]))
@@ -183,13 +187,21 @@ def read_squares(
 def label_pixels(lab: np.ndarray, palette: Palette) -> np.ndarray:
     """For every pixel: the index of its piece colour, or `_PAPER`, or `_OTHER`."""
     flat = lab.reshape(-1, 3)
-    difference = flat[:, None, :] - palette.lab[None, :, :]
-    difference[:, :, 0] *= LIGHTNESS_WEIGHT
-    distance = np.linalg.norm(difference, axis=2)
-    # Black has no colour of its own to match, so it is told by darkness further down.
-    distance[:, _NEGATIVE] = np.inf
-    nearest = distance.argmin(axis=1)
-    labels = np.where(distance.min(axis=1) <= MAX_COLOUR_DISTANCE, nearest, _OTHER)
+    weights = np.float32([LIGHTNESS_WEIGHT, 1.0, 1.0])
+    weighted = flat * weights
+    # One colour at a time, on squared distances: several times quicker than one big
+    # pixels-by-colours table, and this runs on every frame.
+    nearest = np.full(len(flat), _OTHER, dtype=np.intp)
+    nearest_squared = np.full(len(flat), MAX_COLOUR_DISTANCE**2, dtype=np.float32)
+    for index, reference in enumerate(palette.lab.astype(np.float32) * weights):
+        if index == _NEGATIVE:
+            continue  # black has no colour of its own to match; it is told by darkness below
+        offset = weighted - reference
+        squared = np.einsum("ij,ij->i", offset, offset)
+        closer = squared <= nearest_squared
+        nearest[closer] = index
+        nearest_squared[closer] = squared[closer]
+    labels = nearest
     neutral = np.hypot(flat[:, 1], flat[:, 2]) < NEUTRAL_CHROMA
     # Halfway between the black square and white paper: darker is ink, lighter is paper.
     dark = flat[:, 0] < (palette.lab[_NEGATIVE, 0] + 100.0) / 2
@@ -199,7 +211,11 @@ def label_pixels(lab: np.ndarray, palette: Palette) -> np.ndarray:
 
 def classify_patch(lab_patch: np.ndarray, palette: Palette, colours: PieceColours) -> Reading:
     """What one patch shows. The patch is CIELAB (see `to_lab`) and runs from dot a to dot b."""
-    labels = label_pixels(lab_patch, palette)
+    return classify_labels(label_pixels(lab_patch, palette), colours)
+
+
+def classify_labels(labels: np.ndarray, colours: PieceColours) -> Reading:
+    """What one patch shows, from its pixels' labels (see `label_pixels`)."""
     fraction = np.bincount(labels.ravel(), minlength=_OTHER + 1) / labels.size
 
     best: PieceClass = "empty"
@@ -240,12 +256,22 @@ class MatReader:
 
     def read(self, flattened: Flattened) -> dict[str, Reading]:
         """Segment id -> what is lying in it, for every segment of the mat, from one frame."""
-        lab_page = to_lab(flattened.image, paper_colour(flattened.image))
-        self.palette = read_squares(lab_page, self.geometry, self.mat, self.palette)
-        patches = cut_patches(replace(flattened, image=lab_page), self.mat, self.geometry)
+        paper = paper_colour(flattened.image)
+        self.palette = read_squares(flattened.image, paper, self.geometry, self.mat, self.palette)
+        patches = cut_patches(flattened, self.mat, self.geometry)
+        if not patches:
+            return {}
+        # Only the patches are converted and labelled, not the whole page, and all in one
+        # pass: they are the same size, and together a fourteenth of the page.
+        stacked = np.stack(list(patches.values()))
+        count, height, width = stacked.shape[:3]
+        lab = to_lab(stacked.reshape(count * height, width, 3), paper)
+        labels = label_pixels(lab, self.palette)
         return {
-            segment: classify_patch(patch, self.palette, self._colours)
-            for segment, patch in patches.items()
+            segment: classify_labels(patch_labels, self._colours)
+            for segment, patch_labels in zip(
+                patches, labels.reshape(count, height, width), strict=True
+            )
         }
 
 

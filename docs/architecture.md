@@ -16,16 +16,21 @@ segment patches                            vision/patches.py
   │  one fixed-size crop for every gap between neighbouring dots
   ▼
 classify each patch                        vision/classify.py, kit/pieces.yaml
-  │  empty | wire | battery | bulb | resistor | switch
-  │  baseline: HSV colour per piece type (built); a small classifier on our own patches (not built)
+  │  empty | wire | bulb | resistor | switch closed | switch open | battery (+ end) | unsure
+  │  every pixel goes to the nearest of the mat's seven colour squares, read each frame;
+  │  red beside black is a battery and the red end is positive
   ▼
-stability                                  NOT BUILT
-  │  a segment changes only after N frames agree; segments under a hand hold
+stability                                  vision/stable.py
+  │  a segment changes only after 3 frames agree; unsure segments and segments under a
+  │  hand hold; nothing is read off a frame no corner marker backs (it may be soft)
+  ▼
+                                           vision/source.py runs all of the above on one
+                                           thread, with vision/focus.py keeping the focus
   ▼
 MatView: placed pieces + fingertip         lab.py (the seam: camera or hand-set mat)
   ▼
 Lab                                        lab.py
-  │  taps.py     fingertip dwelling on a switch for 0.5 s toggles it
+  │  taps.py     hand-set mat only: a pointer dwelling on a switch for 0.5 s toggles it
   │  pieces.py   pieces → solver → pieces with current, brightness, shorted
   │  sim/        graph analysis (open, short), ngspice, current → pulse rate
   │  lesson.py   which step, whether the circuit completes it
@@ -57,9 +62,9 @@ Open circuits and shorts are found in the graph (`sim/graph.py`) before the solv
 
 ## What the camera cannot see
 
-- **Switch open or closed.** The learner taps the paper switch. The lab remembers which switches have been tapped; a switch lifted off the mat is forgotten and a new one starts open.
 - **Touch.** MediaPipe gives a fingertip position, not contact. A fingertip over a segment counts as touching it.
-- **Battery polarity.** A plain coloured card has no marked end. Until the kit marks one, the reader will pick by rule.
+
+A switch's state and a battery's polarity it can see: open and closed switches are different pieces (cyan and green), and a battery is red at its positive end and black at the other.
 
 ## Lesson steps
 
@@ -89,4 +94,12 @@ Tooling may import the product; the product never imports tooling (`server/tests
 | Cut and classify all 93 segments | median 7.2 ms |
 | Colour baseline on rendered images | 20 of 20 random layouts right in each of 10 views (blur, dim, noise, tilt, half turn) |
 
-Nothing in the camera path has been measured on real paper yet.
+On the printed mat, 22 Nov 2026 (one layout, one desk, nobody's hands in view; `docs/hardware-log.md`):
+
+| What | Number |
+|---|---|
+| Pieces read right | 8 of 8, the same in 33 of 33 samples over 8 seconds |
+| State messages from the camera | 15 a second |
+| Time per frame | flatten 6 ms, hand 27 ms, read 10 ms (26 ms before it was sped up; 10 ms is from a rendered frame) |
+
+Not measured yet: more layouts, hands over the mat, and the delay from a piece moving to the state changing. Three agreeing frames at about 20 frames a second is roughly 0.15 s, plus up to 0.07 s for the next message.

@@ -49,8 +49,10 @@ switch for half a second taps it, exactly as a fingertip does on the paper.
 - `lesson.prompt` is the text to show. `step_done` turns true once the circuit has met
   the step's goal for half a second, and stays true; about six seconds later the next
   step's prompt arrives. `lesson_done` turns true when the last step is done.
-- A switch's `closed` flips when a fingertip rests on it for half a second. The finger
-  must leave the switch before it can flip it again.
+- On the camera a switch's `closed` comes from the piece: the learner swaps the closed
+  switch piece (green) for the open one (cyan), and a fingertip on it changes nothing.
+  On the hand-set mat (`make manual`) a fingertip resting on a switch for half a second
+  still flips it, and must leave before it can flip it again.
 
 ## After changing the models
 

@@ -43,7 +43,7 @@ Added 21 Nov. `mat.pdf` with seven 12 mm colour squares along the top edge, 8 mm
 
 Checked on a 150 dpi render: nothing outside the band of squares differs from `mat.pdf`, each square's centre is its piece's exact value, and OpenCV still finds corner markers 0 to 3. Not checked: the printed sheet under the camera. The squares only stand for the pieces if both sheets come off the same printer on the same paper.
 
-No code reads the squares yet, and `make kit` does not draw them: their positions are only in this file.
+The reader samples these squares in every frame (`server/tacto/vision/classify.py`), and `make kit` draws them from `kit/pieces.yaml`.
 
 ## `components-v3.pdf`
 
@@ -60,7 +60,7 @@ Printed pieces with a symbol on each, not plain card. Every piece is 25 mm long,
 
 ## What this changes for the camera reader
 
-- `kit/pieces.yaml` still holds the first proposal (black wire, blue resistor, one switch colour, an all-red battery). It does not match this sheet.
+- `kit/pieces.yaml` holds these colours.
 - The battery's positive end can now be seen: it is the red half.
 - There are two switch pieces, open and closed, so the camera could read a switch's state from the piece.
 - The closest pair of colours is blue and cyan, 45° of hue apart; green and cyan are 50° apart.

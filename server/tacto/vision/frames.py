@@ -6,6 +6,7 @@ from a folder of recorded frames, and in tests.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Protocol
 
@@ -27,6 +28,26 @@ class FingerFinder(Protocol):
     def index_tip_px(self, frame: np.ndarray) -> tuple[float, float] | None:
         """The index fingertip in frame pixels, or None when no hand is found."""
         ...
+
+
+class FramesOnAClock:
+    """A `FrameSource` handed out at a steady rate, as a camera worker hands out frames.
+
+    This is what lets recorded frames drive the same reader loop as the live camera.
+    """
+
+    def __init__(self, source: FrameSource, *, fps: float = 10.0) -> None:
+        self._source = source
+        self._period_s = 1.0 / fps
+        self._seq = -1
+
+    def wait_for_frame(self, after: int, timeout: float) -> tuple[int, np.ndarray] | None:
+        time.sleep(min(self._period_s, max(timeout, 0.0)))
+        frame = self._source.latest_frame()
+        if frame is None:
+            return None
+        self._seq = max(self._seq, after) + 1
+        return self._seq, frame
 
 
 class FolderFrames:

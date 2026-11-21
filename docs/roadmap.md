@@ -11,15 +11,17 @@ Twenty different layouts read correctly under venue lighting with a hand moving 
 | # | Step | State |
 |---|---|---|
 | 1 | State contract, JSON schema, recorded sample, replay mock | Done. `contract/`, `make mock` |
-| 2 | Mat flattening: four corner markers to a homography | Done on rendered images (30 tests, incl. blur, dim, tilt, upside down). Not yet on real paper |
+| 2 | Mat flattening: four corner markers to a homography | Done. Works on the printed mat (22 Nov): all four markers read at 1080p from the webcam position |
 | 2b | Hold the mat's position while a hand covers a corner marker (`vision/tracker.py`); manual exposure (`vision/exposure.py`) | Built, 21 Nov. Tracker tested on rendered images. On the real desk manual exposure fixed the burnt-out paper. Focus cannot be locked on this camera (see `docs/hardware-log.md`) |
 | 3 | Segment patches: one fixed-size crop per dot-to-dot segment | Done on rendered images. `vision/patches.py` |
-| 4 | Classification per segment: HSV colour baseline, then a small classifier | Colour baseline done on rendered images with the proposed colours (`vision/classify.py`, `kit/pieces.yaml`): 20 of 20 layouts in each of 10 views. The trained classifier waits for real patches (step 5) |
-| 5 | Capture tool: labelled patches from the real camera given a known layout; held-out layouts; per-class accuracy | Not started |
-| 6 | Stability: N consecutive frames; segments under a hand hold (MediaPipe landmarks as the mask) | Not started |
+| 4 | Classification per segment | Done (`vision/classify.py`): each patch matched to the mat's seven colour squares; battery polarity from its red half; open and closed switches as different pieces. 20 careless layouts right in each of 9 rendered views; 8 of 8 pieces right on the printed mat (one layout) |
+| 5 | Capture tool: labelled patches from the real camera; held-out layouts; per-class accuracy | Not built. No trained classifier is needed so far; what is missing is the 20-layout accuracy number on the real mat |
+| 6 | Stability: 3 agreeing frames; unsure segments and segments under a hand hold | Done on rendered frames (`vision/stable.py`, `vision/source.py`). Not tried with real hands |
 | 7 | Graph and solver: open, short, DC current per piece, hand-worked tests | Done. One bulb, series, parallel, short across a bulb, bypassed bulb |
-| 8 | Finger: fingertip to mat to nearest segment; switch tap with debounce | Logic done and tested on the hand-set mat. Not yet on the camera |
+| 8 | Finger: fingertip to mat to nearest segment | Wired to the camera (`vision/source.py`); tested with a fake hand on rendered frames. Not tried with a real hand. Switches no longer toggle by tap on the camera: the learner swaps the piece |
 | 9 | Lesson steps: fixed sequence, each completes from the circuit | Done. Wording is placeholder |
+
+| 10 | The lab on the camera: `make dev` | Runs (`tacto/main.py`): 15 state messages a second from the real camera, 22 Nov. `GET /debug/reader` shows what the reader sees and the milliseconds per step. `make dev TACTO_SOURCE=replay` runs recorded frames |
 
 Also built: the hand-set mat (`make manual`), for the UI team to trigger any state and as the demo fallback.
 

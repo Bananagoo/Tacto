@@ -23,7 +23,7 @@ camera-tool:
 	       uvc-util.m UVCController.m UVCType.m UVCValue.m \
 	  && echo "camera-tool: built $(UVC_UTIL_DIR)/uvc-util"; fi
 
-# The lab on the camera, with the web UI. The camera reader is not built yet: use make manual.
+# The lab on the camera, with the web UI. GET localhost:8000/debug/reader shows what the reader sees.
 dev:
 	$(MAKE) -j2 server web
 
@@ -32,8 +32,9 @@ dev:
 bench:
 	$(MAKE) -j2 bench-server web
 
+# The camera unless told otherwise (make dev TACTO_SOURCE=replay), whatever .env says.
 server:
-	cd server && uv run uvicorn tacto.main:app --reload --port 8000 --timeout-graceful-shutdown 2
+	cd server && TACTO_SOURCE=$${TACTO_SOURCE:-camera} uv run uvicorn tacto.main:app --reload --port 8000 --timeout-graceful-shutdown 2
 
 bench-server:
 	cd server && uv run uvicorn tacto_bench.main:app --reload --port 8000 --timeout-graceful-shutdown 2

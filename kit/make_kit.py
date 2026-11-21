@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 
 from tacto.mat import MatFileError, load_mat
+from tacto.vision.classify import load_colours
 from tacto.vision.kit_render import render_mat
 
 KIT_DIR = Path(__file__).resolve().parent
@@ -38,7 +39,9 @@ def main() -> None:
     except MatFileError as error:
         raise SystemExit(f"make_kit: {error}") from error
     args.out.mkdir(parents=True, exist_ok=True)
-    save_pdf(render_mat(mat, dpi=PRINT_DPI), args.out / "mat.pdf")
+    save_pdf(
+        render_mat(mat, dpi=PRINT_DPI, colours=load_colours().colours), args.out / "mat.pdf"
+    )
     print(f"make_kit: wrote {args.out / 'mat.pdf'}")
     print("make_kit: print at 100% (no 'fit to page') and check the 50 mm bar with a ruler")
 

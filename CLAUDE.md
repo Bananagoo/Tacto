@@ -36,7 +36,7 @@ Run from the repo root.
 | `make mock` | Replay the recorded sample on `ws://localhost:8000/ws`. No camera, mouse or solver needed |
 | `make manual` | The real lab on a mat you set by hand. Open `localhost:8000/manual` |
 | `make bench` | `make manual` plus the web dev tools (camera bench at `localhost:5173/devtools/`) |
-| `make dev` | The lab on the camera, with the web UI. Not usable until the camera reader is built |
+| `make dev` | The lab on the camera, with the web UI. `localhost:8000/debug/reader` shows what the reader sees. `make dev TACTO_SOURCE=replay` runs recorded frames instead |
 | `make check` | `make check-server` and `make check-web`: format, lint, type-check, tests. Must pass before every commit |
 | `make contract` / `make sample` | Regenerate `contract/` after a contract change |
 | `make kit` | Write the printable mat to `kit/out/mat.pdf` from `kit/mats/circuits-101.yaml` |
@@ -47,13 +47,13 @@ Run from the repo root.
 | Path | What it is |
 |---|---|
 | `server/tacto/contract.py` | The one state message and the one browser message. Source of `contract/` |
-| `server/tacto/lab.py` | Mat source in, `State` out: solves, finds the touched piece, taps switches, runs the lesson |
+| `server/tacto/lab.py` | Mat source in, `State` out: solves, finds the touched piece, runs the lesson |
 | `server/tacto/pieces.py` | Pieces on segments to the solver and back |
 | `server/tacto/sim/` | Graph analysis (open, short), the ngspice solver, current to pulse rate |
 | `server/tacto/lesson.py`, `lessons/` | Lesson steps as data; each completes from the circuit |
-| `server/tacto/taps.py` | A switch tap is a half-second fingertip dwell |
+| `server/tacto/taps.py` | Hand-set mat only: a switch tap is a half-second pointer dwell |
 | `server/tacto/mat.py`, `kit/mats/` | The mat: grid size and dot spacing as data |
-| `server/tacto/vision/` | Camera, manual exposure, hand tracking, corner markers, flattening, holding the mat's position (`tracker.py`), the printable mat |
+| `server/tacto/vision/` | The camera reader. `source.py` runs it: `tracker.py` (find and hold the mat), `focus.py`, `classify.py` (read each segment against the mat's colour squares), `stable.py`, `hands.py`. Also `exposure.py` and the printable mat |
 | `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the hand-set mat, the camera bench |
 | `web/devtools/` | Tooling pages for the vision lane (camera bench, haptics test page) |
 
@@ -64,13 +64,13 @@ Tooling may import the product (`server/tacto/`); the product never imports tool
 - Wires are card strips, classified like any other piece. There are no pen lines.
 - The mat has four ArUco corner markers. The pieces have none.
 - The circuit solver runs on the server.
-- A switch is two printed pieces, open (cyan) and closed (green). The learner swaps the piece and the camera reads which one is down. Decided 21 Nov; it replaces the finger tap. `taps.py` and the tap wording in `contract/README.md` are still there until the camera reader lands.
+- A switch is two printed pieces, open (cyan) and closed (green). The learner swaps the piece and the camera reads which one is down. Decided 21 Nov; it replaces the finger tap on the camera. The hand-set mat (`make manual`) still toggles by dwell.
 - Fingertip tracking is MediaPipe on our own colour frames.
 
 ## Still open: ask, do not assume
 
 - Grid size and dot spacing (config in `kit/mats/circuits-101.yaml`; the current values are placeholders).
-- Nothing on colours: the printed pieces are in `kit/printed/` and their colours are listed in `kit/printed/README.md`. `kit/pieces.yaml` still holds the old proposal and does not match them yet.
+- Nothing on colours: the printed pieces are in `kit/printed/`, and `kit/pieces.yaml` holds their colours.
 
 ## Rules
 

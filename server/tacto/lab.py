@@ -64,6 +64,7 @@ class Lab:
         *,
         source_name: Source,
         lesson: LessonRunner | None = None,
+        tap_switches: bool = True,
         now: Callable[[], float] = time.monotonic,
     ) -> None:
         self._grid = grid
@@ -74,6 +75,9 @@ class Lab:
         self._volts = DEFAULT_VOLTS
         self._seq = 0
         self._lesson = lesson
+        # False for the camera: its switches are two printed pieces, open and closed, and
+        # the reader says which one is down. A fingertip resting on one changes nothing.
+        self._tap_switches = tap_switches
         self._taps = SwitchTaps()
         self._flipped: set[str] = set()
         self._solved_for: tuple[tuple[Placed, ...], float] | None = None
@@ -106,6 +110,8 @@ class Lab:
 
     def _with_taps(self, view: MatView, now: float) -> tuple[Placed, ...]:
         """The source's pieces, with every tapped switch flipped."""
+        if not self._tap_switches:
+            return view.placed
         switches = {p.id for p in view.placed if p.type == "switch"}
         if view.mat_visible:
             self._flipped &= switches
