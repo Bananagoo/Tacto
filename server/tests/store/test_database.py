@@ -8,6 +8,7 @@ from sqlalchemy import inspect
 from store_samples import make_lesson
 
 from tacto.store.db import DEFAULT_DATABASE_URL, create_database
+from tacto.store.learners import SqlLearnerRepository
 from tacto.store.lessons import SqlLessonRepository
 from tacto.store.tables import UtcDateTime
 
@@ -43,12 +44,14 @@ def test_opening_an_existing_database_keeps_its_data(tmp_path):
     url = f"sqlite:///{tmp_path / 'tacto.db'}"
     first = create_database(url)
     SqlLessonRepository(first).save(make_lesson())
+    learner_id = SqlLearnerRepository(first).get_or_create("Ada")
     first.dispose()
 
     # A later run of the server, with the same schema, opens the same file.
     second = create_database(url)
 
     assert SqlLessonRepository(second).get("circuits-101") == make_lesson()
+    assert SqlLearnerRepository(second).get_or_create("Ada") == learner_id
     second.dispose()
 
 
