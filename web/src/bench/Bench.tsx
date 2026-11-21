@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useTacto } from '../useTacto'
 import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
@@ -8,9 +9,10 @@ import { WireLine } from './WireLine'
 
 /**
  * The mat as the camera reads it, drawn straight from the latest state. Nothing here knows
- * a layout: it draws whatever parts and wires the server lists.
+ * a layout: it draws whatever parts and wires the server lists. `children` are laid over the
+ * mat's corner (the camera picture), so they take no room from the tutor beside it.
  */
-export function Bench() {
+export function Bench({ children }: { children?: ReactNode }) {
   const connected = useTacto((store) => store.connected)
   const circuit = useTacto((store) => store.state?.circuit)
   const wires = circuit?.wires ?? []
@@ -57,6 +59,7 @@ export function Bench() {
         <Fingertip />
       </svg>
       <BenchNotice connected={connected} status={circuit?.status} />
+      {children}
     </figure>
   )
 }
