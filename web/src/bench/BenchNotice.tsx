@@ -39,8 +39,11 @@ export function BenchNotice({ connected, status }: BenchNoticeProps) {
 
 function Quiet({ children }: { children: string }) {
   return (
-    <p className="pointer-events-none absolute inset-0 m-0 flex items-center justify-center p-8 text-center text-4xl font-semibold text-stone-100">
-      {children}
-    </p>
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-8">
+      {/* A box round the words, so they read as a message and not as part of the drawing. */}
+      <p className="m-0 max-w-xl rounded-2xl border-4 border-stone-100 bg-emerald-950/80 px-10 py-8 text-center text-4xl font-semibold text-stone-100">
+        {children}
+      </p>
+    </div>
   )
 }
