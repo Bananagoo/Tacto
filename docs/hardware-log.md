@@ -41,3 +41,7 @@ Format:
 - Measured (read from the mouse over HID++, not felt): the haptic feature is 0x19b0 at index 0x0b; it reports exactly 15 presets, 0 to 14; haptics enabled, strength 60 of 100, full 0 to 100 range supported. Writing strength 60 back was accepted.
 - Not tested by feel yet: whether changing strength is noticeable, and which preset and rate loop into a steady buzz.
 - Decision: `MAX_WAVEFORM_INDEX` = 14. Strength is exposed as `setStrength` on the driver and as a slider on the haptics test page.
+
+## 2026-11-21, mouse strength and speed, tested by Katherine
+- Passed: on the haptics test page with `webhid` over the receiver, the speed slider changes the tick rate and the strength slider changes how strong the vibration feels. Both confirmed by hand.
+- Not measured yet: the preferred preset, the fastest rate that still feels like separate ticks, and the strength to use in the demo.
