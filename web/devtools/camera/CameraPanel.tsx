@@ -11,6 +11,16 @@ import {
 const STATUS_EVERY_MS = 500
 const PREFERRED_CAMERA = 'LVNext'
 
+// How the picture is shown, never how it is read: the server always works on the frame
+// as the camera sent it, because a mirrored marker cannot be read. Marker labels drawn
+// on the picture turn with it; the readout beside it stays in camera coordinates.
+const VIEWS = {
+  camera: { label: 'As the camera sees it', className: '' },
+  mirror: { label: 'Mirrored', className: '-scale-x-100' },
+  turned: { label: 'Rotated 180°', className: 'rotate-180' },
+} as const
+type View = keyof typeof VIEWS
+
 export default function CameraPanel() {
   const [cameras, setCameras] = useState<CameraInfo[]>([])
   const [listError, setListError] = useState('')
@@ -19,6 +29,7 @@ export default function CameraPanel() {
   const [nonce, setNonce] = useState(0)
   const [aruco, setAruco] = useState(true)
   const [hand, setHand] = useState(false)
+  const [view, setView] = useState<View>('mirror')
   const [status, setStatus] = useState<CameraStatus | null>(null)
   const [streamError, setStreamError] = useState('')
   const image = useRef<HTMLImageElement>(null)
@@ -113,6 +124,20 @@ export default function CameraPanel() {
           <input type="checkbox" checked={hand} onChange={(e) => setHand(e.target.checked)} />
           Hand points
         </label>
+        <label className="flex items-center gap-2">
+          View
+          <select
+            className="rounded bg-white/10 px-2 py-1"
+            value={view}
+            onChange={(event) => setView(event.target.value as View)}
+          >
+            {Object.entries(VIEWS).map(([key, { label }]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {listError && <p className="text-rose-400">{listError}</p>}
@@ -128,7 +153,7 @@ export default function CameraPanel() {
               ref={image}
               src={source}
               alt="Live camera"
-              className="h-full w-full object-contain"
+              className={`h-full w-full object-contain ${VIEWS[view].className}`}
               onError={() => {
                 setStreamError(
                   'The camera stream stopped. Check it is plugged in and that the terminal running the server has Camera permission.',
