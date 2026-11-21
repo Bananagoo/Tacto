@@ -12,9 +12,9 @@
 
 import type { HapticPattern } from '../contract'
 
-// Index 15 is allowed because docs/roadmap.md and .claude/rules/hardware.md list presets 0-15.
-// TODO(haptics owner): webhid is documented for 0-14 only; confirm 15 on the real mouse.
-export const MAX_WAVEFORM_INDEX = 15
+// The mouse reports exactly 15 presets, 0-14 (read from its haptic feature's capabilities
+// on 2026-11-21, docs/hardware-log.md). Some docs say 16; index 15 does not exist.
+export const MAX_WAVEFORM_INDEX = 14
 
 export interface HapticsDriver {
   readonly name: string
@@ -27,6 +27,19 @@ export interface HapticsDriver {
   play(pattern: HapticPattern): void
   /** Fire one preset waveform by index (0 to MAX_WAVEFORM_INDEX). */
   playRaw(index: number): void
+  /** False when this driver has no way to change how strong the vibration is. */
+  readonly canSetStrength: boolean
+  /** Vibration strength, 0 (off) to 100. Null when it cannot be read. */
+  getStrength(): Promise<number | null>
+  /**
+   * Set vibration strength, 0 (off) to 100. This changes a setting on the mouse itself, so
+   * call it when the user moves a control, not on every tick.
+   */
+  setStrength(percent: number): Promise<void>
+}
+
+function clampStrength(percent: number): number {
+  return Math.min(100, Math.max(0, Math.round(percent)))
 }
 
 function assertWaveformIndex(index: number) {
@@ -48,8 +61,16 @@ const WAVEFORM: Record<HapticPattern, number> = {
 export class ConsoleHaptics implements HapticsDriver {
   readonly name = 'console'
   readonly isConnected = true
+  readonly canSetStrength = true
+  private strength = 60
   async connect() {}
   close() {}
+  async getStrength() {
+    return this.strength
+  }
+  async setStrength(percent: number) {
+    this.strength = clampStrength(percent)
+  }
   play(pattern: HapticPattern) {
     this.playRaw(WAVEFORM[pattern])
   }
@@ -86,6 +107,14 @@ export class PluginHaptics implements HapticsDriver {
   close() {
     this.socket?.close()
     this.socket = null
+  }
+  // The plugin's API takes a waveform index and nothing else.
+  readonly canSetStrength = false
+  async getStrength() {
+    return null
+  }
+  async setStrength() {
+    throw new Error('The plugin driver cannot change strength; use webhid')
   }
   play(pattern: HapticPattern) {
     this.playRaw(WAVEFORM[pattern])
@@ -141,8 +170,17 @@ const LONG_REPORT = 0x11
 const LONG_REPORT_BYTES = 19
 const BLUETOOTH_DEVICE_INDEX = 0x02
 const RECEIVER_SLOTS = [1, 2, 3, 4, 5, 6]
-const PING_TIMEOUT_MS = 300
+const REPLY_TIMEOUT_MS = 300
 const PING_MARK = 0xa5
+const SOFTWARE_ID = 0x0e // any non-zero value; replies echo it so we can match them
+// HID++ feature 0x19b0 (haptics) sits at index 0x0b on the MX Master 4. Its functions, from
+// the Solaar project and checked on the real mouse: 0 capabilities, 1 read enabled + strength,
+// 2 write enabled + strength, 4 play preset. No function for custom waveforms is known.
+const HAPTIC_FEATURE_INDEX = 0x0b
+const FN_PING = 1
+const FN_GET_STRENGTH = 1
+const FN_SET_STRENGTH = 2
+const FN_PLAY = 4
 
 export class WebHidHaptics implements HapticsDriver {
   readonly name = 'webhid'
@@ -190,29 +228,78 @@ export class WebHidHaptics implements HapticsDriver {
   /** Ping each pairing slot (HID++ root feature) and return the first that echoes back. */
   private async findReceiverSlot(device: HidDevice): Promise<number | null> {
     for (const slot of RECEIVER_SLOTS) {
-      const answered = await new Promise<boolean>((resolve) => {
-        const onReport = (event: HidInputReportEvent) => {
-          const bytes = event.data
-          if (bytes.byteLength < 6 || bytes.getUint8(0) !== slot) return
-          // Feature index 0 echoes the ping; 0xff (or 0x8f on old devices) is an error reply.
-          const featureIndex = bytes.getUint8(1)
-          if (featureIndex === 0x00 && bytes.getUint8(5) === PING_MARK) finish(true)
-          else if (featureIndex === 0xff || featureIndex === 0x8f) finish(false)
-        }
-        const timer = setTimeout(() => finish(false), PING_TIMEOUT_MS)
-        const finish = (result: boolean) => {
-          clearTimeout(timer)
-          device.removeEventListener('inputreport', onReport)
-          resolve(result)
-        }
-        device.addEventListener('inputreport', onReport)
-        const data = new Uint8Array(LONG_REPORT_BYTES)
-        data.set([slot, 0x00, 0x1e, 0x00, 0x00, PING_MARK])
-        device.sendReport(LONG_REPORT, data).catch(() => finish(false))
-      })
-      if (answered) return slot
+      const reply = await this.request(device, slot, 0x00, FN_PING, [0x00, 0x00, PING_MARK])
+      if (reply && reply[2] === PING_MARK) return slot
     }
     return null
+  }
+
+  /**
+   * Send one HID++ call and wait for its reply. Returns the reply's parameter bytes, or null
+   * if the device answered with an error or did not answer in time.
+   */
+  private request(
+    device: HidDevice,
+    deviceIndex: number,
+    featureIndex: number,
+    fn: number,
+    params: number[] = [],
+  ): Promise<Uint8Array | null> {
+    const call = (fn << 4) | SOFTWARE_ID
+    return new Promise((resolve) => {
+      const onReport = (event: HidInputReportEvent) => {
+        const bytes = event.data
+        if (bytes.byteLength < 4 || bytes.getUint8(0) !== deviceIndex) return
+        const replyFeature = bytes.getUint8(1)
+        if (replyFeature === featureIndex && bytes.getUint8(2) === call) {
+          finish(new Uint8Array(bytes.buffer, bytes.byteOffset + 3, bytes.byteLength - 3))
+        } else if (
+          // 0xff marks an error reply to this feature; 0x8f is the older form.
+          (replyFeature === 0xff && bytes.getUint8(2) === featureIndex) ||
+          replyFeature === 0x8f
+        ) {
+          finish(null)
+        }
+      }
+      const timer = setTimeout(() => finish(null), REPLY_TIMEOUT_MS)
+      const finish = (result: Uint8Array | null) => {
+        clearTimeout(timer)
+        device.removeEventListener('inputreport', onReport)
+        resolve(result)
+      }
+      device.addEventListener('inputreport', onReport)
+      const data = new Uint8Array(LONG_REPORT_BYTES)
+      data.set([deviceIndex, featureIndex, call, ...params])
+      device.sendReport(LONG_REPORT, data).catch(() => finish(null))
+    })
+  }
+
+  readonly canSetStrength = true
+  async getStrength() {
+    if (!this.device) return null
+    const reply = await this.request(
+      this.device,
+      this.deviceIndex,
+      HAPTIC_FEATURE_INDEX,
+      FN_GET_STRENGTH,
+    )
+    if (!reply) return null
+    const enabled = (reply[0] & 0x01) === 1
+    return enabled ? reply[1] : 0
+  }
+  async setStrength(percent: number) {
+    if (!this.device) throw new Error('Connect the mouse first')
+    const level = clampStrength(percent)
+    // Zero means "haptics off"; the mouse still wants a level, so park it at 50.
+    const params = level === 0 ? [0x00, 50] : [0x01, level]
+    const reply = await this.request(
+      this.device,
+      this.deviceIndex,
+      HAPTIC_FEATURE_INDEX,
+      FN_SET_STRENGTH,
+      params,
+    )
+    if (!reply) throw new Error('The mouse did not accept the strength change')
   }
 
   close() {
@@ -225,7 +312,7 @@ export class WebHidHaptics implements HapticsDriver {
   playRaw(index: number) {
     assertWaveformIndex(index)
     const data = new Uint8Array(LONG_REPORT_BYTES)
-    data.set([this.deviceIndex, 0x0b, 0x4e, index])
+    data.set([this.deviceIndex, HAPTIC_FEATURE_INDEX, (FN_PLAY << 4) | SOFTWARE_ID, index])
     // A failed report must not become an unhandled rejection in the middle of a tick stream.
     this.device
       ?.sendReport(LONG_REPORT, data)

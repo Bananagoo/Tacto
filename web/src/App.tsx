@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { HapticPattern } from './contract'
-import { DRIVERS, type DriverName } from './haptics/driver'
+import { DRIVERS, MAX_WAVEFORM_INDEX, type DriverName } from './haptics/driver'
 import { usePulse } from './haptics/usePulse'
 import { useTacto, useTactoConnection } from './useTacto'
 
@@ -122,7 +122,7 @@ export default function App() {
         <button className="rounded bg-white/10 px-3 py-1 hover:bg-white/20" onClick={connectDriver}>
           Connect
         </button>
-        {Array.from({ length: 16 }, (_, index) => (
+        {Array.from({ length: MAX_WAVEFORM_INDEX + 1 }, (_, index) => (
           <button
             key={index}
             className="rounded bg-white/10 px-2 py-1 text-sm hover:bg-white/20"

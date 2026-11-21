@@ -1,11 +1,15 @@
 // Dev-only page (not the product UI): pick a driver, Connect, fire one waveform, or repeat the
 // selected waveform at a chosen rate to find the fastest rate that still feels like separate ticks
-// (the value for MAX_PULSE_HZ in usePulse.ts).
+// (the value for MAX_PULSE_HZ in usePulse.ts). The strength slider changes how hard the mouse
+// vibrates; it is a setting stored on the mouse, so it is sent when the slider is released.
 // Served by `make web` at /src/haptics/test.html. It reuses DRIVERS from driver.ts so there is
 // one code path to the mouse. The `console` driver needs no hardware (flashes a dot instead).
 
 import { useEffect, useMemo, useState } from 'react'
 import { DRIVERS, MAX_WAVEFORM_INDEX, type DriverName } from './driver'
+
+const MIN_RATE_HZ = 1
+const MAX_RATE_HZ = 30
 
 export default function HapticTestPage() {
   const [driverName, setDriverName] = useState<DriverName>('console')
@@ -16,6 +20,7 @@ export default function HapticTestPage() {
   const [flash, setFlash] = useState(false)
   const [rateHz, setRateHz] = useState(8)
   const [ticking, setTicking] = useState(false)
+  const [strength, setStrength] = useState<number | null>(null)
 
   // Release the old driver's socket or HID device when switching away.
   useEffect(() => () => driver.close(), [driver])
@@ -56,6 +61,7 @@ export default function HapticTestPage() {
         onChange={(event) => {
           setDriverName(event.target.value as DriverName)
           setConnected(false)
+          setStrength(null)
           setMessage('')
         }}
       >
@@ -65,7 +71,12 @@ export default function HapticTestPage() {
       </select>
       <button
         className="rounded bg-white/10 px-3 py-2 hover:bg-white/20"
-        onClick={() => run(() => driver.connect())}
+        onClick={() =>
+          run(async () => {
+            await driver.connect()
+            setStrength(await driver.getStrength())
+          })
+        }
       >
         Connect
       </button>
@@ -92,17 +103,19 @@ export default function HapticTestPage() {
         <span className={`h-3 w-3 rounded-full ${flash ? 'bg-amber-300' : 'bg-white/15'}`} />
       </div>
       <div className="flex items-center gap-3">
-        <select
-          className="rounded bg-white/10 px-2 py-1"
-          value={rateHz}
-          onChange={(event) => setRateHz(Number(event.target.value))}
-        >
-          {[2, 4, 6, 8, 10, 12, 15, 20, 25, 30].map((hz) => (
-            <option key={hz} value={hz}>
-              {hz} Hz
-            </option>
-          ))}
-        </select>
+        <label className="flex flex-1 items-center gap-3">
+          <span className="w-20 opacity-60">Speed</span>
+          <input
+            type="range"
+            className="flex-1"
+            min={MIN_RATE_HZ}
+            max={MAX_RATE_HZ}
+            step={1}
+            value={rateHz}
+            onChange={(event) => setRateHz(Number(event.target.value))}
+          />
+          <span className="w-14 text-right tabular-nums">{rateHz} Hz</span>
+        </label>
         <button
           className="rounded bg-white/10 px-3 py-2 hover:bg-white/20 disabled:opacity-40"
           disabled={!connected}
@@ -111,6 +124,25 @@ export default function HapticTestPage() {
           {ticking ? 'Stop ticks' : 'Start ticks'}
         </button>
       </div>
+      <label className="flex items-center gap-3">
+        <span className="w-20 opacity-60">Strength</span>
+        <input
+          type="range"
+          className="flex-1 disabled:opacity-40"
+          min={0}
+          max={100}
+          step={5}
+          disabled={!connected || !driver.canSetStrength}
+          value={strength ?? 0}
+          onChange={(event) => setStrength(Number(event.target.value))}
+          onPointerUp={() => strength !== null && run(() => driver.setStrength(strength))}
+          onKeyUp={() => strength !== null && run(() => driver.setStrength(strength))}
+        />
+        <span className="w-14 text-right tabular-nums">{strength ?? '–'}</span>
+      </label>
+      {!driver.canSetStrength && (
+        <p className="text-sm opacity-60">This driver cannot change strength; use webhid.</p>
+      )}
       <p className="text-sm opacity-60">
         WebHID effect ids are not confirmed to match the plugin's waveform names.
       </p>

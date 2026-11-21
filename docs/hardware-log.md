@@ -34,3 +34,10 @@ Format:
 ## 2026-11-21, mouse tick rate, tested by Ananya Maheshwari
 - Failed: the mock's top rate (about 8 Hz at full voltage) felt a bit too quick with `tick` = 3.
 - Decision: `MAX_PULSE_HZ` lowered from 12 to 6 in `web/src/haptics/usePulse.ts`. This is a feel choice, not a measured limit of the mouse. Above about 6 V the mock's rate is held at 6 Hz, so higher voltage stops changing the tick rate.
+
+## 2026-11-21, mouse through the Logi Bolt receiver, tested by Katherine
+- Passed: `webhid` driver connects when "USB Receiver" is picked in Chrome and fires waveforms (felt by hand). The driver finds the mouse on receiver slot 2 by pinging slots 1 to 6.
+- Passed: the plugin route is still not installed on this laptop (no Logi Options+), so `webhid` over the receiver is the working route here.
+- Measured (read from the mouse over HID++, not felt): the haptic feature is 0x19b0 at index 0x0b; it reports exactly 15 presets, 0 to 14; haptics enabled, strength 60 of 100, full 0 to 100 range supported. Writing strength 60 back was accepted.
+- Not tested by feel yet: whether changing strength is noticeable, and which preset and rate loop into a steady buzz.
+- Decision: `MAX_WAVEFORM_INDEX` = 14. Strength is exposed as `setStrength` on the driver and as a slider on the haptics test page.
