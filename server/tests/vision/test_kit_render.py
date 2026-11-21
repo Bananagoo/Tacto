@@ -115,3 +115,15 @@ def test_the_tiles_sheet_follows_the_layout():
     )
     kinds = sorted(tile_kind(m.id) for m in find_markers(grey(render_tiles(layout, dpi=DPI))))
     assert kinds == ["bulb"] * 2 + ["resistor"] * 2 + ["switch"] * 2 + ["wire"] * 2
+
+
+def test_the_dot_grid_is_printed_except_under_the_middle_of_a_slot(mat_page, layout, geometry):
+    # The outer columns and the bottom row of Circuits 101 carry no wire or part.
+    free_dots = [(col, row) for col in (0, layout.cols - 1) for row in range(layout.rows)]
+    free_dots += [(col, layout.rows - 1) for col in range(layout.cols)]
+    for dot in free_dots:
+        shade = pixel_at(mat_page, geometry.dot_mm(dot))
+        assert 100 < shade < 200, "a free dot is grey: seen, but not mistaken for ink"
+    # The "tile" slot's label is two lines either side of its middle, so the middle
+    # itself shows whether a dot was printed there.
+    assert pixel_at(mat_page, geometry.dot_mm((7, 2))) > 240, "no dot through a slot's label"

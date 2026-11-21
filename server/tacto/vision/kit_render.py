@@ -63,9 +63,13 @@ def render_mat(layout: MatLayout, *, dpi: int = 150) -> np.ndarray:
     """The mat page as a BGR image."""
     geometry = PrintGeometry.for_layout(layout)
     canvas = PageCanvas(PAGE_WIDTH_MM, PAGE_HEIGHT_MM, dpi=dpi)
+    # The dot under the middle of a slot would sit in the slot's label, and it joins
+    # nothing: a tile covers it.
+    slot_middles = {_middle_dot(slot) for slot in layout.slots}
     for col in range(layout.cols):
         for row in range(layout.rows):
-            canvas.circle(geometry.dot_mm((col, row)), _DOT_RADIUS_MM, colour=_DOT_GREY)
+            if (col, row) not in slot_middles:
+                canvas.circle(geometry.dot_mm((col, row)), _DOT_RADIUS_MM, colour=_DOT_GREY)
     for drawable in layout.drawables:
         _draw_guide(canvas, geometry, drawable)
     for slot in layout.slots:
@@ -133,6 +137,10 @@ def render_tile(kind: SlotContent, marker_id: int, *, dpi: int = 150) -> np.ndar
     )
     _draw_cut_line(canvas)
     return canvas.image
+
+
+def _middle_dot(slot: Slot) -> tuple[float, float]:
+    return (slot.a[0] + slot.b[0]) / 2, (slot.a[1] + slot.b[1]) / 2
 
 
 def _ends_mm(geometry: PrintGeometry, segment: Segment) -> tuple[PointMm, PointMm]:
