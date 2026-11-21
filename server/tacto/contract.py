@@ -77,6 +77,9 @@ class Touch(BaseModel):
     y: float = 0.0  # 0..1 from the first dot row to the last
     piece_id: str | None = None  # the piece under the fingertip, if any
     pulse_hz: float = 0.0  # tick rate to play on the mouse; 0 means silent
+    # How hard to vibrate, 0 to 1: the current through the touched piece as a share of the
+    # current that gets full strength. It rises and falls with pulse_hz. 1 while buzzing.
+    strength: float = Field(0.0, ge=0.0, le=1.0)
     buzz: bool = False  # the touched piece is shorted: one hard continuous buzz, no ticks
 
 

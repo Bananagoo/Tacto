@@ -31,7 +31,7 @@ MatView: placed pieces + fingertip         lab.py (the seam: camera or recorded 
   ▼
 Lab                                        lab.py
   │  pieces.py   pieces → solver → pieces with current, brightness, shorted
-  │  sim/        graph analysis (open, short), ngspice, current → pulse rate
+  │  sim/        graph analysis (open, short), ngspice, current → pulse rate and strength
   │  lesson.py   which step, whether the circuit completes it
   ▼
 State message, 15 a second                 contract.py, app.py (WebSocket /ws)

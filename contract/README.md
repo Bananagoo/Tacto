@@ -31,8 +31,11 @@ and `t` counting up. It needs no camera, mouse or solver. It accepts
 - `circuit.status` is `working`, `open` or `shorted`. When shorted,
   `circuit.shorted_path` lists the piece ids round the loop, and each has `shorted: true`.
 - `touch` is the fingertip. `x`, `y` run 0 to 1 from the first dot column/row to the
-  last. Play `pulse_hz` ticks a second on the mouse; if `buzz` is true play one hard
-  continuous buzz. Vibration is current, never voltage.
+  last. Play `pulse_hz` ticks a second on the mouse, at `strength` (0 to 1) of the
+  mouse's vibration range; if `buzz` is true play one hard continuous buzz. Both follow
+  the current through the touched piece, so more bulbs in series feel slower and
+  fainter and the battery wire of a parallel circuit feels faster and stronger.
+  Vibration is current, never voltage.
 - `mat_visible: false` means the camera has lost the mat; pieces hold their last values.
 - `lesson.prompt` is the text to show. `step_done` turns true once the circuit has met
   the step's goal for half a second, and stays true; about six seconds later the next

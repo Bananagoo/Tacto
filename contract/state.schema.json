@@ -221,6 +221,13 @@
           "title": "Pulse Hz",
           "type": "number"
         },
+        "strength": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Strength",
+          "type": "number"
+        },
         "buzz": {
           "default": false,
           "title": "Buzz",
@@ -295,6 +302,7 @@
         "y": 0.0,
         "piece_id": null,
         "pulse_hz": 0.0,
+        "strength": 0.0,
         "buzz": false
       }
     },

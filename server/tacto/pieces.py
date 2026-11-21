@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from tacto.contract import Circuit, CircuitStatus, Dot, Piece, PieceType, Touch, segment_id
-from tacto.sim.feel import pulse_hz
+from tacto.sim.feel import pulse_hz, strength
 from tacto.sim.solver import solve_circuit
 from tacto.sim.types import Part, Wire
 
@@ -87,9 +87,14 @@ def touch_for(pieces: Sequence[Piece], *, x: float, y: float, piece_id: str | No
         return Touch(present=True, x=x, y=y)
     if piece.shorted:
         # A short is a warning, not a current reading: one continuous buzz, no ticks.
-        return Touch(present=True, x=x, y=y, piece_id=piece.id, buzz=True)
+        return Touch(present=True, x=x, y=y, piece_id=piece.id, buzz=True, strength=1.0)
     return Touch(
-        present=True, x=x, y=y, piece_id=piece.id, pulse_hz=round(pulse_hz(piece.current), 2)
+        present=True,
+        x=x,
+        y=y,
+        piece_id=piece.id,
+        pulse_hz=round(pulse_hz(piece.current), 2),
+        strength=round(strength(piece.current), 3),
     )
 
 

@@ -3,7 +3,9 @@
 // and nothing from src/, so it works whatever state the product UI is in. Needs `make dev`
 // or `make mock` on port 8000.
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DRIVERS } from '../../src/haptics/driver'
+import { pulsePeriodMs, useBeat } from '../../src/haptics/usePulse'
 
 type Dot = [number, number]
 
@@ -32,6 +34,7 @@ interface State {
     y: number
     piece_id: string | null
     pulse_hz: number
+    strength: number
     buzz: boolean
   }
   lesson: {
@@ -46,6 +49,19 @@ interface State {
 const PITCH = 100 // drawing units between neighbouring dots
 const MARGIN = 60
 const RETRY_MS = 1000
+// TODO(Katie): tune all three by feel on the real mouse.
+// The mouse's strength setting runs 0 to 100. The faintest current still has to be felt,
+// so the state's strength (0 to 1) is spread over this floor up to 100.
+const MIN_STRENGTH_PERCENT = 25
+// Strength is a setting stored on the mouse, written over HID: only send a change this big.
+const STRENGTH_STEP_PERCENT = 5
+// A short is one preset looped fast enough to run together into a buzz.
+const BUZZ_HZ = 25
+
+function strengthPercent(strength: number): number {
+  const percent = MIN_STRENGTH_PERCENT + strength * (100 - MIN_STRENGTH_PERCENT)
+  return Math.round(percent / STRENGTH_STEP_PERCENT) * STRENGTH_STEP_PERCENT
+}
 // The printed pieces' own colours (kit/pieces.yaml), so the picture looks like the desk.
 const COLOUR = {
   wire: 'rgb(30,70,210)',
@@ -179,6 +195,53 @@ export default function StatePanel() {
   const setVolts = (volts: number) =>
     socket.current?.send(JSON.stringify({ type: 'set_voltage', volts }))
 
+  // ---------- the mouse: the current under the fingertip, as ticks ----------
+  // The same driver the product UI uses (src/haptics/driver.ts), so what is felt here is
+  // what the product will play. WebHID needs Chrome or Edge and a click to connect.
+  const mouse = useMemo(() => DRIVERS.webhid(), [])
+  const [mouseOn, setMouseOn] = useState(false)
+  const [mouseError, setMouseError] = useState('')
+  const strengthBefore = useRef<number | null>(null)
+  const strengthSent = useRef<number | null>(null)
+
+  const connectMouse = async () => {
+    setMouseError('')
+    try {
+      await mouse.connect()
+      // Remember how the mouse was set, to put it back when this page lets go of it.
+      strengthBefore.current = await mouse.getStrength()
+      setMouseOn(mouse.isConnected)
+    } catch (error) {
+      setMouseError(error instanceof Error ? error.message : String(error))
+    }
+  }
+  useEffect(
+    () => () => {
+      const restore =
+        strengthBefore.current != null
+          ? mouse.setStrength(strengthBefore.current)
+          : Promise.resolve()
+      void restore.catch(() => undefined).finally(() => mouse.close())
+    },
+    [mouse],
+  )
+
+  const touch = state?.touch
+  // A stale state must not keep the mouse ticking: silent when the server has gone.
+  const live = mouseOn && connected && (touch?.present ?? false)
+  const buzzing = live && (touch?.buzz ?? false)
+  const periodMs = buzzing ? 1000 / BUZZ_HZ : live ? pulsePeriodMs(touch?.pulse_hz ?? 0) : 0
+  const percent = strengthPercent(touch?.strength ?? 0)
+
+  // Strength first, then ticks at that strength: a change is sent once, not on every tick.
+  useEffect(() => {
+    if (periodMs === 0 || strengthSent.current === percent) return
+    strengthSent.current = percent
+    void mouse.setStrength(percent).catch(() => undefined)
+  }, [mouse, periodMs, percent])
+  const fire = useCallback(() => mouse.play(buzzing ? 'short' : 'tick'), [mouse, buzzing])
+  useBeat(fire, periodMs)
+
   if (!state) {
     return (
       <main className="mx-auto max-w-6xl p-8">
@@ -255,11 +318,40 @@ export default function StatePanel() {
           <dd>
             {state.touch.present
               ? state.touch.piece_id
-                ? `on ${state.touch.piece_id}, ${state.touch.buzz ? 'buzz' : `${state.touch.pulse_hz} Hz`}`
+                ? `on ${state.touch.piece_id}`
                 : 'over the mat'
               : 'none'}
           </dd>
+          <dt className="opacity-60">Feels like</dt>
+          <dd>
+            {state.touch.buzz
+              ? 'buzz (short)'
+              : state.touch.pulse_hz > 0
+                ? `${Math.min(state.touch.pulse_hz, 1000 / pulsePeriodMs(state.touch.pulse_hz)).toFixed(1)} ticks/s at ${strengthPercent(state.touch.strength)}% strength`
+                : 'nothing'}
+          </dd>
         </dl>
+
+        <div className="flex flex-col gap-2 rounded-xl bg-white/5 p-4">
+          {mouseOn ? (
+            <p className="text-emerald-400">
+              Mouse connected
+              {periodMs > 0 ? ': playing' : ': silent until a finger is on a live piece'}
+            </p>
+          ) : (
+            <button
+              className="rounded bg-emerald-500/80 px-4 py-2 font-medium hover:bg-emerald-500"
+              onClick={() => void connectMouse()}
+            >
+              Connect mouse
+            </button>
+          )}
+          {mouseError && <p className="text-rose-400">{mouseError}</p>}
+          <p className="text-sm opacity-60">
+            Pick "USB Receiver" in the browser prompt. Rate and strength both follow the current
+            through the piece under your fingertip.
+          </p>
+        </div>
 
         <label className="flex flex-col gap-2 rounded-xl bg-white/5 p-4">
           <span className="opacity-60">Voltage (what the scroll wheel sends)</span>
