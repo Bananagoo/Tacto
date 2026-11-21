@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import {
   cameraStatus,
   listCameras,
@@ -19,6 +19,7 @@ export default function CameraPanel() {
   const [nonce, setNonce] = useState(0)
   const [aruco, setAruco] = useState(true)
   const [hand, setHand] = useState(false)
+  const [mat, setMat] = useState(false)
   const [status, setStatus] = useState<CameraStatus | null>(null)
   const [streamError, setStreamError] = useState('')
   const image = useRef<HTMLImageElement>(null)
@@ -40,6 +41,7 @@ export default function CameraPanel() {
   const overlays: Overlay[] = [
     ...(aruco ? (['aruco'] as const) : []),
     ...(hand ? (['hand'] as const) : []),
+    ...(mat ? (['mat'] as const) : []),
   ]
   const source = running ? streamUrl(index, overlays, nonce) : ''
 
@@ -113,6 +115,10 @@ export default function CameraPanel() {
           <input type="checkbox" checked={hand} onChange={(e) => setHand(e.target.checked)} />
           Hand points
         </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={mat} onChange={(e) => setMat(e.target.checked)} />
+          Mat reading
+        </label>
       </div>
 
       {listError && <p className="text-rose-400">{listError}</p>}
@@ -181,6 +187,26 @@ export default function CameraPanel() {
                         .join('; ') || 'no hand'
                     : '–')}
               </dd>
+            </>
+          )}
+          {mat && (
+            <>
+              <dt className="opacity-60">Mat</dt>
+              <dd className={shown?.mat?.found ? 'text-emerald-400' : 'text-amber-300'}>
+                {shown?.mat == null ? '–' : shown.mat.found ? 'found' : 'four corners not visible'}
+              </dd>
+              {shown?.mat?.found && (
+                <>
+                  <dt className="opacity-60">Drawn</dt>
+                  <dd>{shown.mat.drawn?.join(', ') || 'nothing'}</dd>
+                  {Object.entries(shown.mat.slots ?? {}).map(([slot, content]) => (
+                    <Fragment key={slot}>
+                      <dt className="opacity-60">Slot {slot}</dt>
+                      <dd>{content}</dd>
+                    </Fragment>
+                  ))}
+                </>
+              )}
             </>
           )}
           {shown?.error && (

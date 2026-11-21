@@ -25,9 +25,11 @@ export interface CameraStatus {
   corners_visible?: boolean
   fingertips?: Fingertip[]
   hand_error?: string
+  /** What the product's mat reader makes of the current frame, unsmoothed. */
+  mat?: { found: boolean; drawn?: string[]; slots?: Record<string, string> }
 }
 
-export type Overlay = 'aruco' | 'hand'
+export type Overlay = 'aruco' | 'hand' | 'mat'
 
 export async function listCameras(): Promise<CameraInfo[]> {
   const response = await fetch('/api/dev/cameras')

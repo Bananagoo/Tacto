@@ -259,3 +259,39 @@ def test_status_combines_what_every_viewer_saw(client):
         assert status["fingertips"][0]["x"] == 5
     finally:
         routes.hub.release(0)
+
+
+def test_mat_overlay_reports_the_reader_result_for_the_frame(client, monkeypatch):
+    from tacto.mat.loader import load_mat
+    from tacto.platform import MATS_DIR
+    from tacto.vision.kit_render import render_mat
+
+    layout = load_mat(MATS_DIR / "circuits-101.yaml")
+    monkeypatch.setattr(routes, "hub", fake_hub(render_mat(layout), []))
+    hub = routes.hub
+    hub.acquire(0)
+    try:
+        client.get("/dev/camera/stream", params={"index": 0, "overlay": "mat", "frames": 1})
+        status = client.get("/dev/camera/status", params={"index": 0}).json()
+        assert status["mat"] == {
+            "found": True,
+            "drawn": [],
+            "slots": {"tile": "empty", "side": "empty"},
+        }
+    finally:
+        hub.release(0)
+
+
+def test_mat_overlay_says_when_the_mat_is_not_in_view(client, monkeypatch):
+    # A bare desk. (The shared test frame has markers 0-3 in its corners, which is a mat.)
+    desk = np.full((720, 1280, 3), 120, dtype=np.uint8)
+    monkeypatch.setattr(routes, "hub", fake_hub(desk, []))
+    hub = routes.hub
+    hub.acquire(0)
+    try:
+        client.get("/dev/camera/stream", params={"index": 0, "overlay": "mat", "frames": 1})
+        assert client.get("/dev/camera/status", params={"index": 0}).json()["mat"] == {
+            "found": False
+        }
+    finally:
+        hub.release(0)

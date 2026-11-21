@@ -22,9 +22,9 @@ Run from the repo root.
 | `make server` / `make web` | One side only |
 | `make check` | Format check, lint, type-check, tests. Must pass before every commit |
 | `make fmt` | Format everything |
-| `make kit` | Render the printable mat and parts to `kit/out/` (once `kit/make_kit.py` exists) |
+| `make kit` | Render the printable mat and tiles to `kit/out/` from `kit/mats/circuits-101.yaml` |
 
-`TACTO_SOURCE=replay|camera` picks where the product's world comes from. Neither is built yet, so until the session loop lands use `make bench`, which needs no hardware.
+`TACTO_SOURCE=camera|replay` picks where the product's world comes from: the camera above the printed mat (default), or frames recorded into `server/fixtures/<mat id>/` with `scripts/record_frames.py`. With neither, use `make bench`, which needs no hardware.
 
 ## Product and tooling
 
