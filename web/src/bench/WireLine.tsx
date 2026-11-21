@@ -45,7 +45,7 @@ export const WireLine = memo(function WireLine({
       {touched && <line {...ends} className="stroke-white/70" strokeWidth={26} />}
       <line
         {...ends}
-        className={overloaded ? 'animate-overload stroke-orange-500' : 'stroke-stone-100/30'}
+        className={overloaded ? 'animate-overload stroke-orange-500' : 'stroke-amber-200/50'}
         strokeWidth={overloaded ? 16 : 6}
       />
       {speed !== 0 && (

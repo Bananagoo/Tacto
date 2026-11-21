@@ -35,9 +35,9 @@ export function Bench({ children }: { children?: ReactNode }) {
 
   return (
     <figure
-      className={`relative m-0 aspect-[96/66] min-h-0 overflow-hidden rounded-3xl bg-white/5 lg:aspect-auto ${
+      className={`relative m-0 aspect-[96/66] min-h-0 overflow-hidden rounded-3xl bg-emerald-800 lg:aspect-auto ${
         // A thick frame as well as the banner: the short must be seen from across the room.
-        short ? 'ring-8 ring-orange-500 ring-inset' : 'ring-1 ring-white/10 ring-inset'
+        short ? 'ring-8 ring-orange-500 ring-inset' : 'ring-2 ring-emerald-950 ring-inset'
       }`}
     >
       <svg
@@ -65,7 +65,11 @@ export function Bench({ children }: { children?: ReactNode }) {
         ))}
         <Fingertip />
       </svg>
-      <BenchNotice connected={connected} status={circuit?.status} />
+      {/* With the server's circuit hidden, a mat that is connected reads as empty. */}
+      <BenchNotice
+        connected={connected}
+        status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
+      />
       {children}
     </figure>
   )
