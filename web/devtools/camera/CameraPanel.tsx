@@ -248,7 +248,9 @@ export default function CameraPanel() {
                   : !shown.mat_found
                     ? `not found (corners ${shown.corners_seen?.join(', ') || 'none'})`
                     : shown.mat_held
-                      ? `held (corners ${shown.corners_seen?.join(', ') || 'none'})`
+                      ? shown.mat_confirmed
+                        ? `held (corners ${shown.corners_seen?.join(', ')})`
+                        : 'held blind: no corner readable, not reading pieces'
                       : 'all four corners'}
               </dd>
             </>

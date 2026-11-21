@@ -23,6 +23,8 @@ export interface CameraStatus {
   sharpness?: number
   mat_found?: boolean
   mat_held?: boolean
+  /** A corner was read in this frame. False while the picture is too soft to read any. */
+  mat_confirmed?: boolean
   corners_seen?: number[]
   marker_ids?: number[]
   missing_corners?: number[]

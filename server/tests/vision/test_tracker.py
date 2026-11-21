@@ -2,6 +2,7 @@
 
 import math
 
+import cv2
 import numpy as np
 from vision_scenes import STRAIGHT, TILTED, Scene, frame_position
 
@@ -37,7 +38,7 @@ def test_a_mat_never_seen_whole_is_not_found(mat, geometry):
 def test_four_corners_give_a_fresh_position(mat, geometry):
     tracker = MatTracker(geometry)
     flattened = tracker.see(Scene(mat).photograph(TILTED))
-    assert flattened is not None and tracker.held is False
+    assert flattened is not None and tracker.held is False and tracker.confirmed is True
     assert worst_dot_error_mm(flattened, TILTED, mat, geometry) < 1.5
 
 
@@ -46,7 +47,7 @@ def test_a_covered_corner_keeps_the_last_position_and_still_shows_the_new_frame(
     tracker.see(Scene(mat).photograph(TILTED))
     covered = Scene(mat).cover_corner(2).place("battery", (3, 2), (4, 2))
     flattened = tracker.see(covered.photograph(TILTED))
-    assert flattened is not None and tracker.held is True
+    assert flattened is not None and tracker.held is True and tracker.confirmed is True
     assert worst_dot_error_mm(flattened, TILTED, mat, geometry) < 1.5
     # The piece laid down while the corner was covered is in the flattened picture.
     x_mm, y_mm = np.mean([geometry.dot_mm((3, 2)), geometry.dot_mm((4, 2))], axis=0)
@@ -75,7 +76,7 @@ def test_a_mat_that_moved_while_a_corner_was_covered_is_lost(mat, geometry):
     assert tracker.see(Scene(mat).photograph(STRAIGHT)) is not None
 
 
-def test_with_no_corner_in_sight_it_holds_only_briefly(mat, geometry):
+def test_with_no_corner_in_sight_it_holds_for_a_while_but_unconfirmed(mat, geometry):
     clock = Clock()
     tracker = MatTracker(geometry, clock=clock)
     tracker.see(Scene(mat).photograph())
@@ -85,8 +86,22 @@ def test_with_no_corner_in_sight_it_holds_only_briefly(mat, geometry):
     frame = blind.photograph()
     clock.now += BLIND_HOLD_S * 0.5
     assert tracker.see(frame) is not None and tracker.held is True
+    assert tracker.confirmed is False
     clock.now += BLIND_HOLD_S
-    assert tracker.see(frame) is None
+    assert tracker.see(frame) is None and tracker.confirmed is False
+
+
+def test_a_soft_frame_keeps_the_position_and_focus_coming_back_confirms_it(mat, geometry):
+    # A hand on the laptop pulls the focus: no marker can be read in the blur.
+    clock = Clock()
+    tracker = MatTracker(geometry, clock=clock)
+    tracker.see(Scene(mat).photograph())
+    soft = cv2.GaussianBlur(Scene(mat).photograph(), (0, 0), 12)
+    for _ in range(4):
+        clock.now += 2.0
+        assert tracker.see(soft) is not None and tracker.confirmed is False
+    assert tracker.see(Scene(mat).photograph()) is not None
+    assert tracker.confirmed is True and tracker.held is False
 
 
 def test_a_frame_that_is_not_a_picture_is_not_an_error(mat, geometry):

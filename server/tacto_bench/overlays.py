@@ -95,6 +95,7 @@ def flat_view(frame: np.ndarray, tracker: MatTracker) -> tuple[np.ndarray | None
     report = {
         "mat_found": flattened is not None,
         "mat_held": tracker.held,
+        "mat_confirmed": tracker.confirmed,
         "corners_seen": tracker.corners_seen,
     }
     return (None if flattened is None else flattened.image), report
