@@ -5,6 +5,7 @@ import { DotGrid } from './DotGrid'
 import { placeKeys, VIEW_HEIGHT, VIEW_WIDTH, type Point } from './grid'
 import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
+import { Readout } from './Readout'
 import { readingAt } from './readingAt'
 import { WireLine } from './WireLine'
 
@@ -76,13 +77,14 @@ export function Bench({ children }: { children?: ReactNode }) {
         {parts.map((part) => (
           <PartView key={part.id} part={part} />
         ))}
-        <Multimeter point={pointer} reading={reading} />
+        <Multimeter point={pointer} />
       </svg>
       {/* With the server's circuit hidden, a mat that is connected reads as empty. */}
       <BenchNotice
         connected={connected}
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
+      <Readout reading={reading} />
       {children}
     </figure>
   )
