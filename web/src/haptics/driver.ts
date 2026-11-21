@@ -100,13 +100,33 @@ export class PluginHaptics implements HapticsDriver {
 /**
  * Direct WebHID, Chrome or Edge only. Packet layout follows
  * https://github.com/mario-gutierrez/mx-master-4-webhid (MIT):
- * report 0x11, 19 bytes: device index 0x02, feature 0x0b4e, effect id, zeros.
+ * report 0x11, 19 bytes: device index, feature 0x0b4e, effect id, zeros.
+ *
+ * Two ways the mouse can be connected:
+ *  - Bluetooth: the browser sees the mouse itself; device index 0x02, as in that project.
+ *  - Logi Bolt USB receiver: the browser sees the receiver, and the device index is the
+ *    slot the mouse is paired to (1-6). We find the slot by pinging each one.
+ * TODO(haptics owner): the receiver route is our own guess at the addressing, not from
+ * any Logitech doc. Confirm on the real mouse and log it in docs/hardware-log.md.
  */
+interface HidCollection {
+  usagePage?: number
+  outputReports?: { reportId?: number }[]
+}
+interface HidInputReportEvent {
+  reportId: number
+  data: DataView
+}
 interface HidDevice {
   opened: boolean
+  productId: number
+  productName: string
+  collections: HidCollection[]
   open(): Promise<void>
   close(): Promise<void>
   sendReport(reportId: number, data: Uint8Array): Promise<void>
+  addEventListener(type: 'inputreport', listener: (event: HidInputReportEvent) => void): void
+  removeEventListener(type: 'inputreport', listener: (event: HidInputReportEvent) => void): void
 }
 interface Hid {
   requestDevice(options: {
@@ -114,9 +134,20 @@ interface Hid {
   }): Promise<HidDevice[]>
 }
 
+const LOGITECH = 0x046d
+const MOUSE_PRODUCT_IDS = [0xb042, 0xb048] // MX Master 4 and the Business edition, over Bluetooth
+const BOLT_RECEIVER_PRODUCT_ID = 0xc548
+const LONG_REPORT = 0x11
+const LONG_REPORT_BYTES = 19
+const BLUETOOTH_DEVICE_INDEX = 0x02
+const RECEIVER_SLOTS = [1, 2, 3, 4, 5, 6]
+const PING_TIMEOUT_MS = 300
+const PING_MARK = 0xa5
+
 export class WebHidHaptics implements HapticsDriver {
   readonly name = 'webhid'
   private device: HidDevice | null = null
+  private deviceIndex = BLUETOOTH_DEVICE_INDEX
 
   get isConnected() {
     return this.device?.opened === true
@@ -125,16 +156,65 @@ export class WebHidHaptics implements HapticsDriver {
   async connect() {
     const hid = (navigator as Navigator & { hid?: Hid }).hid
     if (!hid) throw new Error('WebHID is not available in this browser')
-    const [device] = await hid.requestDevice({
-      filters: [
-        { vendorId: 0x046d, productId: 0xb042 },
-        { vendorId: 0x046d, productId: 0xb048 },
-      ],
+    const devices = await hid.requestDevice({
+      filters: [...MOUSE_PRODUCT_IDS, BOLT_RECEIVER_PRODUCT_ID].map((productId) => ({
+        vendorId: LOGITECH,
+        productId,
+      })),
     })
-    if (!device) throw new Error('No MX Master 4 selected')
+    // A receiver shows up as several HID devices; only one of them takes the long report.
+    const device =
+      devices.find((candidate) =>
+        candidate.collections.some((collection) =>
+          collection.outputReports?.some((report) => report.reportId === LONG_REPORT),
+        ),
+      ) ?? devices[0]
+    if (!device) throw new Error('No MX Master 4 or Logi receiver selected')
     if (!device.opened) await device.open()
     this.device = device
+
+    if (device.productId === BOLT_RECEIVER_PRODUCT_ID) {
+      const slot = await this.findReceiverSlot(device)
+      if (slot === null) {
+        throw new Error(
+          'The receiver is connected but no mouse answered. Is the mouse on and on the receiver channel?',
+        )
+      }
+      this.deviceIndex = slot
+      console.log(`haptics: mouse found on receiver slot ${slot}`)
+    } else {
+      this.deviceIndex = BLUETOOTH_DEVICE_INDEX
+    }
   }
+
+  /** Ping each pairing slot (HID++ root feature) and return the first that echoes back. */
+  private async findReceiverSlot(device: HidDevice): Promise<number | null> {
+    for (const slot of RECEIVER_SLOTS) {
+      const answered = await new Promise<boolean>((resolve) => {
+        const onReport = (event: HidInputReportEvent) => {
+          const bytes = event.data
+          if (bytes.byteLength < 6 || bytes.getUint8(0) !== slot) return
+          // Feature index 0 echoes the ping; 0xff (or 0x8f on old devices) is an error reply.
+          const featureIndex = bytes.getUint8(1)
+          if (featureIndex === 0x00 && bytes.getUint8(5) === PING_MARK) finish(true)
+          else if (featureIndex === 0xff || featureIndex === 0x8f) finish(false)
+        }
+        const timer = setTimeout(() => finish(false), PING_TIMEOUT_MS)
+        const finish = (result: boolean) => {
+          clearTimeout(timer)
+          device.removeEventListener('inputreport', onReport)
+          resolve(result)
+        }
+        device.addEventListener('inputreport', onReport)
+        const data = new Uint8Array(LONG_REPORT_BYTES)
+        data.set([slot, 0x00, 0x1e, 0x00, 0x00, PING_MARK])
+        device.sendReport(LONG_REPORT, data).catch(() => finish(false))
+      })
+      if (answered) return slot
+    }
+    return null
+  }
+
   close() {
     void this.device?.close()
     this.device = null
@@ -144,11 +224,11 @@ export class WebHidHaptics implements HapticsDriver {
   }
   playRaw(index: number) {
     assertWaveformIndex(index)
-    const data = new Uint8Array(19)
-    data.set([0x02, 0x0b, 0x4e, index])
+    const data = new Uint8Array(LONG_REPORT_BYTES)
+    data.set([this.deviceIndex, 0x0b, 0x4e, index])
     // A failed report must not become an unhandled rejection in the middle of a tick stream.
     this.device
-      ?.sendReport(0x11, data)
+      ?.sendReport(LONG_REPORT, data)
       .catch((error) => console.error('haptic report failed', error))
     window.dispatchEvent(new CustomEvent('tacto:haptic', { detail: index }))
   }
