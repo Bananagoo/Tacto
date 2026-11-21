@@ -14,7 +14,7 @@ from tacto.lesson import (
     is_satisfied,
     load_lesson,
 )
-from tacto.pieces import Placed, solve_pieces
+from tacto.pieces import solve_pieces
 from tacto_mock.scenario import branch, loop
 
 LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml"
@@ -167,7 +167,7 @@ def test_step_ids_must_be_unique():
         Lesson(id="x", title="X", steps=[step, step])
 
 
-# ---------- the lab carries the lesson and the switch taps ----------
+# ---------- the lab carries the lesson ----------
 
 
 class Mat:
@@ -195,74 +195,12 @@ def test_without_a_lesson_the_lesson_fields_are_empty():
     assert Lab(GRID, Mat([]), source_name="manual").state().lesson.step_count == 0
 
 
-def test_a_dwell_on_the_switch_closes_it_and_a_second_tap_opens_it():
+def test_a_finger_resting_on_a_switch_changes_nothing():
+    # Open and closed switches are different pieces; the learner swaps them.
     clock = Clock()
-    mat = Mat(CIRCUITS["open"], finger=SWITCH_XY)
-    lab = Lab(GRID, mat, source_name="camera", now=clock)
-    assert lab.state().circuit.status == "open"
-    clock.t = 0.4
-    assert lab.state().circuit.status == "open"
-    clock.t = 0.5
-    state = lab.state()
-    assert state.circuit.status == "working"
-    assert next(p for p in state.pieces if p.type == "switch").closed is True
-    clock.t = 5.0
-    assert lab.state().circuit.status == "working"  # a resting finger does not tap again
-
-    mat.current = MatView(mat.current.placed, None)
-    clock.t = 5.1
-    lab.state()
-    mat.current = MatView(mat.current.placed, SWITCH_XY)
-    clock.t = 5.2
-    lab.state()
-    clock.t = 5.7
-    assert lab.state().circuit.status == "open"
-
-
-def test_a_finger_on_another_piece_never_taps():
-    clock = Clock()
-    lab = Lab(GRID, Mat(CIRCUITS["open"], finger=(2.5 / 8, 1 / 5)), source_name="camera", now=clock)
-    for t in (0.0, 0.5, 1.0, 2.0):
+    lab = Lab(GRID, Mat(CIRCUITS["open"], finger=SWITCH_XY), source_name="camera", now=clock)
+    for t in (0.0, 0.5, 1.0, 5.0):
         clock.t = t
-        assert lab.state().circuit.status == "open"
-
-
-def test_a_switch_taken_off_the_mat_is_forgotten():
-    clock = Clock()
-    mat = Mat(CIRCUITS["open"], finger=SWITCH_XY)
-    lab = Lab(GRID, mat, source_name="camera", now=clock)
-    lab.state()
-    clock.t = 0.5
-    assert lab.state().circuit.status == "working"
-    without = [p for p in CIRCUITS["open"] if p.type != "switch"]
-    mat.current = MatView(tuple(without), None)
-    clock.t = 1.0
-    lab.state()
-    mat.current = MatView(tuple(CIRCUITS["open"]), None)
-    clock.t = 1.5
-    assert lab.state().circuit.status == "open"  # the new switch starts open
-
-
-def test_a_tapped_switch_is_remembered_while_the_mat_is_hidden():
-    clock = Clock()
-    mat = Mat(CIRCUITS["open"], finger=SWITCH_XY)
-    lab = Lab(GRID, mat, source_name="camera", now=clock)
-    lab.state()
-    clock.t = 0.5
-    lab.state()
-    # The camera loses the mat and, at worst, reports nothing on it.
-    mat.current = MatView((), None, mat_visible=False)
-    clock.t = 1.0
-    lab.state()
-    mat.current = MatView(tuple(CIRCUITS["open"]), None)
-    clock.t = 1.5
-    assert lab.state().circuit.status == "working"
-
-
-def test_a_hand_set_closed_switch_can_be_tapped_open():
-    clock = Clock()
-    placed = [Placed("switch", (4, 1), (4, 2), closed=True)]
-    lab = Lab(GRID, Mat(placed, finger=SWITCH_XY), source_name="manual", now=clock)
-    lab.state()
-    clock.t = 0.5
-    assert lab.state().pieces[0].closed is False
+        state = lab.state()
+        assert state.circuit.status == "open"
+        assert next(p for p in state.pieces if p.type == "switch").closed is False

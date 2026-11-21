@@ -66,7 +66,7 @@ def test_pieces_appear_after_enough_frames_with_polarity_and_switch_state(mat):
 def test_the_lab_turns_the_camera_view_into_a_working_circuit(mat):
     source = CameraMatSource(mat, NoFrames())
     feed(source, loop(mat).photograph(TILTED))
-    state = Lab(mat.grid, source, source_name="camera", tap_switches=False).state()
+    state = Lab(mat.grid, source, source_name="camera").state()
     assert state.mat_visible is True and state.circuit.status == "working"
     bulb = next(p for p in state.pieces if p.type == "bulb")
     assert bulb.brightness > 0 and abs(bulb.current) > 0
@@ -74,7 +74,7 @@ def test_the_lab_turns_the_camera_view_into_a_working_circuit(mat):
 
 def test_swapping_the_closed_switch_for_the_open_one_opens_the_circuit(mat):
     source = CameraMatSource(mat, NoFrames())
-    lab = Lab(mat.grid, source, source_name="camera", tap_switches=False)
+    lab = Lab(mat.grid, source, source_name="camera")
     feed(source, loop(mat).photograph(TILTED))
     assert lab.state().circuit.status == "working"
     opened = (
@@ -94,7 +94,7 @@ def test_a_finger_resting_on_a_switch_does_not_toggle_it(mat):
     clock = [0.0]
     hand = Hand()
     source = CameraMatSource(mat, NoFrames(), hands=hand, clock=lambda: clock[0])
-    lab = Lab(mat.grid, source, source_name="camera", tap_switches=False, now=lambda: clock[0])
+    lab = Lab(mat.grid, source, source_name="camera", now=lambda: clock[0])
     frame = loop(mat).photograph(TILTED)
     feed(source, frame)
     geometry = source._geometry
@@ -119,7 +119,7 @@ def test_the_fingertip_is_reported_on_the_mat_and_touches_the_piece_under_it(mat
     source.step(frame)
     x, y = source.view().finger
     assert abs(x - 2.5 / 8) < 0.02 and abs(y - 3 / 5) < 0.02
-    state = Lab(mat.grid, source, source_name="camera", tap_switches=False).state()
+    state = Lab(mat.grid, source, source_name="camera").state()
     assert state.touch.piece_id == "2,3-3,3" and state.touch.pulse_hz > 0
 
 

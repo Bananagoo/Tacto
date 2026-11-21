@@ -49,7 +49,7 @@ def _camera_index() -> int:
             return found["index"]
     raise SystemExit(
         f"main: no camera named {CAMERA_NAME!r} is plugged in. Plug it in, set "
-        "TACTO_CAMERA_INDEX, or run `make manual` for the lab on a hand-set mat."
+        "TACTO_CAMERA_INDEX, or run `make mock` to replay the recorded sample."
     )
 
 
@@ -88,7 +88,6 @@ lab = Lab(
     source,
     source_name=SOURCE,  # type: ignore[arg-type]
     lesson=LessonRunner(load_lesson(LESSON_FILE)),
-    tap_switches=False,
 )
 app = create_lab_app(lab, source=SOURCE)
 

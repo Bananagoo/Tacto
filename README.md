@@ -10,22 +10,22 @@ You need [uv](https://docs.astral.sh/uv/), [pnpm](https://pnpm.io/) and ngspice 
 
 ```
 make setup
-make manual      # the lab on a mat you set by hand: http://localhost:8000/manual
+make dev         # the lab on the camera; or `make mock` for recorded states, no hardware
 ```
 
 | Command | What you get |
 |---|---|
 | `make mock` | A server that replays a recorded 22-second run. No camera, mouse or solver needed |
-| `make manual` | The real lab (solver, touch, lesson steps) with the camera replaced by a page you click |
-| `make bench` | `make manual` plus the camera bench at `localhost:5173/devtools/` |
+| `make dev` | The lab on the camera looking at the printed mat. A plain live view of its state is at `localhost:5173/devtools/#state` |
+| `make bench` | The camera bench at `localhost:5173/devtools/`: the camera's picture, the flattened mat, each segment's reading |
 | `make kit` | The printable mat, `kit/out/mat.pdf` |
 | `make check` | Format, lint, type-check and tests for server and web |
 
-The camera path (reading unmarked card pieces from the mat) is being built; see `docs/roadmap.md`.
+The camera path reads the printed pieces from the mat; see `docs/roadmap.md` for what has been checked on the real desk.
 
 ## For the lab UI
 
-Everything you need is in [`contract/`](contract/README.md): the JSON schema of the state message, an example, a recorded sample, and how to run the mock and the hand-set mat.
+Everything you need is in [`contract/`](contract/README.md): the JSON schema of the state message, an example, a recorded sample, and how to run the mock.
 
 ## How it works
 

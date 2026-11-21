@@ -23,7 +23,7 @@ Twenty different layouts read correctly under venue lighting with a hand moving 
 
 | 10 | The lab on the camera: `make dev` | Runs (`tacto/main.py`): 15 state messages a second from the real camera, 22 Nov. `GET /debug/reader` shows what the reader sees and the milliseconds per step. `make dev TACTO_SOURCE=replay` runs recorded frames |
 
-Also built: the hand-set mat (`make manual`), for the UI team to trigger any state and as the demo fallback.
+Removed on 22 Nov: the hand-set mat (`make manual`). The UI team builds against `make mock`; the demo fallbacks are recorded frames and the recorded states.
 
 ## Waiting on other lanes
 

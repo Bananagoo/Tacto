@@ -1,7 +1,7 @@
 // A plain live picture of the state message, for the vision lane: what the server says is
 // on the mat, drawn straight from /ws. It reads the new contract (server/tacto/contract.py)
-// and nothing from src/, so it works whatever state the product UI is in. Needs `make dev`,
-// `make manual` or `make mock` on port 8000.
+// and nothing from src/, so it works whatever state the product UI is in. Needs `make dev`
+// or `make mock` on port 8000.
 
 import { useEffect, useRef, useState } from 'react'
 
@@ -185,7 +185,7 @@ export default function StatePanel() {
         <p className="opacity-70">
           {connected
             ? 'Connected, waiting for the first state…'
-            : 'No server on port 8000. Run make dev (camera), make manual or make mock.'}
+            : 'No server on port 8000. Run make dev (camera) or make mock.'}
         </p>
       </main>
     )

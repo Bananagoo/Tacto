@@ -34,8 +34,7 @@ Run from the repo root.
 | `make setup` | Install server (uv) and web (pnpm) dependencies |
 | `make camera-tool` | Build `uvc-util` into `server/vendor/` (macOS, needs the network once). `make setup` runs it. Without it the camera stays on auto-exposure |
 | `make mock` | Replay the recorded sample on `ws://localhost:8000/ws`. No camera, mouse or solver needed |
-| `make manual` | The real lab on a mat you set by hand. Open `localhost:8000/manual` |
-| `make bench` | `make manual` plus the web dev tools (camera bench at `localhost:5173/devtools/`) |
+| `make bench` | The camera bench with the web dev tools, at `localhost:5173/devtools/`. Uses port 8000, like `make dev`: run one or the other |
 | `make dev` | The lab on the camera, with the web UI. `localhost:8000/debug/reader` shows what the reader sees. `make dev TACTO_SOURCE=replay` runs recorded frames instead |
 | `make check` | `make check-server` and `make check-web`: format, lint, type-check, tests. Must pass before every commit |
 | `make contract` / `make sample` | Regenerate `contract/` after a contract change |
@@ -51,11 +50,10 @@ Run from the repo root.
 | `server/tacto/pieces.py` | Pieces on segments to the solver and back |
 | `server/tacto/sim/` | Graph analysis (open, short), the ngspice solver, current to pulse rate |
 | `server/tacto/lesson.py`, `lessons/` | Lesson steps as data; each completes from the circuit |
-| `server/tacto/taps.py` | Hand-set mat only: a switch tap is a half-second pointer dwell |
 | `server/tacto/mat.py`, `kit/mats/` | The mat: grid size and dot spacing as data |
 | `server/tacto/vision/` | The camera reader. `source.py` runs it: `tracker.py` (find and hold the mat), `focus.py`, `classify.py` (read each segment against the mat's colour squares), `stable.py`, `hands.py`. Also `exposure.py` and the printable mat |
-| `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the hand-set mat, the camera bench |
-| `web/devtools/` | Tooling pages for the vision lane (camera bench, haptics test page) |
+| `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the camera bench |
+| `web/devtools/` | Tooling pages for the vision lane (camera bench, live state view, haptics test page) |
 
 Tooling may import the product (`server/tacto/`); the product never imports tooling. `server/tests/test_boundaries.py` enforces this.
 
@@ -64,7 +62,8 @@ Tooling may import the product (`server/tacto/`); the product never imports tool
 - Wires are card strips, classified like any other piece. There are no pen lines.
 - The mat has four ArUco corner markers. The pieces have none.
 - The circuit solver runs on the server.
-- A switch is two printed pieces, open (cyan) and closed (green). The learner swaps the piece and the camera reads which one is down. Decided 21 Nov; it replaces the finger tap on the camera. The hand-set mat (`make manual`) still toggles by dwell.
+- A switch is two printed pieces, open (cyan) and closed (green). The learner swaps the piece and the camera reads which one is down. Decided 21 Nov; there is no finger tap.
+- There is no hand-set mat. Removed 22 Nov; the UI team builds against `make mock`.
 - Fingertip tracking is MediaPipe on our own colour frames.
 
 ## Still open: ask, do not assume
@@ -77,7 +76,7 @@ Tooling may import the product (`server/tacto/`); the product never imports tool
 1. **Reuse before build.** Before writing generic functionality or adding a dependency, check `docs/tech-stack.md`, then use the `reuse-first` skill and verify the package before relying on it.
 2. **The contract is `server/tacto/contract.py`.** Changes need Katie's sign-off. After a change run `make contract` and `make sample`, and tell the UI team.
 3. **The live loop runs with Wi-Fi off.** Camera → flatten → classify → solver → state → screen and haptics never touches the network.
-4. **Every piece runs without hardware.** One camera and one mouse are shared. Vision code must run from recorded frames; the lab must run from the hand-set mat.
+4. **Every piece runs without hardware.** One camera and one mouse are shared. Vision code must run from recorded frames; the UI must run from `make mock`.
 5. **Do not claim hardware works unless a person confirmed it.** You cannot feel the mouse or see the desk. Say what you ran and what still needs a human check.
 6. **Small steps, tests with each one, results before moving on.** Report accuracy and latency as numbers, not impressions.
 7. **Physics must be right.** Vibration is current (amps), the wheel is voltage (volts). Never mix the two in code, names or prompts.

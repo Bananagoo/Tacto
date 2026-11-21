@@ -46,4 +46,4 @@ The prompt is shown. When the circuit has met `done_when` for half a second, the
 make check-server
 ```
 
-A file with a mistake fails with a message that names the file and the field. To try the lesson: `make manual`, open `localhost:8000/manual`, and use the presets.
+A file with a mistake fails with a message that names the file and the field. To try the lesson: `make dev`, build on the mat, and watch `localhost:5173/devtools/#state`.

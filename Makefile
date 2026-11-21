@@ -1,11 +1,11 @@
-.PHONY: camera-tool setup dev bench server bench-server web check check-server check-web contract sample mock manual fmt test kit
+.PHONY: camera-tool setup dev bench server bench-server web check check-server check-web contract sample mock fmt test kit
 
 setup:
 	cd server && uv sync
 	cd web && pnpm install
 	@test -f .env || cp .env.example .env
 	-$(MAKE) camera-tool
-	@echo "Ready. Run: make manual"
+	@echo "Ready. Run: make dev (camera) or make mock (recorded states)"
 
 # uvc-util (MIT) sets the camera's exposure, which OpenCV cannot do on macOS. Pinned to a
 # commit; built into server/vendor/, which is not committed. See server/tacto/vision/exposure.py.
@@ -27,8 +27,7 @@ camera-tool:
 dev:
 	$(MAKE) -j2 server web
 
-# Tooling with the web dev tools: the hand-set mat (localhost:8000/manual) and the
-# camera bench (localhost:5173/devtools/).
+# The camera bench with the web dev tools: localhost:5173/devtools/.
 bench:
 	$(MAKE) -j2 bench-server web
 
@@ -64,9 +63,6 @@ sample:
 # For the UI team: replay the recorded sample on ws://localhost:8000/ws. No hardware needed.
 mock:
 	cd server && uv run uvicorn tacto_mock.main:app --port 8000
-
-# The lab on a mat you set by hand, with the real solver. Open http://localhost:8000/manual
-manual: bench-server
 
 fmt:
 	cd server && uv run ruff check --select I --fix . && uv run ruff format .

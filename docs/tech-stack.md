@@ -35,7 +35,7 @@ LogiInsight camera ──colour frames──> server (Python) ──state, 15 a 
 ## Built ourselves, and why
 
 - **Segment reading.** No library reads card pieces on a dot grid. The grid makes it one small classification per segment.
-- **Lesson steps and switch taps.** A few lines of rules each.
+- **Lesson steps.** A few lines of rules.
 
 ## Hardware facts
 

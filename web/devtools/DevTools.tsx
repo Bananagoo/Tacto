@@ -1,7 +1,7 @@
 // Tooling for the people building Tacto, at /devtools/. Not part of the product:
 // nothing under src/ may import from this folder (server/tests/test_boundaries.py).
-// Run it with `make bench`, which serves the camera routes. The hand-set mat is a page the
-// Python server serves by itself, at http://localhost:8000/manual.
+// The camera and haptics pages need `make bench`; the live state page needs `make dev` or
+// `make mock`.
 
 import { useEffect, useState } from 'react'
 import CameraPanel from './camera/CameraPanel'
@@ -19,7 +19,7 @@ const TOOLS = [
     ),
   },
   { hash: '#haptics', label: 'Haptics', render: () => <HapticTestPage /> },
-  // The live state message drawn plainly. Works with make dev, make manual and make mock.
+  // The live state message drawn plainly. Works with make dev and make mock.
   { hash: '#state', label: 'Live state', render: () => <StatePanel /> },
 ]
 
@@ -45,12 +45,6 @@ export default function DevTools() {
             {candidate.label}
           </a>
         ))}
-        <a
-          href="http://localhost:8000/manual"
-          className="rounded px-3 py-1 opacity-70 hover:opacity-100"
-        >
-          Hand-set mat ↗
-        </a>
       </nav>
       {/* key: switching tools must unmount the old one so it releases the camera or the mouse. */}
       <div key={tool.hash}>{tool.render()}</div>

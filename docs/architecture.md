@@ -27,10 +27,9 @@ stability                                  vision/stable.py
                                            vision/source.py runs all of the above on one
                                            thread, with vision/focus.py keeping the focus
   ▼
-MatView: placed pieces + fingertip         lab.py (the seam: camera or hand-set mat)
+MatView: placed pieces + fingertip         lab.py (the seam: camera or recorded frames)
   ▼
 Lab                                        lab.py
-  │  taps.py     hand-set mat only: a pointer dwelling on a switch for 0.5 s toggles it
   │  pieces.py   pieces → solver → pieces with current, brightness, shorted
   │  sim/        graph analysis (open, short), ngspice, current → pulse rate
   │  lesson.py   which step, whether the circuit completes it
@@ -74,17 +73,17 @@ A lesson (`lessons/<id>.yaml`) is a fixed list of steps. Each has a prompt and a
 
 | | Product | Tooling |
 |---|---|---|
-| Server | `server/tacto/` | `server/tacto_mock/` (replay), `server/tacto_bench/` (hand-set mat, camera bench) |
+| Server | `server/tacto/` | `server/tacto_mock/` (replay), `server/tacto_bench/` (camera bench) |
 | Web | `web/src/` (UI team) | `web/devtools/` |
-| Run | `make dev` | `make mock`, `make manual`, `make bench` |
+| Run | `make dev` | `make mock`, `make bench` |
 
-Tooling may import the product; the product never imports tooling (`server/tests/test_boundaries.py`). The hand-set mat is the fallback if the camera misbehaves at the demo: it feeds the same `Lab` through the same seam.
+Tooling may import the product; the product never imports tooling (`server/tests/test_boundaries.py`). The fallbacks if the camera misbehaves at the demo are recorded frames (`make dev TACTO_SOURCE=replay`) and the recorded states (`make mock`). The hand-set mat was removed on 22 Nov 2026.
 
 ## Measured so far
 
 | What | Number |
 |---|---|
-| Hand-set mat change to state message | median 47 ms, worst 86 ms over 30 changes |
+| Pieces changing to state message, lab only (measured on the hand-set mat, since removed) | median 47 ms, worst 86 ms over 30 changes |
 | `set_voltage` to state message | 69 ms |
 | First solve after startup | 365 ms (done at startup) |
 | Later solves | about 1 ms |

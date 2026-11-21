@@ -13,4 +13,4 @@ paths:
 - Animate with `motion` or CSS. Keep anything that runs per state message (15 per second) cheap: no layout thrash, no new objects in render that break memoisation of large subtrees.
 - The projected screen is what judges see from two metres away: large type, high contrast, one focal point at a time. The lesson prompt is always visible as text.
 - No chat UI, no text input for the learner.
-- Tooling pages (camera bench, haptics page) live in `web/devtools/`, served at `/devtools/` by `make bench`. The hand-set mat is served by the Python server at `localhost:8000/manual`. Nothing under `web/src/` may import from `web/devtools/`.
+- Tooling pages (camera bench, haptics page) live in `web/devtools/`, served at `/devtools/` by `make bench`. Nothing under `web/src/` may import from `web/devtools/`.

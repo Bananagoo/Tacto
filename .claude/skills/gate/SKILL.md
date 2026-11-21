@@ -13,7 +13,7 @@ Check step $ARGUMENTS of the build order in `docs/roadmap.md`. If no step was gi
 1. Read the step and the "Done means" line in `docs/roadmap.md`.
 2. Run `make check`. If it fails, the gate fails; report the failure and stop.
 3. For each thing the step must do, find the evidence:
-   - **Automated**: a test, a fixture, or a command you can run now with the mock, the hand-set mat or recorded frames. Run it.
+   - **Automated**: a test, a fixture, or a command you can run now with the mock or recorded frames. Run it.
    - **Human**: anything about the real camera, the real mouse, lighting, sound or how something feels. You cannot verify these. Look for a dated entry in `docs/hardware-log.md`; if there is none, mark it "needs a person".
 4. Check that nothing from the "Parked" list has been built.
 

@@ -92,7 +92,8 @@ def beats() -> list[Beat]:
         Beat(0.6, open_loop[:3], step=0),
         Beat(0.6, open_loop[:7], step=0),
         Beat(1.2, open_loop, step=0, step_done=True),
-        # Step 1: a tap closes the switch; 6 V over 10 ohms is 0.6 A, a 3 Hz pulse.
+        # Step 1: the closed switch piece replaces the open one.
+        # 6 V over 10 ohms is 0.6 A, a 3 Hz pulse.
         Beat(0.8, open_loop, step=1, finger_on=SWITCH),
         Beat(1.0, one_bulb, step=1, step_done=True, finger_on=SWITCH),
         Beat(1.5, one_bulb, step=1, step_done=True, finger_on=BULB_A),

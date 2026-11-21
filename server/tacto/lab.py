@@ -1,13 +1,11 @@
 """The lab: what is on the mat in, one `State` message out.
 
-A `MatSource` says which pieces lie where and where the fingertip is. The camera
-is one source; a mat set by hand is another. The lab solves the circuit, works
-out what the finger is touching, and keeps the battery voltage the browser asks for.
+A `MatSource` says which pieces lie where and where the fingertip is: the camera, or
+recorded frames. The lab solves the circuit, works out what the finger is touching,
+and keeps the battery voltage the browser asks for.
 
-The camera cannot see whether a paper switch is open or closed: the learner taps it.
-So the lab remembers which switches have been tapped an odd number of times and
-flips those relative to what the source reports. A switch that leaves the mat is
-forgotten, so a new one starts as the source reports it (open, for the camera).
+A switch is open or closed as the source reports it: open and closed switches are
+different printed pieces, and the learner swaps one for the other.
 """
 
 from __future__ import annotations
@@ -15,7 +13,7 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Protocol, TypeVar
 
 from tacto.contract import (
@@ -31,7 +29,6 @@ from tacto.contract import (
 )
 from tacto.lesson import LessonRunner
 from tacto.pieces import Placed, solve_pieces, touch_for
-from tacto.taps import SwitchTaps
 
 DEFAULT_VOLTS = 6.0
 # How far from a piece, in dot spacings, a fingertip still counts as on it.
@@ -64,7 +61,6 @@ class Lab:
         *,
         source_name: Source,
         lesson: LessonRunner | None = None,
-        tap_switches: bool = True,
         now: Callable[[], float] = time.monotonic,
     ) -> None:
         self._grid = grid
@@ -75,11 +71,6 @@ class Lab:
         self._volts = DEFAULT_VOLTS
         self._seq = 0
         self._lesson = lesson
-        # False for the camera: its switches are two printed pieces, open and closed, and
-        # the reader says which one is down. A fingertip resting on one changes nothing.
-        self._tap_switches = tap_switches
-        self._taps = SwitchTaps()
-        self._flipped: set[str] = set()
         self._solved_for: tuple[tuple[Placed, ...], float] | None = None
         self._solved: tuple[list[Piece], Circuit] = ([], Circuit())
 
@@ -93,7 +84,7 @@ class Lab:
     def state(self) -> State:
         view = self._source.view()
         now = self._now()
-        pieces, circuit = self._solve(self._with_taps(view, now))
+        pieces, circuit = self._solve(view.placed)
         state = State(
             seq=self._seq,
             t=round(now - self._started, 3),
@@ -107,22 +98,6 @@ class Lab:
         )
         self._seq += 1
         return state
-
-    def _with_taps(self, view: MatView, now: float) -> tuple[Placed, ...]:
-        """The source's pieces, with every tapped switch flipped."""
-        if not self._tap_switches:
-            return view.placed
-        switches = {p.id for p in view.placed if p.type == "switch"}
-        if view.mat_visible:
-            self._flipped &= switches
-        under_finger = piece_at(view.placed, self._grid, *view.finger) if view.finger else None
-        on_switch = under_finger.id if under_finger and under_finger.id in switches else None
-        tapped = self._taps.update(on_switch, now)
-        if tapped is not None:
-            self._flipped ^= {tapped}
-        return tuple(
-            replace(p, closed=not p.closed) if p.id in self._flipped else p for p in view.placed
-        )
 
     def _solve(self, placed: tuple[Placed, ...]) -> tuple[list[Piece], Circuit]:
         # The mat changes a few times a minute and the state goes out 15 times a
