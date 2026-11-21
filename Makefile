@@ -11,7 +11,7 @@ dev:
 	$(MAKE) -j2 server web
 
 server:
-	cd server && uv run uvicorn tacto.main:app --reload --port 8000
+	cd server && uv run uvicorn tacto.main:app --reload --port 8000 --timeout-graceful-shutdown 2
 
 web:
 	cd web && pnpm dev

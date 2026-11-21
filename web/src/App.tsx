@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { HapticPattern } from './contract'
-import { DRIVERS, type DriverName } from './haptics/driver'
+import { DRIVERS, MAX_WAVEFORM_INDEX, type DriverName } from './haptics/driver'
 import { usePulse } from './haptics/usePulse'
 import { useTacto, useTactoConnection } from './useTacto'
 
@@ -21,10 +21,13 @@ export default function App() {
   usePulse(driver, state?.probe.present ? state.probe.pulse_hz : 0)
 
   // Scroll wheel = voltage dial. Smooth-scroll mice send many small deltas.
+  // Sign: `+=` so that, with macOS natural scrolling on (the default), scrolling up raises the
+  // voltage. Flipped from `-=` on 2026-11-21 after testing on the real mouse; if the demo laptop
+  // has natural scrolling off, the direction will be reversed there (see docs/hardware-log.md).
   const wheelRemainder = useRef(0)
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
-      wheelRemainder.current -= event.deltaY
+      wheelRemainder.current += event.deltaY
       const steps = Math.trunc(wheelRemainder.current / WHEEL_UNITS_PER_STEP)
       if (steps !== 0) {
         wheelRemainder.current -= steps * WHEEL_UNITS_PER_STEP
@@ -119,7 +122,7 @@ export default function App() {
         <button className="rounded bg-white/10 px-3 py-1 hover:bg-white/20" onClick={connectDriver}>
           Connect
         </button>
-        {Array.from({ length: 16 }, (_, index) => (
+        {Array.from({ length: MAX_WAVEFORM_INDEX + 1 }, (_, index) => (
           <button
             key={index}
             className="rounded bg-white/10 px-2 py-1 text-sm hover:bg-white/20"

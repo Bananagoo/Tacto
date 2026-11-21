@@ -219,3 +219,39 @@ def test_hand_overlay_without_mediapipe_reports_why(client, monkeypatch):
         assert status["hand_error"] == "mediapipe is not installed"
     finally:
         hub.release(0)
+
+
+class FakeTracker:
+    """Stands in for MediaPipe: one right hand with 21 points on a diagonal."""
+
+    def hands(self, frame, t_ms):
+        return [
+            {"handedness": "Right", "points": [[100 + 20 * i, 200 + 10 * i] for i in range(21)]}
+        ]
+
+
+def test_hand_overlay_reports_and_draws_all_21_points():
+    frame = sheet()
+    drawn, analysis = overlays.analyse(frame, {"hand"}, FakeTracker(), 0)
+    assert len(analysis["hands"]) == 1
+    assert len(analysis["hands"][0]["points"]) == 21
+    # Point 8 is the index fingertip; it stays available on its own for the readout.
+    assert analysis["fingertips"] == [{"handedness": "Right", "x": 260, "y": 280}]
+    assert not np.array_equal(drawn, frame)
+    assert np.array_equal(frame, sheet()), "the camera's frame must not be drawn on"
+
+
+def test_status_combines_what_every_viewer_saw(client):
+    # Two tabs can watch one camera with different overlays; neither should blank the other.
+    worker = routes.hub.acquire(0)
+    try:
+        worker.analyses[1] = {"width": 1280, "marker_ids": [0, 3]}
+        worker.analyses[2] = {
+            "width": 1280,
+            "fingertips": [{"handedness": "Right", "x": 5, "y": 6}],
+        }
+        status = client.get("/dev/camera/status", params={"index": 0}).json()
+        assert status["marker_ids"] == [0, 3]
+        assert status["fingertips"][0]["x"] == 5
+    finally:
+        routes.hub.release(0)

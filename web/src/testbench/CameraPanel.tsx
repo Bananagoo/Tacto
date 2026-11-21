@@ -111,7 +111,7 @@ export default function CameraPanel() {
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={hand} onChange={(e) => setHand(e.target.checked)} />
-          Fingertip
+          Hand points
         </label>
       </div>
 
@@ -122,6 +122,9 @@ export default function CameraPanel() {
         <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-black">
           {running ? (
             <img
+              // A new element per stream: changing an overlay then starts a fresh
+              // connection, and closing the old one cannot blank the new one.
+              key={source}
               ref={image}
               src={source}
               alt="Live camera"
@@ -169,7 +172,7 @@ export default function CameraPanel() {
           )}
           {hand && (
             <>
-              <dt className="opacity-60">Fingertip</dt>
+              <dt className="opacity-60">Index tip</dt>
               <dd className={shown?.hand_error ? 'text-rose-400' : ''}>
                 {shown?.hand_error ??
                   (shown?.fingertips

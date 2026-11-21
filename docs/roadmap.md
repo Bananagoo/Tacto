@@ -8,7 +8,7 @@ Each phase has a gate. Do not start the next phase until the gate passes or the 
 
 | Lane | Test | Done when | Fallback |
 |---|---|---|---|
-| Sim and haptics | Fire a pulse from the dev harness with the `plugin` driver, then `webhid`. Feel waveforms 0–15. Find the fastest tick rate that still feels like separate ticks | A pulse fires on command; `WAVEFORM` table and `MAX_PULSE_HZ` are set from what was felt | Other driver; then C# Actions SDK |
+| Sim and haptics | Fire a pulse from the dev harness with the `plugin` driver, then `webhid`. Feel waveforms 0–14. Find the fastest tick rate that still feels like separate ticks | A pulse fires on command; `WAVEFORM` table and `MAX_PULSE_HZ` are set from what was felt | Other driver; then C# Actions SDK |
 | Sim and haptics | Circuit solver for one bulb, two in series, two in parallel | Unit tests match hand-worked answers | — |
 | Vision | Mount the camera over the desk, open RGB as NV12 or YUY2, detect the four corner markers and flatten the mat | One printed mat reads correctly under venue lighting; 20 frames saved to `server/fixtures/` | Any UVC webcam |
 | Vision | Hands Tracker running at the same time as our RGB capture; 4-touch calibration | Fingertip lands within one grid cell; NIR still ~30 fps | MediaPipe Hand Landmarker on the RGB frame |

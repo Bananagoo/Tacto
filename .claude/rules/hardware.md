@@ -35,7 +35,7 @@ Links and the full list are in `docs/tech-stack.md`. These are the ones that bre
 
 ## MX Master 4 haptics
 
-- Preset waveforms only, indices 0–15 (names in `web/src/haptics/driver.ts`). There is no continuous vibration and no strength control from code; strength is a Logi Options+ setting.
+- Preset waveforms only, indices 0–14 (names in `web/src/haptics/driver.ts`); the mouse itself reports 15 presets. There is no continuous vibration: loop a preset instead. Strength (0–100) can be set from code with the `webhid` driver's `setStrength`; it is a setting stored on the mouse, so do not change it on every tick. The plugin driver cannot set it.
 - Plugin driver: `wss://local.jmw.nz:41443/ws`, send one byte (the waveform index). Needs Logi Options+ and the Haptic Web plugin installed. `local.jmw.nz` must resolve to 127.0.0.1; the docs do not say how it does, so add it to `/etc/hosts` for the demo.
 - WebHID driver: Chrome or Edge, needs a click to call `connect()`. Effect ids 0–14; not confirmed to be in the same order as the plugin's indices.
 - "Current" is a short tick repeated at `pulse_hz`. The fastest usable rate is a measured constant (`MAX_PULSE_HZ`), not a guess.
