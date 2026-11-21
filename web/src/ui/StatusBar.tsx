@@ -1,22 +1,15 @@
 import { useHaptics } from '../haptics/useHaptics'
 import { useTacto } from '../useTacto'
 
-/** The instrument's readouts and switches: the server, the wheel's voltage, the mouse. */
+/** The instrument's readouts and switches: the server and the mouse. */
 export function StatusBar() {
   const connected = useTacto((store) => store.connected)
-  const sourceVoltage = useTacto((store) => store.state?.circuit.source_voltage)
 
   return (
     <footer className="flex flex-wrap items-center justify-between gap-x-10 gap-y-3 rounded-3xl bg-white/5 px-8 py-4 text-2xl">
       {/* A filled or hollow mark and the words: the state is not carried by colour. */}
       <span className={connected ? 'text-stone-100' : 'font-bold text-amber-300'}>
         {connected ? '● Connected' : '○ Reconnecting…'}
-      </span>
-      <span className="flex items-baseline gap-4">
-        <span className="text-stone-300">Voltage (scroll the wheel)</span>
-        <span className="text-5xl font-bold tabular-nums">
-          {sourceVoltage === undefined ? '–' : sourceVoltage.toFixed(1)} V
-        </span>
       </span>
       <MouseStatus />
     </footer>

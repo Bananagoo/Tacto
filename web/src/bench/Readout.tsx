@@ -9,7 +9,7 @@ export function Readout({ reading }: { reading: Reading | null }) {
   return (
     <dl
       aria-label="Multimeter reading"
-      className="pointer-events-none absolute top-4 right-4 z-10 m-0 grid grid-cols-[auto_auto] gap-x-3 rounded-lg border-4 border-stone-800 bg-lime-100/90 px-4 py-2 text-2xl font-bold text-stone-800 tabular-nums"
+      className="pointer-events-none absolute top-4 right-4 z-10 m-0 grid grid-cols-[auto_auto] gap-x-5 rounded-lg border-[6px] border-stone-800 bg-lime-100 px-6 py-3 text-4xl font-bold text-stone-800 tabular-nums"
     >
       {reading?.short ? (
         <dd className="col-span-2 m-0 text-center">SHORT</dd>
