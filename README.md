@@ -1,74 +1,49 @@
-# Tacto: science within reach
+# Tacto
 
-A sheet of paper, a pen and a webcam become an electronics lab. Build a circuit from paper parts on a dot-grid mat, watch it run on screen, and feel the current through the mouse while a spoken tutor keeps the challenge at your level.
+A paper electronics lab. Build a circuit from coloured card pieces on a printed dot-grid mat; a camera reads it; the same circuit runs live on screen. Touch a piece and the MX Master 4 mouse pulses with its current. Turn the scroll wheel to change the battery voltage. On-screen prompts walk through a short lesson.
 
 Built at LauzHack 2026.
 
-## Quick start
+## Run it
 
-Needs [uv](https://docs.astral.sh/uv/), Node 20+, [pnpm](https://pnpm.io/) and the ngspice library for the circuit solver.
+You need [uv](https://docs.astral.sh/uv/), [pnpm](https://pnpm.io/) and ngspice (`brew install libngspice`).
 
-```bash
-brew install libngspice   # macOS; the path goes in .env as NGSPICE_LIBRARY_PATH
-make setup     # installs server and web dependencies, creates .env
-make bench     # the product on a virtual mat, plus dev tools: server on :8000, web on :5173
+```
+make setup
+make manual      # the lab on a mat you set by hand: http://localhost:8000/manual
 ```
 
-Open http://localhost:5173/devtools/ in Chrome. The Virtual mat tab plays the whole lesson with no hardware: draw the gap, move tiles and rest a fingertip by clicking, with the product running beside it. The camera bench and the haptics page are the other tabs.
-
-`make dev` runs the product itself at http://localhost:5173. It needs a real world source (recorded frames or the camera), which is not built yet.
-
-Put your keys in `.env`. Never commit it; this repository is public.
-
-## Where things are
-
-| Path | What |
+| Command | What you get |
 |---|---|
-| `server/tacto/` | Python: `vision/` reads the mat, `sim/` solves the circuit, `tutor/` runs the lesson, `contract.py` defines every message |
-| `web/src/` | React: `bench/` draws the circuit, `ui/` the tutor and concept map, `haptics/` drives the mouse, `voice/` the microphone and audio |
-| `server/tacto_bench/`, `web/devtools/` | Test tooling, kept apart from the product: virtual mat, camera bench, haptics page |
-| `scripts/` | One-off hardware probes |
-| `lessons/` | Lesson content as YAML |
-| `kit/` | Printable mat and parts |
-| `docs/` | `tech-stack.md` (decisions), `architecture.md`, `roadmap.md` (phases and gates), `hardware-log.md` |
+| `make mock` | A server that replays a recorded 22-second run. No camera, mouse or solver needed |
+| `make manual` | The real lab (solver, touch, lesson steps) with the camera replaced by a page you click |
+| `make bench` | `make manual` plus the camera bench at `localhost:5173/devtools/` |
+| `make kit` | The printable mat, `kit/out/mat.pdf` |
+| `make check` | Format, lint, type-check and tests for server and web |
 
-## Working with Claude Code
+The camera path (reading unmarked card pieces from the mat) is being built; see `docs/roadmap.md`.
 
-Start `claude` in the repo root and accept the trust prompt; it lists the allowed commands and the format hook from `.claude/settings.json`.
+## For the lab UI
 
-What is set up:
+Everything you need is in [`contract/`](contract/README.md): the JSON schema of the state message, an example, a recorded sample, and how to run the mock and the hand-set mat.
 
-| Piece | Where | What it does |
-|---|---|---|
-| Project instructions | `CLAUDE.md` | The product, commands, lanes and ten rules, loaded every session |
-| Scoped rules | `.claude/rules/` | Hardware facts, server, web, contract and lesson rules, loaded only when Claude touches matching files |
-| `/hardware-check <mouse\|camera\|hands\|kit\|voice>` | skill | Walks you through one device test and logs the result |
-| `/gate <phase>` | skill | Checks a roadmap gate; separates what is tested from what needs a person |
-| `/sync [message]` | skill | Check, commit, rebase onto main; never pushes on its own |
-| `reuse-first` | skill, automatic | Makes Claude look for a library before writing generic code |
-| `library-scout` | subagent | Researches candidate libraries in its own context |
-| `reviewer` | subagent | Reviews the diff for secrets, contract drift, network in the real-time loop, scope |
-| Format hook | `.claude/hooks/format.sh` | Runs ruff or prettier on each file Claude edits |
-| Permissions | `.claude/settings.json` | `make`, `uv`, `pnpm` and read-only git run without prompts; `git push` asks; `.env` cannot be read |
+## How it works
 
-Personal overrides go in `.claude/settings.local.json` and `CLAUDE.local.md` (both gitignored).
+```
+camera frame → flatten the mat (4 corner markers) → one patch per dot-to-dot segment
+  → classify each patch (empty, wire, battery, bulb, resistor, switch)
+  → circuit graph → solver → one state message, 15 times a second → lab UI and mouse
+```
 
-### First prompt for each lane
+See `docs/architecture.md`.
 
-Paste one of these to start. Each session should stay in its own lane (table in `CLAUDE.md`).
+## Layout
 
-**Vision**
-
-> I own the vision lane. Read docs/tech-stack.md and docs/roadmap.md phase 1. First write a shared grid-geometry module and kit/make_kit.py so I can print the mat and parts. Then build mat reading in server/tacto/vision/ against saved frames: corner markers, homography, part markers, wire ink per segment. Make it run in replay mode from server/fixtures/. Plan first, then build.
-
-**Simulation and haptics**
-
-> I own the simulation and haptics lane. Read docs/tech-stack.md and docs/architecture.md. Build the DC solver in server/tacto/sim/ (networkx for open and short detection, ngspice through InSpice for the physics) with tests for one bulb, two in series and two in parallel, each with the hand-worked answer in the docstring. Then the function that turns current at the fingertip into pulse_hz. I will run /hardware-check mouse in parallel.
-
-**Front end**
-
-> I own the front end lane. Read docs/architecture.md and web/src/contract.ts. Build the bench view in web/src/bench/ as SVG driven by the State from useTacto: battery, bulb, resistor, switch, wires on the dot grid, bulb glow from brightness, a marker for the fingertip. Develop against mock mode. Move the current App.tsx harness behind ?dev. Show me a plan and a sketch of the layout first.
-
-**Lesson and pitch**
-
-> I own the lesson lane. Read .claude/rules/lessons.md and lessons/circuits-101.yaml. Write the three MVP challenges (light the bulb, series, parallel) with prediction choices, answers and hint ladders, then the pydantic lesson model and the tutor state machine in server/tacto/tutor/ (zone score rule and concept mastery) with tests. No model calls yet; hints come from the YAML ladder.
+| Path | What it is |
+|---|---|
+| `server/` | Python: camera, mat reading, circuit solver, lesson steps, the WebSocket |
+| `web/` | The lab UI (React) and the dev tools |
+| `contract/` | The state contract, generated from `server/tacto/contract.py` |
+| `lessons/` | Lesson steps as YAML |
+| `kit/` | The printable mat |
+| `docs/` | Architecture, roadmap, tech stack, hardware log |

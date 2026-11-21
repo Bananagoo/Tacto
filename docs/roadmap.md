@@ -1,63 +1,45 @@
-# MVP roadmap
+# Roadmap
 
-**Goal.** A judge builds a paper circuit, sees the bulb light on screen and feels the current in the mouse, inside a three-minute demo.
+Reset on 21 Nov 2026 to the core lab. The state before the reset is the git tag `pre-pivot`. Work is on the branch `core-lab`, merged to `main` when the UI team is ready for the new contract.
 
-Each phase has a gate. Do not start the next phase until the gate passes or the fallback is chosen. Run `/gate <phase>` to check where we are.
+## Done means
 
-## Phase 1: prove each piece (in parallel)
+Twenty different layouts read correctly under venue lighting with a hand moving over the mat, and a change on the mat reaches the state message in under half a second. Reported as accuracy and latency numbers.
 
-| Lane | Test | Done when | Fallback |
-|---|---|---|---|
-| Sim and haptics | Fire a pulse from the dev harness with the `plugin` driver, then `webhid`. Feel waveforms 0–14. Find the fastest tick rate that still feels like separate ticks | A pulse fires on command; `WAVEFORM` table and `MAX_PULSE_HZ` are set from what was felt | Other driver; then C# Actions SDK |
-| Sim and haptics | Circuit solver for one bulb, two in series, two in parallel | Unit tests match hand-worked answers | — |
-| Vision | Mount the camera over the desk, open RGB as NV12 or YUY2, detect the four corner markers and flatten the mat | One printed mat reads correctly under venue lighting; 20 frames saved to `server/fixtures/` | Any UVC webcam |
-| Vision | Hands Tracker running at the same time as our RGB capture; 4-touch calibration | Fingertip lands within one grid cell; NIR still ~30 fps | MediaPipe Hand Landmarker on the RGB frame |
-| Vision | `kit/make_kit.py` renders mat and parts to PDF; print and cut one set | Camera test runs on the real kit | — |
-| Front end | Bench view draws parts from a `State`; bulb glow follows `brightness` | Mock state renders; wheel changes the glow | — |
-| Lesson | Write three challenges (light the bulb, series, parallel) in `lessons/circuits-101.yaml`: prompt, prediction choices, right answer, hint ladder | File loads and validates | — |
-| Lesson | Ask Logitech's booth: does a learning tool qualify, and what do they score on | Answer written in `docs/demo-script.md` | — |
+## Build order (vision and circuit state lane)
 
-**Gate 1:** all tests pass or a fallback is chosen and written into `docs/tech-stack.md`.
+| # | Step | State |
+|---|---|---|
+| 1 | State contract, JSON schema, recorded sample, replay mock | Done. `contract/`, `make mock` |
+| 2 | Mat flattening: four corner markers to a homography | Done on rendered images (30 tests, incl. blur, dim, tilt, upside down). Not yet on real paper |
+| 3 | Segment patches: one fixed-size crop per dot-to-dot segment | Not started |
+| 4 | Classification per segment: HSV colour baseline, then a small classifier | Not started. Needs the piece colours |
+| 5 | Capture tool: labelled patches from the real camera given a known layout; held-out layouts; per-class accuracy | Not started |
+| 6 | Stability: N consecutive frames; segments under a hand hold (MediaPipe landmarks as the mask) | Not started |
+| 7 | Graph and solver: open, short, DC current per piece, hand-worked tests | Done. One bulb, series, parallel, short across a bulb, bypassed bulb |
+| 8 | Finger: fingertip to mat to nearest segment; switch tap with debounce | Logic done and tested on the hand-set mat. Not yet on the camera |
+| 9 | Lesson steps: fixed sequence, each completes from the circuit | Done. Wording is placeholder |
 
-## Phase 2: core loop
+Also built: the hand-set mat (`make manual`), for the UI team to trigger any state and as the demo fallback.
 
-- Mat reading feeds the solver; the solver feeds the bench view.
-- Scroll wheel sets the voltage.
+## Waiting on other lanes
 
-**Gate 2:** a paper battery, a bulb and two drawn wires light the bulb on screen, and the wheel changes its brightness. Works in `replay` and in `camera` mode.
+| What | Who | Blocks |
+|---|---|---|
+| Grid size and dot spacing | Kit owner | Printing the final mat; patch size (step 3) |
+| Colour of each piece type, and the card itself | Kit owner | Steps 4 and 5 |
+| A mark for the battery's positive end | Kit owner | Current direction on screen |
+| Camera mounted straight above the mat, paper filling the frame | Kit owner | Any real-camera number |
+| Lesson wording | Kit owner | Nothing; edit `lessons/circuits-101.yaml` |
+| Adopting the new contract in `web/src/` | UI team | Merging `core-lab` to `main` |
 
-## Phase 3: feel
+## Needs a person on the hardware
 
-- Fingertip on a wire pulses the mouse at a rate set by the current there.
-- Lifting a part stops the pulse; a short gives the `short` pattern.
+- Print `kit/out/mat.pdf` at 100% and check the 50 mm bar.
+- Check the corner markers are found under hall lighting (`make bench`, camera tab, Markers).
+- Feel the pulse rates (1.5, 3 and 6 Hz) and the short-circuit buzz on the real mouse.
+- Try the half-second switch tap with a real hand.
 
-**Gate 3:** touching a wire gives a pulse, raising the voltage quickens it, lifting a part stops it.
+## Parked
 
-## Phase 4: tutor
-
-- Zone of productive learning: running score, +1 correct prediction, −1 repeated error or 30 s idle, state change at ±3. One tutor response per state.
-- Learner map: six concepts, shaky or solid, shown on screen, used to pick the next challenge.
-- Voice: spoken prompts and spoken predictions; buttons always available.
-
-**Gate 4:** three challenges run end to end; the tutor steps down once and up once in a run.
-
-## Phase 5: rehearse
-
-- Fix lighting and camera mount. Turn the camera's face AI off. Add `127.0.0.1 local.jmw.nz` to `/etc/hosts` if using the plugin.
-- Record a backup video.
-
-**Gate 5:** three clean run-throughs inside three minutes, one of them with Wi-Fi off.
-
-## Should have, after gate 4
-
-Concept map animation, zone gauge, the "break it" and "turn it up" challenges, token-cost readout for the AXA pitch.
-
-## Stretch
-
-3D parts, freehand sketches read by a vision model, a second language for the tutor's voice, laptop-webcam "looked away" signal.
-
-## Not now
-
-Emotion detection, student accounts with logins, teacher dashboard, any chat interface.
-
-Moved into scope on 21 Nov 2026 (see `docs/superpowers/specs/2026-11-21-tacto-platform-design.md`): a local database for lesson content, a learner's nickname and their learning graph, and progress saved between sessions.
+Voice tutor, speech-to-text, text-to-speech, voice detection, the agent loop, LLM hints and any Together or OpenRouter calls, zone score, learner model, concept map, lab report, freehand sketch reading, 3D parts.

@@ -1,14 +1,29 @@
 # Tacto
 
-Tacto turns a printed paper mat, a pen and a webcam into an electronics lab. A learner places paper components on a dot-grid mat and draws wires; a camera reads the mat; the circuit runs on screen; the MX Master 4 mouse is the bench instrument (scroll wheel sets voltage, vibration is current); a spoken tutor asks for a prediction before every test and keeps the challenge at the learner's level.
+Tacto is a paper electronics lab. A student builds a circuit from coloured card pieces on a printed dot-grid mat. A camera above the desk reads it. The same circuit appears live in an on-screen lab. The student interacts by touch and through the MX Master 4 mouse: a haptic pulse is current, the scroll wheel is voltage. On-screen prompts walk them through a fixed set of lesson steps.
 
-This is a LauzHack 2026 project. The only thing that matters is a **3-minute live demo that a judge runs with their own hands**. Prefer the simplest thing that works on stage over the general solution.
+That is the whole product for now. This is a LauzHack 2026 project and the only thing that matters is a **3-minute live demo that a judge runs with their own hands**, on one macOS laptop, with Wi-Fi off. Prefer the simplest thing that works on stage.
+
+## Parked: do not build, extend or wire in
+
+Voice tutor, speech-to-text, text-to-speech, voice detection, an agent loop, LLM hints and any Together or OpenRouter calls, zone score, learner model, concept map, lab report, freehand sketch reading, 3D parts. If a request touches one of these, say so and ask first. The code that existed for them is at the git tag `pre-pivot`.
 
 ## Read before you build
 
-- `docs/tech-stack.md`: every library and model decision, with fallbacks. Check it before adding a dependency.
-- `docs/architecture.md`: data flow, the WebSocket contract, run modes.
-- `docs/roadmap.md`: phases, gates, who owns what, and the "not now" list.
+- `docs/architecture.md`: the data flow from camera frame to state message, and where each step lives.
+- `contract/README.md`: the state contract, the recorded sample and the mock, as the UI team sees them.
+- `docs/roadmap.md`: the build order, what is done, and what "done" means.
+- `docs/tech-stack.md`: every library decision and the hardware facts. Check it before adding a dependency.
+
+## Who owns what
+
+| Lane | Owner | Owns |
+|---|---|---|
+| Vision and circuit state | Katie | `server/` (camera frame to state message), `contract/`, `scripts/`, `web/devtools/` |
+| Lab UI | Two teammates | `web/src/`: visuals, WebSocket client, haptics, scroll wheel, prompt panel |
+| Kit and lesson | One teammate | The physical mat and card pieces, the camera mount, lesson wording in `lessons/` |
+
+Stay in your lane. **Do not edit `web/src/`** from the vision lane: what the UI team gets from us is the contract, the recorded sample and the mock. If a task needs a file in another lane, say so instead of editing it.
 
 ## Commands
 
@@ -17,59 +32,71 @@ Run from the repo root.
 | Command | Does |
 |---|---|
 | `make setup` | Install server (uv) and web (pnpm) dependencies |
-| `make dev` | The product: server on :8000 and web on :5173, both with reload |
-| `make bench` | Tooling: the real product on a virtual mat you change by clicking, plus the camera bench. Open `localhost:5173/devtools/` |
-| `make server` / `make web` | One side only |
-| `make check` | Format check, lint, type-check, tests. Must pass before every commit |
+| `make mock` | Replay the recorded sample on `ws://localhost:8000/ws`. No camera, mouse or solver needed |
+| `make manual` | The real lab on a mat you set by hand. Open `localhost:8000/manual` |
+| `make bench` | `make manual` plus the web dev tools (camera bench at `localhost:5173/devtools/`) |
+| `make dev` | The lab on the camera, with the web UI. Not usable until the camera reader is built |
+| `make check` | `make check-server` and `make check-web`: format, lint, type-check, tests. Must pass before every commit |
+| `make contract` / `make sample` | Regenerate `contract/` after a contract change |
+| `make kit` | Write the printable mat to `kit/out/mat.pdf` from `kit/mats/circuits-101.yaml` |
 | `make fmt` | Format everything |
-| `make kit` | Render the printable mat and tiles to `kit/out/` from `kit/mats/circuits-101.yaml` |
 
-`TACTO_SOURCE=camera|replay` picks where the product's world comes from: the camera above the printed mat (default), or frames recorded into `server/fixtures/<mat id>/` with `scripts/record_frames.py`. With neither, use `make bench`, which needs no hardware.
+## Layout
 
-## Product and tooling
-
-Product code is `server/tacto/` and `web/src/`. Test tooling (the virtual mat, the camera bench, the haptics page) is `server/tacto_bench/` and `web/devtools/`, with its tests in `server/tests/bench/`. Tooling may import the product; the product never imports tooling. `server/tests/test_boundaries.py` enforces this. The design is in `docs/superpowers/specs/2026-11-21-tacto-platform-design.md`.
-
-## Layout and lanes
-
-Four people work in parallel, each with their own Claude Code session. Stay in your lane; if a task needs a file in someone else's lane, say so instead of editing it.
-
-| Lane | Owns |
+| Path | What it is |
 |---|---|
-| Vision | `server/tacto/vision/`, `kit/`, `server/fixtures/` |
-| Simulation and haptics | `server/tacto/sim/`, `web/src/haptics/` |
-| Front end | `web/src/bench/`, `web/src/ui/`, `web/src/App.tsx` |
-| Lesson and pitch | `lessons/`, `server/tacto/tutor/`, `web/src/voice/`, `docs/demo-script.md` |
+| `server/tacto/contract.py` | The one state message and the one browser message. Source of `contract/` |
+| `server/tacto/lab.py` | Mat source in, `State` out: solves, finds the touched piece, taps switches, runs the lesson |
+| `server/tacto/pieces.py` | Pieces on segments to the solver and back |
+| `server/tacto/sim/` | Graph analysis (open, short), the ngspice solver, current to pulse rate |
+| `server/tacto/lesson.py`, `lessons/` | Lesson steps as data; each completes from the circuit |
+| `server/tacto/taps.py` | A switch tap is a half-second fingertip dwell |
+| `server/tacto/mat.py`, `kit/mats/` | The mat: grid size and dot spacing as data |
+| `server/tacto/vision/` | Camera, hand tracking, corner markers, flattening, the printable mat |
+| `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the hand-set mat, the camera bench |
+| `web/devtools/` | Tooling pages for the vision lane (camera bench, haptics test page) |
 
-Shared, change with care and tell the team: `server/tacto/contract.py`, `web/src/contract.ts`, `server/tacto/main.py`, `docs/`, this file.
+Tooling may import the product (`server/tacto/`); the product never imports tooling. `server/tests/test_boundaries.py` enforces this.
+
+## Decided: do not revisit
+
+- Wires are card strips, classified like any other piece. There are no pen lines.
+- The mat has four ArUco corner markers. The pieces have none.
+- The circuit solver runs on the server.
+- The switch toggles by a finger tap on the paper switch (a half-second dwell), not a physical flap.
+- Fingertip tracking is MediaPipe on our own colour frames.
+
+## Still open: ask, do not assume
+
+- Grid size and dot spacing (config in `kit/mats/circuits-101.yaml`; the current values are placeholders).
+- The colour of each piece type (proposed: wire black, battery red, bulb yellow, resistor blue, switch green).
 
 ## Rules
 
-1. **Reuse before build.** Before writing generic functionality or adding a dependency, check `docs/tech-stack.md`, then look for a maintained library (use the `reuse-first` skill). If you add or swap one, update the table in the same commit.
-2. **The contract is `server/tacto/contract.py`.** `web/src/contract.ts` mirrors it. Change both in one commit, keep changes additive, and never rename a field someone else reads without telling them.
-3. **Nothing in the real-time loop touches the network.** Camera → mat reading → solver → state → screen and haptics must run with Wi-Fi off. LLM, speech-to-text and text-to-speech calls happen outside that loop, are cached, and always have an offline fallback.
-4. **Keys stay on the server.** API keys live in `.env` (gitignored) and are read only by server code. Never put a key in `web/`, in a commit, in a log line or in a test. This repository is public.
-5. **Every piece runs without hardware.** One camera and one mouse are shared by four people. Vision code must run from recorded frames (`TACTO_SOURCE=replay`), haptics through the `console` driver. Do not write code that only works with the device plugged in.
-6. **Do not claim hardware works unless a person confirmed it.** You cannot feel the mouse or see the desk. Say what you ran and what still needs a human check.
-7. **No chat window, ever.** The learner never types to or reads a conversation with an AI. The tutor speaks short prompts and listens for a prediction; buttons are the fallback.
-8. **Teaching rules are product rules.** Predict before every test. Hints go one step down at a time and never state the answer. The camera does not infer emotion and nothing is recorded.
-9. **Stay inside the MVP.** If a request is on the "not now" list in `docs/roadmap.md`, say so and ask before building it.
-10. **Physics must be right.** Vibration is current (amps), the wheel is voltage (volts). Never mix the two in code, names, UI text or tutor lines; fixing that confusion is what the lesson teaches.
+1. **Reuse before build.** Before writing generic functionality or adding a dependency, check `docs/tech-stack.md`, then use the `reuse-first` skill and verify the package before relying on it.
+2. **The contract is `server/tacto/contract.py`.** Changes need Katie's sign-off. After a change run `make contract` and `make sample`, and tell the UI team.
+3. **The live loop runs with Wi-Fi off.** Camera → flatten → classify → solver → state → screen and haptics never touches the network.
+4. **Every piece runs without hardware.** One camera and one mouse are shared. Vision code must run from recorded frames; the lab must run from the hand-set mat.
+5. **Do not claim hardware works unless a person confirmed it.** You cannot feel the mouse or see the desk. Say what you ran and what still needs a human check.
+6. **Small steps, tests with each one, results before moving on.** Report accuracy and latency as numbers, not impressions.
+7. **Physics must be right.** Vibration is current (amps), the wheel is voltage (volts). Never mix the two in code, names or prompts.
+8. **Secrets stay out of the repo.** It is public. `.env` is gitignored.
+9. **Nothing from the camera is stored** except frames a person records on purpose into `server/fixtures/`, and those must not show faces.
 
 ## Conventions
 
-- Python 3.12, `uv`, `ruff` (line length 100), type hints on public functions, pydantic models at boundaries. Tests in `server/tests/`, named `test_*.py`.
-- TypeScript strict, function components, zustand for shared state, Tailwind classes for styling. No enums or parameter properties (`erasableSyntaxOnly` is on).
-- Units in names when ambiguous: `pulse_hz`, `source_voltage`, `timeout_ms`.
-- Constants that need tuning on real hardware get a `TODO(<lane> owner)` comment and live at the top of the file.
+- Python 3.12, `uv`, `ruff` (line length 100), type hints on public functions, pydantic models at boundaries. Tests in `server/tests/`, named `test_*.py`. Every solver change needs a test with a hand-worked answer.
+- Units in names when ambiguous: `pulse_hz`, `dot_pitch_mm`, `x_px`.
+- Constants that need tuning on real hardware get a `TODO(<owner>)` comment and live at the top of the file.
 - Comments explain why, not what.
+- `import cv2` only inside `server/tacto/vision/`, `server/tacto_bench/`, `kit/` and `scripts/`.
 
 ## Git
 
+- The reset lives on the branch `core-lab` until the UI team is ready for the new contract; then it merges to `main`.
 - Small commits, imperative subject line, one concern each. Run `make check` first.
-- Work on `main` in your own lane, or a short branch if the change crosses lanes. `git pull --rebase` before pushing. Use `/sync`.
-- Ask before `git push`, before any force operation, and before deleting files you did not create.
+- Never force-push. Ask before deleting files you did not create.
 
 ## When you finish a task
 
-Say in two or three lines: what changed, what you ran to check it, and what a human still has to verify on the hardware.
+Say in two or three lines: what changed, what you ran to check it (with the numbers), and what a person still has to verify on the hardware.

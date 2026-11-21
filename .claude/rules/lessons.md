@@ -1,20 +1,14 @@
 ---
 paths:
   - "lessons/**"
-  - "server/tacto/tutor/**"
-  - "web/src/voice/**"
+  - "server/tacto/lesson.py"
 ---
 
-# Lesson and tutor rules
+# Lesson rules
 
-The learner is someone who has never seen a circuit. Scholé judges whether it teaches, not whether it is polished.
-
-- Every step follows predict → build → test → explain: the learner predicts what a change will do, makes it, feels the result, then hears why. The prediction is optional per step. The explanation comes only after the learner has seen their prediction succeed or fail.
-- Predictions are a closed set of two to four spoken choices ("brighter", "dimmer", "the same"). Match keywords first; call a model only when no keyword matches.
-- Hints form a ladder: a smaller question, then a pointer to where to look or touch, then a worked example on the learner's own circuit. One step per request. No step states the answer to the prediction.
-- Tutor lines are spoken: one sentence, under 20 words, no symbols or units that read badly aloud, second person, no praise inflation.
-- Vibration is current. The wheel is voltage. Check every line for this before committing; it is the misconception the lesson exists to fix.
-- Zone rule: score +1 for a correct prediction, −1 for a repeated error or 30 s with no hand activity; change zone at ±3. Too easy → skip ahead or remove guidance. Productive → stay quiet. Stuck → one step down the ladder.
-- Signals come from the desk only: predictions, circuit edits, hand activity, idle time. No emotion inference, nothing recorded.
-- Lesson content lives in YAML in `lessons/` and is validated by a pydantic model at startup. Changing wording must not require changing code.
-- Scripted lines are pre-generated to audio and committed, so the demo does not depend on Wi-Fi.
+- A lesson is a fixed list of steps in `lessons/<id>.yaml`. Each step has an `id`, a `prompt` and a `done_when`. The wording belongs to the lesson author; the structure belongs to the vision lane.
+- A step completes from the circuit alone. There are no predictions to score, no hints, no timers on the learner and no messages from the browser. A prompt may still ask "what do you expect?" as wording.
+- `done_when` is a closed set: `status`, `batteries`, `bulbs`, `lit_bulbs`, `arrangement`. Adding a condition is a code change with a test.
+- A step's goal must not already be met by an empty mat or by the circuit that completed the step before it (`test_lesson.py` checks this).
+- Physics words are exact: the pulse in the mouse is current, the wheel is voltage.
+- Prompts are short enough to read from two metres away: one or two sentences.

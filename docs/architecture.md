@@ -1,91 +1,87 @@
 # Architecture
 
-## Data flow
+One server process on one laptop turns camera frames into state messages. The lab UI in the browser draws them and drives the mouse. Nothing in this loop touches the network.
+
+## The loop
 
 ```
-                    ┌──────────────────────── server (Python, :8000) ────────────────────────┐
-LogiInsight RGB ──> │ vision/camera   frames (camera | replay)                               │
-                    │ vision/mat      corner markers → homography → flat mat image           │
-                    │ vision/parts    part markers → kind, dots                              │
-                    │ vision/wires    ink on each dot-to-dot segment                         │
-Hands Tracker ────> │ vision/finger   index_tip → mat coordinates (4-touch calibration)      │
-  ws :8765          │ sim/graph       parts + wires → netlist, open/closed/short             │
-                    │ sim/solver      DC nodal analysis → current and voltage everywhere     │
-                    │ sim/feel        current at the fingertip → pulse_hz                    │
-                    │ tutor/          lesson step, prediction check, zone score, learner map │
-                    │ main.py         State out at ~15 Hz, events in, over /ws               │
-                    └─────────────────────────────────┬──────────────────────────────────────┘
-                                                      │ WebSocket /ws (JSON)
-                    ┌─────────────────────────────────┴──── web (Chrome, :5173) ─────────────┐
-                    │ useTacto        store of the latest State                              │
-                    │ bench/          parts, wires, bulb glow, fingertip marker              │
-                    │ ui/             tutor prompt, prediction buttons, concept map, zone    │
-                    │ haptics/        HapticsDriver: plugin | webhid | console               │
-                    │ voice/          mic → utterance → server; plays tutor audio            │
-                    └─────────────────────────────────────────────────────────────────────────┘
+camera frame (colour, 1080p, ~30 fps)
+  │  vision/camera.py                      one worker thread per camera
+  ▼
+flatten                                    vision/flatten.py
+  │  find the four ArUco corner markers, fit a homography, warp to a square-on page
+  ▼
+segment patches                            NOT BUILT
+  │  one fixed-size crop for every gap between neighbouring dots
+  ▼
+classify each patch                        NOT BUILT
+  │  empty | wire | battery | bulb | resistor | switch
+  │  baseline: HSV colour per piece type; then a small classifier on our own patches
+  ▼
+stability                                  NOT BUILT
+  │  a segment changes only after N frames agree; segments under a hand hold
+  ▼
+MatView: placed pieces + fingertip         lab.py (the seam: camera or hand-set mat)
+  ▼
+Lab                                        lab.py
+  │  taps.py     fingertip dwelling on a switch for 0.5 s toggles it
+  │  pieces.py   pieces → solver → pieces with current, brightness, shorted
+  │  sim/        graph analysis (open, short), ngspice, current → pulse rate
+  │  lesson.py   which step, whether the circuit completes it
+  ▼
+State message, 15 a second                 contract.py, app.py (WebSocket /ws)
+  ▼
+lab UI and mouse haptics                   web/src/ (UI team)
+  │
+  └── set_voltage ─────────────────────────▶ Lab
 ```
 
-The server holds the truth. The browser renders it and reports what the learner did. There is exactly one WebSocket.
+The fingertip comes from MediaPipe Hand Landmarker on the same frame (`vision/hands.py`, `vision/live.py`) and is mapped onto the mat through the same homography (`flatten.frame_point_to_mat`). The hand's landmarks, padded, will also be the mask for "segments under a hand keep their value".
 
-## Contract
+## The mat model
 
-`server/tacto/contract.py` defines every message. `web/src/contract.ts` mirrors it by hand.
+The mat is a grid of dots (`kit/mats/<id>.yaml`: columns, rows, dot spacing). A dot is `[col, row]`, origin top-left. Every piece lies on one **segment**: the gap between two dots that are neighbours in a row or a column. A piece's id is its segment, `"c,r-c,r"` with the top-left dot first.
 
-Server to web:
+Dots are nodes and pieces are edges. Wires and closed switches conduct freely; bulbs and resistors resist; an open switch is a gap; a battery is the source, with `a` its positive end.
 
-- `state`, about 15 times a second: `circuit` (status, source voltage, parts, wires with currents), `probe` (fingertip position, what it touches, `pulse_hz`), `tutor` (challenge, phase, prompt, choices, zone), `learner` (concept → unseen | shaky | solid).
-- `haptic`, occasional: a one-off pattern the server chose, such as the tutor's `nudge`.
+## Circuit status
 
-Web to server:
+| Status | Meaning |
+|---|---|
+| `open` | No complete loop through a battery. An empty mat is open |
+| `working` | Current flows through at least one piece |
+| `shorted` | A loop through the battery with nothing in it to resist. `shorted_path` lists the pieces round it |
 
-- `wheel` (steps), `answer` (choice, via voice or button), `calibrate_touch` (corner 0–3), `next`.
+Open circuits and shorts are found in the graph (`sim/graph.py`) before the solver is called, so ngspice only ever sees a circuit with a unique answer. A wire across one of two series bulbs is not a short: the circuit works and that bulb is dark.
 
-Who decides what:
+## What the camera cannot see
 
-- The **server** decides physics and feel: `pulse_hz` is computed from the current at the fingertip, so the mapping lives in one place (`sim/feel`).
-- The **web** decides how to render it: which waveform a `tick` is, and the cap on tick rate (`web/src/haptics/`).
+- **Switch open or closed.** The learner taps the paper switch. The lab remembers which switches have been tapped; a switch lifted off the mat is forgotten and a new one starts open.
+- **Touch.** MediaPipe gives a fingertip position, not contact. A fingertip over a segment counts as touching it.
+- **Battery polarity.** A plain coloured card has no marked end. Until the kit marks one, the reader will pick by rule.
 
-HTTP endpoints (add as needed, keep them few): `GET /health`; later `POST /stt` (audio clip → matched choice) and static tutor audio.
+## Lesson steps
 
-## Run modes
+A lesson (`lessons/<id>.yaml`) is a fixed list of steps. Each has a prompt and a `done_when` (status, number of batteries, bulbs, lit bulbs, series or parallel). A step is done once its goal has held for half a second; it stays done; after `linger_seconds` the next prompt appears. There are no predictions to score, no hints and no timers on the learner.
 
-| `TACTO_SOURCE` | World comes from | Needs |
+## Product and tooling
+
+| | Product | Tooling |
 |---|---|---|
-| (tooling, `make bench`) | `server/tacto_bench/virtual_mat.py`: a mat you change by clicking at `/devtools/#mat`. The real session, solver, lesson engine and database run on top of it. Not a product mode | Nothing |
-| `replay` | Frames in `server/fixtures/` plus a recorded fingertip track | Nothing |
-| `camera` | LogiInsight RGB stream and the Hands Tracker app | Camera, tracker app running |
+| Server | `server/tacto/` | `server/tacto_mock/` (replay), `server/tacto_bench/` (hand-set mat, camera bench) |
+| Web | `web/src/` (UI team) | `web/devtools/` |
+| Run | `make dev` | `make mock`, `make manual`, `make bench` |
 
-Haptics driver is picked in the browser: `console` (flashes a dot, no hardware), `plugin` (Haptic Web plugin), `webhid` (direct, Chrome or Edge).
+Tooling may import the product; the product never imports tooling (`server/tests/test_boundaries.py`). The hand-set mat is the fallback if the camera misbehaves at the demo: it feeds the same `Lab` through the same seam.
 
-Record fixtures early: the first time the camera reads the printed mat, save 20 frames of several layouts to `server/fixtures/`. Everyone without the camera develops against those.
+## Measured so far
 
-## Real-time loop budget
+| What | Number |
+|---|---|
+| Hand-set mat change to state message | median 47 ms, worst 86 ms over 30 changes |
+| `set_voltage` to state message | 69 ms |
+| First solve after startup | 365 ms (done at startup) |
+| Later solves | about 1 ms |
+| MediaPipe hand tracking | about 26 ms a frame at 1080p |
 
-Target: a change on the paper shows on screen in under 250 ms; a fingertip landing on a wire starts the pulse in under 150 ms.
-
-- Mat reading may run slower than the camera (5–10 Hz is fine); the fingertip path runs at tracker rate (~30 Hz).
-- When a hand covers part of the mat, keep the last known reading for the hidden segments. Do not let wires flicker while the learner is touching them.
-- Smooth every segment's ink decision over a few frames before changing the circuit.
-- No network call anywhere in this path.
-
-## Outside the loop
-
-Triggered by lesson events, never per frame, always cached, always with a fallback:
-
-| Call | Trigger | Cache key | Fallback |
-|---|---|---|---|
-| Speech to text | Learner finished speaking (VAD) | none | Buttons |
-| Hint wording | Zone becomes `stuck` | challenge + misconception + step + language | Hint ladder in the lesson YAML |
-| Tutor audio | Build time for scripted lines; on demand for hints | hash of text + voice | Browser `speechSynthesis` |
-
-Log every call with model, tokens and milliseconds to `server/logs/calls.jsonl` so we can quote cost per lesson.
-
-## Coordinates
-
-- **Mat grid**: `Dot = (col, row)`, origin top-left. This is what the contract uses.
-- **Mat unit square**: `x, y` in 0..1 from the top-left, used for the fingertip.
-- **Camera pixels** and **tracker coordinates** never leave `vision/`. The Hands Tracker's coordinates are mirrored in x, bottom-up in y and relative to a crop; convert them with the calibrated homography, not by hand.
-
-## Configuration
-
-`.env` at the repo root (copy `.env.example`): `TOGETHER_API_KEY`, `OPENROUTER_API_KEY`, `TACTO_SOURCE`, model names. Read with `python-dotenv` in server code only.
+Camera-path latency and accuracy are not measured yet.

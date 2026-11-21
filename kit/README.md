@@ -1,6 +1,8 @@
-# Paper kit
+# The mat
 
-The printable mat and its tiles. Owned by the vision lane.
+The printable mat: a grid of dots between four corner markers. The card pieces are cut by hand from coloured card and carry no markers, so the mat is the only thing printed.
+
+**The mat must be printed from this script**, not drawn separately: the camera reader measures against the same geometry the script prints from.
 
 ## Make it
 
@@ -8,39 +10,31 @@ The printable mat and its tiles. Owned by the vision lane.
 make kit
 ```
 
-writes `kit/out/mat.pdf` and `kit/out/tiles.pdf` (A4 landscape, 300 dpi) from `kit/mats/circuits-101.yaml`. For another mat, from `server/`:
+writes `kit/out/mat.pdf` (A4 landscape, 300 dpi) from `kit/mats/circuits-101.yaml`.
 
+## Change the grid
+
+Edit `kit/mats/circuits-101.yaml`:
+
+```yaml
+id: circuits-101
+cols: 9            # dots across
+rows: 6            # dots down
+dot_pitch_mm: 28   # centre to centre; a piece spans one gap, so this is the piece length
 ```
-uv run python ../kit/make_kit.py --mat ../kit/mats/<id>.yaml --out ../kit/out
-```
 
-## Print and cut
+The grid must fit between the corner markers: `(cols - 1) * dot_pitch_mm` at most 231 mm and `(rows - 1) * dot_pitch_mm` at most 144 mm. `make kit` says so if it does not. These values are placeholders until the kit owner decides them.
 
-1. Print both pages at **100%** ("actual size"; not "fit to page") on plain white A4, in black and white or colour.
-2. Hold a ruler against the bar in each footer: it must measure 50 mm. If it does not, the print was scaled; print again.
-3. Cut each tile along its grey outline. Keep the white edge around the square pattern: the camera cannot find a pattern cut to its black border.
-4. Lay the tile named on the mat ("starts with the wire") in its dashed slot. Any way round is fine.
+## Print
 
-Flat paper matters: stick the mat to the desk or a board with tape at the edges, outside the four corner squares. Thin card for the tiles makes them easier to pick up.
+1. Print at **100%** ("actual size"; not "fit to page") on plain white A4.
+2. Hold a ruler against the bar in the footer: it must measure 50 mm. If it does not, the print was scaled; print again.
+3. Keep the four corner squares clean and flat, with their white edge. The camera needs all four to find the mat.
 
-## Use it
+## Pieces
 
-- **Corner squares** (markers 0 to 3) tell the camera where the page is and which way up. All four must be visible for the mat to be read; while a hand hides one, the last reading is kept.
-- **Dotted lines marked "draw here"** are where the learner draws with an ordinary dark pen (ballpoint, fineliner, soft pencil). A line covering at least half the gap counts. A highlighter or a hard pencil is too faint.
-- **Dashed boxes** are slots. A tile is in a slot when its pattern is within 14 mm of the slot's middle. A hand resting on a tile's pattern for longer than a moment reads as the tile being taken away; point at the wires, not at the pattern.
-- Mount the camera so the paper fills most of the picture. White paper on a dark desk makes the camera over-expose and wash the page out.
+Each piece is a strip of card as long as one dot gap, one colour per type. Proposed colours, not final: wire black, battery red, bulb yellow, resistor blue, switch green. Avoid skin tones and white. If the battery card has a marked positive end, tell the vision owner how it is marked.
 
-## Where the numbers live
+## Camera
 
-`server/tacto/vision/print_geometry.py` holds every size and marker id; the renderer (`kit_render.py`) and the reader (`flatten.py`, `reader.py`) both import it, so the paper and the software cannot disagree.
-
-| Thing | Value |
-|---|---|
-| Dot pitch | 28 mm, the same for every mat, so tiles are interchangeable |
-| Corner markers | `DICT_4X4_50` ids 0, 1, 2, 3 (top-left, then clockwise), 20 mm |
-| Tile | 56 x 24 mm (two dots long), 14 mm marker in the middle |
-| Tile marker ids | bulb 10-14, wire 20-24, resistor 30-34, switch 40-44 |
-
-## Recording frames for replay
-
-Save camera frames as `.png` or `.jpg` in a folder under `server/fixtures/`. `tacto.vision.source.FolderFrames` plays a folder back in file-name order, looping, so number the files (`0001.png`, ...). Nothing in the frames should show a person's face.
+Mount the camera straight above the mat so the paper fills most of the picture and all four corners are visible. White paper against a dark desk washes out under the camera's auto-exposure when the paper is small in the frame.
