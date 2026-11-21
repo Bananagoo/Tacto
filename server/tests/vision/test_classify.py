@@ -25,6 +25,7 @@ from tacto.pieces import Placed
 from tacto.vision.classify import (
     ColoursFileError,
     MatReader,
+    Palette,
     PieceColours,
     Reading,
     classify_patch,
@@ -434,3 +435,66 @@ def test_a_square_with_a_sleeve_beside_it_is_not_read(mat, geometry, colours):
     readings = read(covered, TILTED, mat, geometry, colours, reader=reader)
     assert np.array_equal(reader.palette.lab[0], before[0])
     assert kinds(readings) == expected
+
+
+# ---------- values measured off the real mat ----------
+# The seven squares as the demo camera read them on 22 Nov 2026 (GET /debug/reader), and
+# the mean colour of real pieces' pixels in the same frame. CIELAB with the paper as white.
+
+REAL_SQUARES = Palette(
+    lab=np.float32(
+        [
+            [22.8, 21.0, -45.4],  # wire
+            [89.2, -5.7, 82.0],  # bulb
+            [47.4, 71.6, 25.5],  # resistor
+            [35.3, -32.8, 17.2],  # switch_closed
+            [37.1, 3.2, -41.5],  # switch_open
+            [46.1, 69.6, 59.9],  # battery_positive
+            [4.6, -1.3, 2.2],  # battery_negative
+        ]
+    ),
+    seen=(True,) * 7,
+)
+
+
+def lab_patch(lab: tuple[float, float, float]) -> np.ndarray:
+    return np.full((PATCH_WIDTH_PX, PATCH_LENGTH_PX, 3), lab, np.float32)
+
+
+@pytest.mark.parametrize(
+    "lab",
+    [
+        (25.0, 12.0, -33.0),  # the two wires that split 52% wire to 42% open switch
+        (23.0, 13.0, -33.0),
+        (18.0, 17.0, -35.0),
+        (26.0, 18.0, -42.0),
+        (30.0, 11.0, -30.0),  # paler still: the same hue, washed out further
+        (15.0, 12.0, -27.0),  # and in shadow
+    ],
+)
+def test_a_washed_out_or_shaded_real_wire_is_still_a_wire(lab, colours):
+    assert classify_patch(lab_patch(lab), REAL_SQUARES, colours).piece == "wire"
+
+
+@pytest.mark.parametrize(
+    "lab",
+    [(37.0, 3.0, -41.0), (30.0, 1.0, -31.0), (44.0, 5.0, -44.0), (25.0, 2.0, -28.0)],
+)
+def test_a_real_open_switch_bright_or_shaded_is_still_an_open_switch(lab, colours):
+    assert classify_patch(lab_patch(lab), REAL_SQUARES, colours).piece == "switch_open"
+
+
+def test_skin_is_still_not_a_piece_with_the_real_squares(colours):
+    # Skin's hue lies between the red and yellow squares; it is far too pale to be either.
+    for skin in [(70.0, 15.0, 22.0), (60.0, 18.0, 20.0), (80.0, 10.0, 18.0)]:
+        assert classify_patch(lab_patch(skin), REAL_SQUARES, colours).piece == "unsure"
+
+
+@pytest.mark.parametrize(
+    "square, piece",
+    [(1, "bulb"), (2, "resistor"), (3, "switch_closed"), (0, "wire"), (4, "switch_open")],
+)
+def test_each_real_square_reads_as_its_own_piece_at_three_quarters_strength(square, piece, colours):
+    lightness, a, b = REAL_SQUARES.lab[square]
+    faded = (float(lightness), float(a) * 0.75, float(b) * 0.75)
+    assert classify_patch(lab_patch(faded), REAL_SQUARES, colours).piece == piece

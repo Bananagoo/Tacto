@@ -82,3 +82,11 @@ Format:
 - Failed: after a while wires (blue) began to read as open switches (cyan).
 - Not measured on the desk. Reproduced on rendered frames using the colours this camera sees: with the row of colour squares in shadow at 70% or 55% light, a wire read as an open switch. The squares are at the mat's edge nearest the learner, under their arms.
 - Decision: each square is now measured against the paper just round it instead of the whole page's paper, so a shadow over the squares divides out, and a square with something lying beside it is not read. Whether this was the cause on the desk is not confirmed until it is tried there. `GET /debug/reader` now lists what each square reads as.
+
+## 2026-11-22, wires against open switches on the real mat, measured by script (Claude)
+- Setup: `make dev` running, 15 pieces laid by Katherine, one frame read by a second process.
+- Measured: the blue and cyan squares read (22.8, 21.0, -45.4) and (37.1, 3.2, -41.5) in CIELAB, about 20 apart; most other pairs are 50 or more.
+- Failed: by plain colour distance, real wires gave 9 to 42% of their pixels to "open switch". Two wires split 52% to 42% and 48% to 40%. Their pixels averaged (25, 12, -33): blue's hue, washed out.
+- Passed: with hue deciding which piece colour a pixel is, the same two wires read 82% and 83% wire with 9% and 0% open switch, in a later frame where the light had changed (paper 184 against 164) and the wires were paler still. All 15 pieces kept the readings they had.
+- Not tested: a real open switch beside real wires after the change (none was on the mat); only rendered values for it.
+- Kit note: to this camera the cyan piece is the nearest colour to the blue one. A colour further from blue for the open switch would give more room.

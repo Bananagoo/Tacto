@@ -48,6 +48,12 @@ COLOURS_FILE = Path(__file__).resolve().parents[3] / "kit" / "pieces.yaml"
 LIGHTNESS_WEIGHT = 0.5
 # A pixel further than this from every piece colour is "something else" (skin, a sleeve).
 MAX_COLOUR_DISTANCE = 45.0
+# Which piece colour a pixel is, once it is one at all, is decided mostly by hue: shadow,
+# glare and a soft focus change how light and how strong a colour looks, not its hue.
+# Lightness and strength count this much against a full count for hue. On the demo desk
+# two real wires read washed out and split 52% wire to 42% open switch by plain distance;
+# their hue was blue's all along (docs/hardware-log.md, 22 Nov 2026).
+HUE_FIRST_WEIGHT = 0.25
 # A pixel with less colour than this is paper, a shadow, a printed dot or black ink.
 NEUTRAL_CHROMA = 14.0
 # Each battery half must be at least this much of the patch for the two to be a battery.
@@ -212,22 +218,29 @@ def read_squares(
 def label_pixels(lab: np.ndarray, palette: Palette) -> np.ndarray:
     """For every pixel: the index of its piece colour, or `_PAPER`, or `_OTHER`."""
     flat = lab.reshape(-1, 3)
-    weights = np.float32([LIGHTNESS_WEIGHT, 1.0, 1.0])
-    weighted = flat * weights
+    chroma = np.hypot(flat[:, 1], flat[:, 2])
     # One colour at a time, on squared distances: several times quicker than one big
     # pixels-by-colours table, and this runs on every frame.
     nearest = np.full(len(flat), _OTHER, dtype=np.intp)
-    nearest_squared = np.full(len(flat), MAX_COLOUR_DISTANCE**2, dtype=np.float32)
-    for index, reference in enumerate(palette.lab.astype(np.float32) * weights):
+    nearest_by_hue = np.full(len(flat), np.inf, dtype=np.float32)
+    near_any = np.zeros(len(flat), dtype=bool)
+    for index, reference in enumerate(palette.lab.astype(np.float32)):
         if index == _NEGATIVE:
             continue  # black has no colour of its own to match; it is told by darkness below
-        offset = weighted - reference
-        squared = np.einsum("ij,ij->i", offset, offset)
-        closer = squared <= nearest_squared
+        lightness_off = flat[:, 0] - reference[0]
+        colour_off = (flat[:, 1] - reference[1]) ** 2 + (flat[:, 2] - reference[2]) ** 2
+        # Is this pixel a piece colour at all? Plain distance: skin has red's hue or
+        # yellow's, and is far too pale to be either.
+        near_any |= (LIGHTNESS_WEIGHT * lightness_off) ** 2 + colour_off <= MAX_COLOUR_DISTANCE**2
+        # Which one? The difference in colour splits into strength and hue; hue counts in full.
+        strength_off = (chroma - float(np.hypot(reference[1], reference[2]))) ** 2
+        hue_off = np.maximum(colour_off - strength_off, 0.0)
+        by_hue = HUE_FIRST_WEIGHT**2 * (lightness_off**2 + strength_off) + hue_off
+        closer = by_hue < nearest_by_hue
         nearest[closer] = index
-        nearest_squared[closer] = squared[closer]
-    labels = nearest
-    neutral = np.hypot(flat[:, 1], flat[:, 2]) < NEUTRAL_CHROMA
+        nearest_by_hue[closer] = by_hue[closer]
+    labels = np.where(near_any, nearest, _OTHER)
+    neutral = chroma < NEUTRAL_CHROMA
     # Halfway between the black square and white paper: darker is ink, lighter is paper.
     dark = flat[:, 0] < (palette.lab[_NEGATIVE, 0] + 100.0) / 2
     labels = np.where(neutral, np.where(dark, _NEGATIVE, _PAPER), labels)
