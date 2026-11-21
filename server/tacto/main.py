@@ -18,7 +18,9 @@ from .app import create_app
 from .observation import Source
 from .platform import Platform, open_platform
 from .store.db import DEFAULT_DATABASE_URL
+from .vision import camera
 from .vision.open import open_source
+from .vision.preview import preview_router
 from .world import World
 
 load_dotenv()
@@ -27,6 +29,8 @@ SOURCE = os.getenv("TACTO_SOURCE", "camera")
 DATABASE_URL = os.getenv("TACTO_DATABASE_URL", DEFAULT_DATABASE_URL)
 
 _lock = threading.Lock()
+# One hub for the whole server, so the corner preview shares the camera the source reads.
+_hub = camera.CameraHub()
 _platform: Platform | None = None
 _source: Source | None = None
 
@@ -42,8 +46,10 @@ def make_world(nickname: str) -> World:
         if _platform is None:
             _platform = open_platform(database_url=DATABASE_URL)
         if _source is None:
-            _source = open_source(SOURCE, _platform.layout)
+            _source = open_source(SOURCE, _platform.layout, hub=_hub)
         return _platform.new_session(nickname=nickname, source=_source, source_name=SOURCE)
 
 
 app = create_app(make_world, source=SOURCE)
+if SOURCE == "camera":
+    app.include_router(preview_router(_hub))

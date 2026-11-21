@@ -1,9 +1,10 @@
-// Layout only: the bench on the left, the tutor and the concept map on the right, the
-// status bar along the bottom. Each piece reads what it needs from the store itself.
+// Layout only: the bench on the left, the tutor, the concept map and the camera corner on the
+// right, the status bar along the bottom. Each piece reads what it needs from the store itself.
 
 import { Bench } from './bench/Bench'
 import { HapticsProvider } from './haptics/HapticsContext'
 import { Instrument } from './Instrument'
+import { CameraCorner } from './ui/CameraCorner'
 import { ConceptMap } from './ui/ConceptMap'
 import { StatusBar } from './ui/StatusBar'
 import { TutorPanel } from './ui/TutorPanel'
@@ -20,6 +21,7 @@ export default function App() {
           <div className="flex min-h-0 flex-col gap-4">
             <TutorPanel />
             <ConceptMap />
+            <CameraCorner />
           </div>
         </main>
         <StatusBar />

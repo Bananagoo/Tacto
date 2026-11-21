@@ -84,7 +84,7 @@ Log every call with model, tokens and milliseconds to `server/logs/calls.jsonl` 
 
 - **Mat grid**: `Dot = (col, row)`, origin top-left. This is what the contract uses.
 - **Mat unit square**: `x, y` in 0..1 from the top-left, used for the fingertip.
-- **Camera pixels** and **tracker coordinates** never leave `vision/`. The Hands Tracker's coordinates are mirrored in x, bottom-up in y and relative to a crop; convert them with the calibrated homography, not by hand.
+- **Camera pixels** and **tracker coordinates** never leave `vision/`, with one exception: the live corner preview (`GET /camera/preview`, `vision/preview.py`) streams a small picture of the desk to the page on this machine, so the room can see the learner's hands. It is never stored, shares the camera the vision source already opened, and returns 404 when no camera is open. Nothing else sends pixels. The Hands Tracker's coordinates are mirrored in x, bottom-up in y and relative to a crop; convert them with the calibrated homography, not by hand.
 
 ## Configuration
 
