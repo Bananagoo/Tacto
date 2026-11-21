@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { useTacto } from '../useTacto'
 import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
-import { Fingertip } from './Fingertip'
-import { placeKeys, VIEW_HEIGHT, VIEW_WIDTH } from './grid'
+import { placeKeys, VIEW_HEIGHT, VIEW_WIDTH, type Point } from './grid'
+import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
+import { readingAt } from './readingAt'
 import { WireLine } from './WireLine'
 
 // The server still sends the printed lesson layout (a battery, a bulb, wire stubs) whatever the
@@ -16,7 +17,7 @@ const DRAW_SERVER_CIRCUIT = false
 /**
  * The mat as the camera reads it, drawn straight from the latest state. Nothing here knows
  * a layout: it draws whatever parts and wires the server lists. `children` are laid over the
- * mat's corner (the camera picture), so they take no room from the tutor beside it.
+ * mat's corner (the camera picture). The multimeter is the pointer over the mat.
  */
 export function Bench({ children }: { children?: ReactNode }) {
   const connected = useTacto((store) => store.connected)
@@ -26,12 +27,21 @@ export function Bench({ children }: { children?: ReactNode }) {
   const wireKeys = placeKeys(wires)
   const parts = circuit?.parts ?? []
   const short = connected && circuit?.status === 'short'
-  // The wire under the fingertip, as the same place key the wires are drawn under. The server
-  // names it "wire:c,r-c,r" (probe.on), and null for a part or nothing.
-  const touchedWire = useTacto((store) => {
-    const on = store.state?.probe.on
-    return on?.startsWith('wire:') ? on.slice('wire:'.length) : null
-  })
+  // The multimeter is the mouse's pointer: where it is on the mat, and what it reads there.
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [pointer, setPointer] = useState<Point | null>(null)
+  const reading = pointer ? readingAt(pointer, circuit, wireKeys) : null
+
+  const movePointer = (event: PointerEvent<SVGSVGElement>) => {
+    const svg = svgRef.current
+    const toMat = svg?.getScreenCTM()?.inverse()
+    if (!svg || !toMat) return
+    const spot = svg.createSVGPoint()
+    spot.x = event.clientX
+    spot.y = event.clientY
+    const onMat = spot.matrixTransform(toMat)
+    setPointer({ x: onMat.x, y: onMat.y })
+  }
 
   return (
     <figure
@@ -41,9 +51,12 @@ export function Bench({ children }: { children?: ReactNode }) {
       }`}
     >
       <svg
+        ref={svgRef}
+        onPointerMove={movePointer}
+        onPointerLeave={() => setPointer(null)}
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         // A stale picture is dimmed while the server is away, so it is not taken for live.
-        className={`absolute inset-0 h-full w-full transition-opacity ${connected ? '' : 'opacity-25'}`}
+        className={`absolute inset-0 h-full w-full cursor-none transition-opacity ${connected ? '' : 'opacity-25'}`}
         role="img"
         aria-label="The circuit on the mat"
       >
@@ -57,13 +70,13 @@ export function Bench({ children }: { children?: ReactNode }) {
             bRow={wire.b[1]}
             current={wire.current}
             overloaded={wire.overloaded}
-            touched={wireKeys[index] === touchedWire}
+            touched={reading?.wireKey === wireKeys[index]}
           />
         ))}
         {parts.map((part) => (
           <PartView key={part.id} part={part} />
         ))}
-        <Fingertip />
+        <Multimeter point={pointer} reading={reading} />
       </svg>
       {/* With the server's circuit hidden, a mat that is connected reads as empty. */}
       <BenchNotice

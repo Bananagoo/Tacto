@@ -13,7 +13,7 @@ interface WireLineProps {
   /** Amps, signed a -> b. */
   current: number
   overloaded: boolean
-  /** The fingertip is on this wire, so it is the one the mouse is ticking for. */
+  /** The multimeter is on this wire. */
   touched: boolean
 }
 
@@ -21,7 +21,7 @@ interface WireLineProps {
  * One drawn wire. Dead: a dim line. Carrying current: dashes run along it, faster for more
  * current, in the direction it flows. Overloaded: more than twice as thick, hot orange and
  * pulsing, so a shorted path stands out by shape and movement as well as colour. Under the
- * fingertip: a wide white halo behind it, so the room sees which wire the mouse is ticking for.
+ * multimeter: a wide white halo behind it, so the room sees which wire it is reading.
  */
 export const WireLine = memo(function WireLine({
   aCol,
