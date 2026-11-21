@@ -14,7 +14,7 @@ Given a need:
 1. Read `docs/tech-stack.md` and the dependency files. If the need is already covered, say so and stop.
 2. Search for candidates on PyPI, npm and GitHub. Prefer the project's own README and docs over blog posts.
 3. For each serious candidate, check and report:
-   - licence (reject GPL and AGPL for code that would sit in our tree)
+   - licence (report it; no licence is ruled out)
    - install command, and whether it needs system packages or compilation on macOS arm64
    - date of the last release or commit
    - the smallest code snippet that does our job, taken from its docs

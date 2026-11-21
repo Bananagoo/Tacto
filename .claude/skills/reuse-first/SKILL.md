@@ -20,7 +20,6 @@ For anything bigger, delegate to the `library-scout` subagent so the search does
 
 A candidate qualifies only if all of these hold:
 
-- Licence is MIT, BSD, Apache-2.0 or similar. No GPL or AGPL code inside our source tree (a separate GPL program we talk to is fine, and say so).
 - Installs with one `uv add` or `pnpm add` on macOS arm64, with no system packages and no compile step.
 - Released or committed to within the last 18 months, or small and stable enough that this does not matter.
 - Does the job with less glue code than writing it would take.

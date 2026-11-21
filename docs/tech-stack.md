@@ -85,7 +85,7 @@ Prices read from Together's serverless catalog on 21 Nov 2026. The frugality lin
 - **A database.** State is in memory; the MVP cuts saved progress.
 - **The LogiInsight SSH/AI link**, except once to switch the face AI off.
 - **Logi Gaze Tracker.** The camera is pointed at the desk.
-- **CircuitJS1 as the main simulator.** GPL-2.0, and driving an iframe from camera input is harder than solving the circuit.
+- **CircuitJS1 as the main simulator.** Driving an iframe from camera input is harder than solving the circuit.
 
 ## Sources
 
