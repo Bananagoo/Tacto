@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+@theme {
+  /* An overloaded wire throbs. Faster and deeper than Tailwind's pulse, so it reads as alarm. */
+  --animate-overload: overload 0.6s ease-in-out infinite;
+
+  @keyframes overload {
+    50% {
+      opacity: 0.45;
+    }
+  }
+}
+
 html,
 body,
 #root {
