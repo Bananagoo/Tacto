@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from tacto.contract_v2 import Grid
+from tacto.contract import Grid
 from tacto.lab import Lab, MatView
-from tacto.lab_lesson import (
+from tacto.lesson import (
     SETTLE_SECONDS,
     DoneWhen,
     Lesson,
@@ -17,7 +17,7 @@ from tacto.lab_lesson import (
 from tacto.pieces import Placed, solve_pieces
 from tacto_mock.scenario import branch, loop
 
-LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "lab" / "circuits-101.yaml"
+LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml"
 GRID = Grid(cols=9, rows=6)
 
 CIRCUITS = {

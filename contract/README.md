@@ -1,7 +1,7 @@
 # The state contract
 
 What the server and the lab UI say to each other. The Python models in
-`server/tacto/contract_v2.py` are the source; everything here is generated from
+`server/tacto/contract.py` are the source; everything here is generated from
 them. Changes need the vision owner's sign-off.
 
 | File | What it is |
@@ -28,7 +28,7 @@ The real lab with the camera replaced by a page: pick a tool and click between
 two dots, or load a preset (open, one bulb, series, parallel, short). It runs
 the real solver, reacts to `set_voltage`, and serves the same `/ws`, so the lab
 UI can be put into any state on demand. It needs ngspice (`brew install libngspice`).
-It runs the lesson in `lessons/lab/circuits-101.yaml`; "Restart lesson" on the page
+It runs the lesson in `lessons/circuits-101.yaml`; "Restart lesson" on the page
 starts it again. With "Finger follows the pointer" on, resting the pointer on a
 switch for half a second taps it, exactly as a fingertip does on the paper.
 

@@ -2,7 +2,7 @@ import json
 
 from fastapi.testclient import TestClient
 
-from tacto.contract_v2 import State
+from tacto.contract import State
 from tacto_mock.main import create_mock_app
 from tacto_mock.sample import SAMPLE_PATH, sample_text
 from tacto_mock.scenario import BATTERY_WIRE, BULB_A, states

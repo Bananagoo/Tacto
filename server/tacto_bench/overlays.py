@@ -1,11 +1,9 @@
 """What the camera bench draws on a frame: ArUco markers and the hand points.
 
-For checking the hardware by eye. The product's mat reading lives in tacto.vision.
+For checking the hardware by eye. The lab's own mat reading lives in tacto.vision.
 """
 
 from __future__ import annotations
-
-from collections.abc import Callable
 
 import cv2
 import numpy as np
@@ -19,15 +17,11 @@ JPEG_QUALITY = 80
 _DICTIONARY = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
 
-MatReader = Callable[[np.ndarray], dict]
-
-
 def analyse(
     frame: np.ndarray,
     overlays: set[str],
     tracker: HandTracker | None,
     t_ms: int,
-    mat_reader: MatReader | None = None,
 ) -> tuple[np.ndarray, dict]:
     """Run the requested checks on a frame. Returns the frame to show and what was found."""
     height, width = frame.shape[:2]
@@ -79,9 +73,6 @@ def analyse(
                         2,
                     )
                 cv2.circle(drawn, points[INDEX_TIP], 18, (0, 0, 255), 4)
-
-    if "mat" in overlays and mat_reader is not None:
-        analysis["mat"] = mat_reader(frame)
 
     return drawn, analysis
 

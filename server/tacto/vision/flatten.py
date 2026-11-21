@@ -12,11 +12,10 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from ..mat.models import MatLayout
+from ..mat import Mat
 from .markers import FoundMarker, find_markers
 from .print_geometry import (
     CORNER_MARKER_IDS,
-    DOT_PITCH_MM,
     PAGE_HEIGHT_MM,
     PAGE_WIDTH_MM,
     PrintGeometry,
@@ -63,7 +62,7 @@ def flatten(frame: np.ndarray, geometry: PrintGeometry) -> Flattened | None:
 def frame_point_to_mat(
     frame_to_page: np.ndarray,
     geometry: PrintGeometry,
-    layout: MatLayout,
+    mat: Mat,
     x_px: float,
     y_px: float,
 ) -> tuple[float, float]:
@@ -78,8 +77,8 @@ def frame_point_to_mat(
         return math.inf, math.inf
     first_x_mm, first_y_mm = geometry.dot_mm((0, 0))
     return (
-        (x / w - first_x_mm) / ((layout.cols - 1) * DOT_PITCH_MM),
-        (y / w - first_y_mm) / ((layout.rows - 1) * DOT_PITCH_MM),
+        (x / w - first_x_mm) / ((mat.cols - 1) * geometry.dot_pitch_mm),
+        (y / w - first_y_mm) / ((mat.rows - 1) * geometry.dot_pitch_mm),
     )
 
 

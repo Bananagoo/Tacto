@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import networkx as nx
 
-from tacto.contract import CircuitStatus, Dot, Part, Wire
+from tacto.sim.types import CircuitStatus, Dot, Part, Wire
 
 
 @dataclass(frozen=True)

@@ -19,7 +19,7 @@ def page_size_pt(pdf: Path) -> tuple[float, float]:
     return right - left, top - bottom
 
 
-def test_make_kit_writes_both_pdfs_at_a4(tmp_path):
+def test_make_kit_writes_the_mat_pdf_at_a4(tmp_path):
     # The same call as the Makefile's `kit` target: run from server/, no --mat.
     subprocess.run(
         [sys.executable, "../kit/make_kit.py", "--out", str(tmp_path / "out")],
@@ -28,8 +28,8 @@ def test_make_kit_writes_both_pdfs_at_a4(tmp_path):
         capture_output=True,
         timeout=120,
     )
-    for name in ("mat.pdf", "tiles.pdf"):
-        assert page_size_pt(tmp_path / "out" / name) == pytest.approx(A4_LANDSCAPE_PT, abs=0.5)
+    assert page_size_pt(tmp_path / "out" / "mat.pdf") == pytest.approx(A4_LANDSCAPE_PT, abs=0.5)
+    assert not (tmp_path / "out" / "tiles.pdf").exists()
 
 
 def test_make_kit_names_a_mat_file_it_cannot_read(tmp_path):

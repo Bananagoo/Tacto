@@ -1,6 +1,6 @@
 """Lesson steps for the lab: a fixed sequence, each step finished by the circuit itself.
 
-A lesson is data (`lessons/lab/<id>.yaml`): each step has a prompt to show and the
+A lesson is data (`lessons/<id>.yaml`): each step has a prompt to show and the
 circuit conditions that complete it. There are no predictions to score, no hints and
 no timers on the learner; a prompt may still ask "what do you expect?" as wording.
 """
@@ -16,7 +16,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from tacto.contract_v2 import Circuit, CircuitStatus, LessonStep, Piece
+from tacto.contract import Circuit, CircuitStatus, LessonStep, Piece
 
 Arrangement = Literal["single", "series", "parallel"]
 

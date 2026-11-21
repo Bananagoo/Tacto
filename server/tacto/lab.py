@@ -18,7 +18,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from typing import Protocol, TypeVar
 
-from tacto.contract_v2 import (
+from tacto.contract import (
     Circuit,
     Dot,
     Grid,
@@ -29,7 +29,7 @@ from tacto.contract_v2 import (
     State,
     Touch,
 )
-from tacto.lab_lesson import LessonRunner
+from tacto.lesson import LessonRunner
 from tacto.pieces import Placed, solve_pieces, touch_for
 from tacto.taps import SwitchTaps
 

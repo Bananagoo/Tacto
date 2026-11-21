@@ -2,9 +2,9 @@
 
 import pytest
 
-from tacto.contract import Circuit
 from tacto.sim import probe_for, solve_circuit
 from tacto.sim.feel import pulse_hz
+from tacto.sim.types import Circuit
 
 from .conftest import SOURCE_VOLTS, one_bulb, two_in_parallel, two_in_series, wire
 

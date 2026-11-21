@@ -10,10 +10,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from tacto.contract import Part, Wire
-from tacto.contract_v2 import Circuit, CircuitStatus, Dot, Piece, PieceType, Touch, segment_id
+from tacto.contract import Circuit, CircuitStatus, Dot, Piece, PieceType, Touch, segment_id
 from tacto.sim.feel import pulse_hz
 from tacto.sim.solver import solve_circuit
+from tacto.sim.types import Part, Wire
 
 _STATUS: dict[str, CircuitStatus] = {
     "empty": "open",

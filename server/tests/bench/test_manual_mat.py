@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from tacto.contract_v2 import Grid, State
+from tacto.app import create_lab_app
+from tacto.contract import Grid, State
 from tacto.lab import Lab
-from tacto.lab_app import create_lab_app
 from tacto_bench.manual_mat import PRESETS, ManualMat
 from tacto_bench.manual_routes import manual_router
 

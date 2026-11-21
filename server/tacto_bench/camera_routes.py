@@ -17,17 +17,12 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from tacto.mat.loader import load_mat
-from tacto.platform import DEFAULT_LESSON_ID, MATS_DIR
 from tacto.vision import camera, hands
 
 from . import overlays
-from .mat_reading import FrameMatReader
 
 router = APIRouter(prefix="/dev", tags=["devtools"])
 hub = camera.CameraHub()
-# The mat the camera bench checks frames against.
-mat_reader = FrameMatReader(load_mat(MATS_DIR / f"{DEFAULT_LESSON_ID}.yaml"))
 
 BOUNDARY = "frame"
 FRAME_TIMEOUT_S = 1.0
@@ -85,7 +80,7 @@ async def stream(
                 seq, frame = got
                 t_ms = int((time.monotonic() - start) * 1000)
                 drawn, analysis = await asyncio.to_thread(
-                    overlays.analyse, frame, wanted, tracker, t_ms, mat_reader
+                    overlays.analyse, frame, wanted, tracker, t_ms
                 )
                 if hand_error is not None:
                     analysis["hand_error"] = hand_error

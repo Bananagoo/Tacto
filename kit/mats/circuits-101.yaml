@@ -1,43 +1,12 @@
-# The printed mat for the Circuits 101 lesson: what is fixed on the paper, where the
-# learner may draw, and which slots take a tile. The kit generator prints from this file
-# and the camera reads against it, so the paper and the software cannot disagree.
+# The printed mat for Circuits 101: a grid of dots between four corner markers.
+# `make kit` prints from this file and the camera reads against it.
 #
-# Dots are [col, row], origin top-left.
-# TODO(vision owner): placeholder geometry, matched by eye to the first printed mat.
-# Replace the grid size and the dots with the real kit's once it is final.
+# TODO(kit owner): grid size and dot spacing are still open. These are placeholders.
+# A piece spans one gap between neighbouring dots, so dot_pitch_mm is the piece length.
+# The grid must fit on A4 landscape between the corner markers:
+#   (cols - 1) * dot_pitch_mm <= 231 and (rows - 1) * dot_pitch_mm <= 144.
 
 id: circuits-101
 cols: 9
 rows: 6
-battery_volts: 6.0
-
-parts:
-  - { id: battery, kind: battery, a: [1, 2], b: [1, 3] }   # a is the positive terminal
-  - { id: bulb_a, kind: bulb, a: [4, 0], b: [6, 0] }
-
-wires:
-  # positive side: battery up to the top rail, along it to bulb A, on to the right rail
-  - { a: [1, 2], b: [1, 0] }
-  - { a: [1, 0], b: [2, 0] }
-  - { a: [2, 0], b: [3, 0] }
-  - { a: [3, 0], b: [4, 0] }
-  - { a: [6, 0], b: [7, 0] }
-  - { a: [7, 0], b: [7, 1] }
-  # right rail below the tile slot, then the bottom rail back to the battery
-  - { a: [7, 3], b: [7, 4] }
-  - { a: [7, 4], b: [6, 4] }
-  - { a: [4, 4], b: [3, 4] }
-  - { a: [3, 4], b: [2, 4] }
-  - { a: [2, 4], b: [1, 4] }
-  - { a: [1, 4], b: [1, 3] }
-  # side branch, above and below its slot
-  - { a: [3, 0], b: [3, 1] }
-  - { a: [3, 3], b: [3, 4] }
-
-drawables:
-  - { id: gap, a: [6, 4], b: [4, 4] }      # the missing line the learner draws first
-  - { id: shortcut, a: [2, 0], b: [2, 4] } # a line straight across the battery wires
-
-slots:
-  - { id: tile, a: [7, 1], b: [7, 3], accepts: [wire, bulb], starts: wire }
-  - { id: side, a: [3, 1], b: [3, 3], accepts: [bulb, wire] }
+dot_pitch_mm: 28

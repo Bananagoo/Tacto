@@ -9,7 +9,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tacto.contract_v2 import Circuit, Grid, LessonStep, Piece, SetVoltage, State, Touch
+from tacto.contract import (
+    Circuit,
+    Grid,
+    LessonStep,
+    Piece,
+    SetVoltage,
+    State,
+    Touch,
+    segment_id,
+)
 
 CONTRACT_DIR = Path(__file__).resolve().parents[2] / "contract"
 
@@ -30,7 +39,7 @@ def example_state() -> State:
     ]
     pieces = [
         Piece(
-            id=_id(a, b),
+            id=segment_id(a, b),
             type=kind,  # type: ignore[arg-type]
             a=a,
             b=b,
@@ -57,12 +66,6 @@ def example_state() -> State:
             step_done=True,
         ),
     )
-
-
-def _id(a: tuple[int, int], b: tuple[int, int]) -> str:
-    from tacto.contract_v2 import segment_id
-
-    return segment_id(a, b)
 
 
 def contract_files() -> dict[str, str]:

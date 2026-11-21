@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from tacto.contract_v2 import Grid, LessonStep, PieceType, State, Touch, segment_id
+from tacto.contract import Grid, LessonStep, PieceType, State, Touch, segment_id
 from tacto.pieces import Placed, solve_pieces, touch_for
 
 GRID = Grid(cols=9, rows=6)

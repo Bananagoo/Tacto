@@ -4,14 +4,14 @@ setup:
 	cd server && uv sync
 	cd web && pnpm install
 	@test -f .env || cp .env.example .env
-	@echo "Ready. Run: make dev"
+	@echo "Ready. Run: make manual"
 
-# The product: server on :8000 and web on :5173, both reloading. Ctrl-C stops both.
+# The lab on the camera, with the web UI. The camera reader is not built yet: use make manual.
 dev:
 	$(MAKE) -j2 server web
 
-# Tooling: the real product on a virtual mat, plus the camera bench.
-# Open http://localhost:5173/devtools/
+# Tooling with the web dev tools: the hand-set mat (localhost:8000/manual) and the
+# camera bench (localhost:5173/devtools/).
 bench:
 	$(MAKE) -j2 bench-server web
 
@@ -48,13 +48,11 @@ mock:
 	cd server && uv run uvicorn tacto_mock.main:app --port 8000
 
 # The lab on a mat you set by hand, with the real solver. Open http://localhost:8000/manual
-manual:
-	cd server && uv run uvicorn tacto_bench.manual_main:app --port 8000 --timeout-graceful-shutdown 2
+manual: bench-server
 
 fmt:
 	cd server && uv run ruff check --select I --fix . && uv run ruff format .
 	cd web && pnpm exec prettier --write src devtools vite.config.ts
 
 kit:
-	@test -f kit/make_kit.py || (echo "kit/make_kit.py is not written yet (vision lane, phase 1)"; exit 1)
 	cd server && uv run python ../kit/make_kit.py --out ../kit/out

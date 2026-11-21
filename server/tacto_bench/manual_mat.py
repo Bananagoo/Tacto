@@ -9,7 +9,7 @@ from __future__ import annotations
 import threading
 from typing import Literal
 
-from tacto.contract_v2 import Dot, Grid, PieceType, segment_id
+from tacto.contract import Dot, Grid, PieceType, segment_id
 from tacto.lab import MatView
 from tacto.pieces import Placed
 from tacto_mock.scenario import branch, loop

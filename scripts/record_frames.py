@@ -5,8 +5,8 @@ Run from server/ so uv uses the project environment:
 
 Frames go to server/fixtures/<mat id>/ as numbered PNGs, five a second. Keep faces out
 of the picture: these files are committed to a public repository. Replay plays them in
-name order, so record the lesson in order: the kit as it ships, then the gap drawn, then
-the tile swapped, and so on, holding each state for a second or two.
+name order, so record the lesson in order, one layout after another, holding each for a
+second or two.
 """
 
 from __future__ import annotations

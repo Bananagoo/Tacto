@@ -1,34 +1,32 @@
-"""The tooling server: the real product, fed by a virtual mat, plus the camera bench.
+"""The tooling server: the lab on a mat you set by hand, plus the camera bench.
 
-Run with `make bench` (uvicorn tacto_bench.main:app --reload --port 8000). Everything
-behind the mat is the product's own code: the solver, the lesson engine, the database.
+Run with `make manual` and open localhost:8000/manual.
+
+Everything behind the mat is the product's own code: the solver, the touch
+logic, the state message. Only the camera is replaced.
 """
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
-from dotenv import load_dotenv
-
-from tacto.app import create_app
-from tacto.platform import open_platform
-from tacto.store.db import DEFAULT_DATABASE_URL
-from tacto.world import World
+from tacto.app import create_lab_app
+from tacto.lab import Lab
+from tacto.lesson import LessonRunner, load_lesson
+from tacto.mat import load_default_mat
+from tacto.pieces import warm_up_solver
 
 from .camera_routes import router as camera_router
-from .mat_routes import mat_router
-from .virtual_mat import VirtualMat
+from .manual_mat import ManualMat
+from .manual_routes import manual_router
 
-load_dotenv()
+GRID = load_default_mat().grid
 
-platform = open_platform(database_url=os.getenv("TACTO_DATABASE_URL", DEFAULT_DATABASE_URL))
-virtual_mat = VirtualMat(platform.layout)
+warm_up_solver()
+manual_mat = ManualMat(GRID)
+LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml"
 
-
-def make_world(nickname: str) -> World:
-    return platform.new_session(nickname=nickname, source=virtual_mat, source_name="mock")
-
-
-app = create_app(make_world, source="mock")
+lab = Lab(GRID, manual_mat, source_name="manual", lesson=LessonRunner(load_lesson(LESSON_FILE)))
+app = create_lab_app(lab, source="manual")
+app.include_router(manual_router(manual_mat, lab))
 app.include_router(camera_router)
-app.include_router(mat_router(virtual_mat))

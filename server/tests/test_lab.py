@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from tacto.contract_v2 import Grid, SetVoltage, State
+from tacto.app import create_lab_app
+from tacto.contract import Grid, SetVoltage, State
 from tacto.lab import Lab, MatView, piece_at
-from tacto.lab_app import create_lab_app
 from tacto.pieces import solve_pieces
 from tacto_mock.scenario import BULB_A, loop
 

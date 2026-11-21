@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from tacto.contract_v2 import Dot
+from tacto.contract import Dot
 from tacto.lab import Lab
 
 from .manual_mat import PRESETS, ManualMat, Tool

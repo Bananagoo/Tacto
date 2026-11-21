@@ -16,71 +16,73 @@ def to_page_mm(frame_to_page: np.ndarray, point_px: tuple[float, float]) -> tupl
     return float(x / w), float(y / w)
 
 
-def all_dots(layout) -> list[tuple[int, int]]:
-    return [(col, row) for col in range(layout.cols) for row in range(layout.rows)]
+def all_dots(mat) -> list[tuple[int, int]]:
+    return [(col, row) for col in range(mat.cols) for row in range(mat.rows)]
 
 
 @pytest.mark.parametrize("view_name", VIEWS)
-def test_flatten_puts_every_dot_within_a_millimetre_and_a_half(view_name, layout, geometry):
+def test_flatten_puts_every_dot_within_a_millimetre_and_a_half(view_name, mat, geometry):
     view = VIEWS[view_name]
-    flattened = flatten(Scene(layout).photograph(view), geometry)
+    flattened = flatten(Scene(mat).photograph(view), geometry)
     assert flattened is not None
     worst_mm = max(
         math.dist(
             to_page_mm(flattened.frame_to_page, frame_position(view, geometry.dot_mm(dot))),
             geometry.dot_mm(dot),
         )
-        for dot in all_dots(layout)
+        for dot in all_dots(mat)
     )
     assert worst_mm < 1.5
 
 
 @pytest.mark.parametrize("view", [STRAIGHT, TILTED, UPSIDE_DOWN])
-def test_the_flattened_image_is_the_page_square_on(view, layout, geometry):
-    flattened = flatten(Scene(layout).photograph(view), geometry)
+def test_the_flattened_image_is_the_page_square_on(view, mat, geometry):
+    flattened = flatten(Scene(mat).photograph(view), geometry)
     assert flattened.image.shape == (
         round(mm_to_px(PAGE_HEIGHT_MM, dpi=FLAT_DPI)),
         round(mm_to_px(PAGE_WIDTH_MM, dpi=FLAT_DPI)),
     )
-    for wire in layout.wires:
-        (ax, ay), (bx, by) = geometry.dot_mm(wire.a), geometry.dot_mm(wire.b)
-        x_px = round(mm_to_px((ax + bx) / 2, dpi=FLAT_DPI))
-        y_px = round(mm_to_px((ay + by) / 2, dpi=FLAT_DPI))
-        assert flattened.image[y_px, x_px] < 100, "a printed wire is where the layout says"
+    for dot in all_dots(mat):
+        x_mm, y_mm = geometry.dot_mm(dot)
+        x_px, y_px = round(mm_to_px(x_mm, dpi=FLAT_DPI)), round(mm_to_px(y_mm, dpi=FLAT_DPI))
+        assert flattened.image[y_px, x_px] < 215, "a printed dot is where the mat says"
+        # Half a dot spacing away there is only paper.
+        aside_px = round(mm_to_px(x_mm + geometry.dot_pitch_mm / 2, dpi=FLAT_DPI))
+        assert flattened.image[y_px, aside_px] > 225
 
 
 @pytest.mark.parametrize("corner", range(4))
-def test_a_hidden_corner_gives_no_result(corner, layout, geometry):
-    frame = Scene(layout).cover_corner(corner).photograph()
+def test_a_hidden_corner_gives_no_result(corner, mat, geometry):
+    frame = Scene(mat).cover_corner(corner).photograph()
     assert flatten(frame, geometry) is None
 
 
-def test_a_corner_marker_seen_twice_gives_no_result(layout, geometry):
+def test_a_corner_marker_seen_twice_gives_no_result(mat, geometry):
     # Two pages in view, or a stray print-out: there is no telling which marker is ours.
-    frame = Scene(layout).photograph()
+    frame = Scene(mat).photograph()
     doubled = np.hstack([frame, frame])
     assert flatten(doubled, geometry) is None
 
 
 @pytest.mark.parametrize("view", [STRAIGHT, TILTED, UPSIDE_DOWN])
-def test_a_frame_point_maps_to_its_mat_position(view, layout, geometry):
-    flattened = flatten(Scene(layout).photograph(view), geometry)
-    for dot in all_dots(layout):
+def test_a_frame_point_maps_to_its_mat_position(view, mat, geometry):
+    flattened = flatten(Scene(mat).photograph(view), geometry)
+    for dot in all_dots(mat):
         x_px, y_px = frame_position(view, geometry.dot_mm(dot))
-        x, y = frame_point_to_mat(flattened.frame_to_page, geometry, layout, x_px, y_px)
-        assert x == pytest.approx(dot[0] / (layout.cols - 1), abs=0.02)
-        assert y == pytest.approx(dot[1] / (layout.rows - 1), abs=0.02)
+        x, y = frame_point_to_mat(flattened.frame_to_page, geometry, mat, x_px, y_px)
+        assert x == pytest.approx(dot[0] / (mat.cols - 1), abs=0.02)
+        assert y == pytest.approx(dot[1] / (mat.rows - 1), abs=0.02)
 
 
-def test_a_point_beside_the_grid_maps_outside_zero_to_one(layout, geometry):
-    flattened = flatten(Scene(layout).photograph(), geometry)
+def test_a_point_beside_the_grid_maps_outside_zero_to_one(mat, geometry):
+    flattened = flatten(Scene(mat).photograph(), geometry)
     x_px, y_px = frame_position(STRAIGHT, (5.0, 205.0))  # bottom-left of the page
-    x, y = frame_point_to_mat(flattened.frame_to_page, geometry, layout, x_px, y_px)
+    x, y = frame_point_to_mat(flattened.frame_to_page, geometry, mat, x_px, y_px)
     assert x < 0 and y > 1
 
 
-def test_a_greyscale_frame_flattens_like_a_colour_one(layout, geometry):
-    frame = Scene(layout).photograph()
+def test_a_greyscale_frame_flattens_like_a_colour_one(mat, geometry):
+    frame = Scene(mat).photograph()
     grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     colour, plain = flatten(frame, geometry), flatten(grey, geometry)
     single_channel = flatten(grey[:, :, np.newaxis], geometry)
@@ -88,8 +90,8 @@ def test_a_greyscale_frame_flattens_like_a_colour_one(layout, geometry):
     assert np.allclose(colour.frame_to_page, single_channel.frame_to_page)
 
 
-def test_a_frame_with_an_alpha_channel_flattens(layout, geometry):
-    frame = cv2.cvtColor(Scene(layout).photograph(), cv2.COLOR_BGR2BGRA)
+def test_a_frame_with_an_alpha_channel_flattens(mat, geometry):
+    frame = cv2.cvtColor(Scene(mat).photograph(), cv2.COLOR_BGR2BGRA)
     assert flatten(frame, geometry) is not None
 
 

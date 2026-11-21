@@ -6,7 +6,7 @@ part or wire being touched. It never encodes voltage.
 
 from __future__ import annotations
 
-from tacto.contract import Circuit, Dot, Part, Probe, Wire
+from tacto.sim.types import Circuit, Dot, Part, Probe, Wire
 
 # TODO(sim owner): tune both on the real mouse.
 # Ticks per second for each amp. Strictly proportional, with no offset, so that half the

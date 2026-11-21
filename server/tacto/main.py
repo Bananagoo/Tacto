@@ -1,49 +1,26 @@
-"""Tacto server. Run with `make dev` (uvicorn tacto.main:app --reload --port 8000).
+"""The lab server. Run with `make dev` (uvicorn tacto.main:app --port 8000).
 
-TACTO_SOURCE picks where the world comes from:
-  camera  the LogiInsight camera above the printed mat (default)
-  replay  recorded frames from server/fixtures/<mat id>/
+TACTO_SOURCE picks where the mat comes from:
+  camera  the camera above the printed mat (default)
+  replay  frames recorded into server/fixtures/<mat id>/
 
-With no camera and no recordings, use `make bench`: the same product on a virtual mat.
+The camera reader is being rebuilt for pieces without markers (colour patches per
+segment). Until it lands, neither source can start: use `make manual`, which runs
+the same lab on a mat set by hand.
 """
 
 from __future__ import annotations
 
 import os
-import threading
 
 from dotenv import load_dotenv
-
-from .app import create_app
-from .observation import Source
-from .platform import Platform, open_platform
-from .store.db import DEFAULT_DATABASE_URL
-from .vision.open import open_source
-from .world import World
 
 load_dotenv()
 
 SOURCE = os.getenv("TACTO_SOURCE", "camera")
-DATABASE_URL = os.getenv("TACTO_DATABASE_URL", DEFAULT_DATABASE_URL)
 
-_lock = threading.Lock()
-_platform: Platform | None = None
-_source: Source | None = None
-
-
-def make_world(nickname: str) -> World:
-    """A session for this learner. There is one desk, so every session shares one source.
-
-    The database and the camera are opened on the first connection, not on import, so
-    importing this module has no side effects.
-    """
-    global _platform, _source
-    with _lock:
-        if _platform is None:
-            _platform = open_platform(database_url=DATABASE_URL)
-        if _source is None:
-            _source = open_source(SOURCE, _platform.layout)
-        return _platform.new_session(nickname=nickname, source=_source, source_name=SOURCE)
-
-
-app = create_app(make_world, source=SOURCE)
+raise SystemExit(
+    f"main: TACTO_SOURCE={SOURCE!r} cannot start yet: the camera reader for unmarked "
+    "pieces is not built. Run `make manual` for the lab on a hand-set mat, or "
+    "`make mock` to replay the recorded sample."
+)

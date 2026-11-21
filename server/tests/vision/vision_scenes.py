@@ -1,6 +1,6 @@
 """Make camera frames without a camera: the printed kit, changed by hand, seen from above.
 
-A scene starts as the rendered mat page. Pen lines, tiles and a covering hand are drawn
+A scene starts as the rendered mat page. A covering hand is drawn
 onto it as a learner would add them, and `photograph` then views the page as a camera
 would: at an angle, on a grey desk, a little blurred, dim or noisy.
 """
@@ -12,12 +12,11 @@ from dataclasses import dataclass, replace
 import cv2
 import numpy as np
 
-from tacto.mat.models import MatLayout, Segment, SlotContent
-from tacto.vision.kit_render import render_mat, render_tile
+from tacto.mat import Mat
+from tacto.vision.kit_render import render_mat
 from tacto.vision.print_geometry import (
     PAGE_HEIGHT_MM,
     PAGE_WIDTH_MM,
-    TILE_MARKER_IDS,
     PrintGeometry,
     mm_to_px,
 )
@@ -25,8 +24,6 @@ from tacto.vision.print_geometry import (
 PAGE_DPI = 150
 FRAME_WIDTH_PX, FRAME_HEIGHT_PX = 1920, 1080
 DESK_GREY = (90, 90, 90)
-PEN_BLUE = (120, 40, 20)  # BGR: a dark blue ballpoint
-PEN_WIDTH_MM = 0.7
 SKIN = (140, 170, 210)
 
 PointMm = tuple[float, float]
@@ -108,55 +105,9 @@ def photograph(page: np.ndarray, view: View, *, seed: int = 0) -> np.ndarray:
 class Scene:
     """The mat page with the learner's changes on it."""
 
-    def __init__(self, layout: MatLayout) -> None:
-        self._layout = layout
-        self._geometry = PrintGeometry.for_layout(layout)
-        self.page = render_mat(layout, dpi=PAGE_DPI)
-
-    def draw_line(
-        self,
-        drawable_id: str,
-        *,
-        fraction: float = 1.0,
-        colour: tuple[int, int, int] = PEN_BLUE,
-        width_mm: float = PEN_WIDTH_MM,
-        aside_mm: float = 0.0,
-    ) -> Scene:
-        """A pen line from the drawable's first dot, `fraction` of the way to its second,
-        `aside_mm` off the guide as an unsteady hand draws it."""
-        (ax, ay), (bx, by) = self._ends_mm(self._find(self._layout.drawables, drawable_id))
-        length_mm = float(np.hypot(bx - ax, by - ay))
-        shift_x, shift_y = -(by - ay) / length_mm * aside_mm, (bx - ax) / length_mm * aside_mm
-        start = (ax + shift_x, ay + shift_y)
-        end = (ax + (bx - ax) * fraction + shift_x, ay + (by - ay) * fraction + shift_y)
-        thickness_px = max(1, round(mm_to_px(width_mm, dpi=PAGE_DPI)))
-        cv2.line(self.page, page_px(start), page_px(end), colour, thickness_px, cv2.LINE_AA)
-        return self
-
-    def place_tile(
-        self,
-        slot_id: str,
-        kind: SlotContent,
-        *,
-        marker_id: int | None = None,
-        offset_mm: PointMm = (0.0, 0.0),
-    ) -> Scene:
-        """Lay a cut-out tile on a slot, `offset_mm` away from sitting exactly on it."""
-        tile = render_tile(kind, marker_id or TILE_MARKER_IDS[kind][0], dpi=PAGE_DPI)
-        (ax, ay), (bx, by) = self._ends_mm(self._find(self._layout.slots, slot_id))
-        if ax == bx:
-            tile = np.rot90(tile)
-        centre_x, centre_y = page_px(((ax + bx) / 2 + offset_mm[0], (ay + by) / 2 + offset_mm[1]))
-        height_px, width_px = tile.shape[:2]
-        top, left = centre_y - height_px // 2, centre_x - width_px // 2
-        self.page[top : top + height_px, left : left + width_px] = tile
-        return self
-
-    def place_starting_tiles(self) -> Scene:
-        for slot in self._layout.slots:
-            if slot.starts != "empty":
-                self.place_tile(slot.id, slot.starts)
-        return self
+    def __init__(self, mat: Mat) -> None:
+        self._geometry = PrintGeometry.for_mat(mat)
+        self.page = render_mat(mat, dpi=PAGE_DPI)
 
     def cover(self, centre_mm: PointMm, radius_mm: float) -> Scene:
         """A hand over part of the page."""
@@ -164,19 +115,8 @@ class Scene:
         cv2.circle(self.page, page_px(centre_mm), radius_px, SKIN, cv2.FILLED)
         return self
 
-    def cover_slot(self, slot_id: str) -> Scene:
-        (ax, ay), (bx, by) = self._ends_mm(self._find(self._layout.slots, slot_id))
-        return self.cover(((ax + bx) / 2, (ay + by) / 2), 20.0)
-
     def cover_corner(self, corner: int) -> Scene:
         return self.cover(self._geometry.corner_marker_centres_mm()[corner], 18.0)
 
     def photograph(self, view: View = STRAIGHT, *, seed: int = 0) -> np.ndarray:
         return photograph(self.page, view, seed=seed)
-
-    def _ends_mm(self, segment: Segment) -> tuple[PointMm, PointMm]:
-        return self._geometry.dot_mm(segment.a), self._geometry.dot_mm(segment.b)
-
-    @staticmethod
-    def _find(items: list, wanted_id: str):
-        return next(item for item in items if item.id == wanted_id)

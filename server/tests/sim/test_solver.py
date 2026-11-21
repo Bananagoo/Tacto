@@ -9,8 +9,8 @@ import time
 
 import pytest
 
-from tacto.contract import Circuit, Dot, Part, Wire
 from tacto.sim import engine, solve_circuit
+from tacto.sim.types import Circuit, Dot, Part, Wire
 
 from .conftest import (
     SOURCE_VOLTS,

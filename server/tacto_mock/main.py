@@ -14,7 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
-from tacto.contract_v2 import SetVoltage
+from tacto.contract import SetVoltage
 
 from .sample import SAMPLE_PATH
 
