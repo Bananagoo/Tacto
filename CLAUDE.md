@@ -18,7 +18,7 @@ Run from the repo root.
 |---|---|
 | `make setup` | Install server (uv) and web (pnpm) dependencies |
 | `make dev` | The product: server on :8000 and web on :5173, both with reload |
-| `make bench` | Tooling: the same app fed by a mock world, plus the camera bench. Open `localhost:5173/devtools/` |
+| `make bench` | Tooling: the real product on a virtual mat you change by clicking, plus the camera bench. Open `localhost:5173/devtools/` |
 | `make server` / `make web` | One side only |
 | `make check` | Format check, lint, type-check, tests. Must pass before every commit |
 | `make fmt` | Format everything |
@@ -28,7 +28,7 @@ Run from the repo root.
 
 ## Product and tooling
 
-Product code is `server/tacto/` and `web/src/`. Test tooling (the mock world, the camera bench, the dev harness, the haptics page) is `server/tacto_bench/` and `web/devtools/`, with its tests in `server/tests/bench/`. Tooling may import the product; the product never imports tooling. `server/tests/test_boundaries.py` enforces this. The design is in `docs/superpowers/specs/2026-11-21-tacto-platform-design.md`.
+Product code is `server/tacto/` and `web/src/`. Test tooling (the virtual mat, the camera bench, the haptics page) is `server/tacto_bench/` and `web/devtools/`, with its tests in `server/tests/bench/`. Tooling may import the product; the product never imports tooling. `server/tests/test_boundaries.py` enforces this. The design is in `docs/superpowers/specs/2026-11-21-tacto-platform-design.md`.
 
 ## Layout and lanes
 

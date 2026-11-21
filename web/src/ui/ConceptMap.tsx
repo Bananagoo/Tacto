@@ -33,7 +33,8 @@ export function ConceptMap() {
   const concepts = Object.entries(learner)
 
   return (
-    <section className="rounded-3xl bg-white/5 p-6">
+    // Capped and scrollable: on a short screen the tutor's line must keep its room.
+    <section className="max-h-[50%] shrink-0 overflow-y-auto rounded-3xl bg-white/5 p-6">
       <h2 className="m-0 mb-4 text-2xl font-medium tracking-wide text-stone-300 uppercase">
         What you know
       </h2>
@@ -46,13 +47,13 @@ export function ConceptMap() {
             return (
               <li
                 key={concept}
-                className={`flex items-baseline gap-3 rounded-2xl border-4 px-5 py-3 ${look.className}`}
+                className={`flex items-baseline gap-2 rounded-2xl border-4 px-4 py-2 ${look.className}`}
               >
-                <span className="text-3xl font-bold" aria-hidden="true">
+                <span className="text-2xl font-bold" aria-hidden="true">
                   {look.mark}
                 </span>
-                <span className="text-3xl font-semibold">{toWords(concept)}</span>
-                <span className="text-xl">{look.words}</span>
+                <span className="text-2xl font-semibold">{toWords(concept)}</span>
+                <span className="text-lg">{look.words}</span>
               </li>
             )
           })}

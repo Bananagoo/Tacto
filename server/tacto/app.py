@@ -11,6 +11,7 @@ from .contract import ClientMessage
 from .world import WorldFactory
 
 STATE_HZ = 15
+DEFAULT_NICKNAME = "guest"
 
 _client_message = TypeAdapter(ClientMessage)
 
@@ -24,9 +25,10 @@ def create_app(make_world: WorldFactory, *, source: str) -> FastAPI:
         return {"ok": True, "source": source}
 
     @app.websocket("/ws")
-    async def ws(socket: WebSocket) -> None:
+    async def ws(socket: WebSocket, learner: str = DEFAULT_NICKNAME) -> None:
         await socket.accept()
-        world = make_world()
+        # The page passes ?learner=<nickname>; there is no login and no text box.
+        world = make_world(learner)
 
         async def send_states() -> None:
             while True:

@@ -6,12 +6,16 @@ import time
 import cv2
 import numpy as np
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from tacto.vision import camera, hands
 from tacto_bench import camera_routes as routes
 from tacto_bench import overlays
-from tacto_bench.main import app
+
+# The camera routes on their own app: importing tacto_bench.main would open the database.
+app = FastAPI()
+app.include_router(routes.router)
 
 
 def sheet(ids=(0, 1, 2, 3)) -> np.ndarray:

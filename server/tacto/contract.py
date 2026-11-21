@@ -60,8 +60,8 @@ class Probe(BaseModel):
     """Where the learner's fingertip is, and what the mouse should do about it."""
 
     present: bool = False
-    x: float = 0.0  # mat coordinates, 0..1 from the left
-    y: float = 0.0  # mat coordinates, 0..1 from the top
+    x: float = 0.0  # mat position, 0..1 from the first dot column to the last
+    y: float = 0.0  # mat position, 0..1 from the first dot row to the last
     on: str | None = None  # part id, or "wire:c,r-c,r", or None
     current: float = 0.0
     pulse_hz: float = 0.0  # tick rate for the mouse; 0 means silent

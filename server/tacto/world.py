@@ -16,5 +16,5 @@ class World(Protocol):
     def handle(self, message: ClientMessage) -> None: ...
 
 
-WorldFactory = Callable[[], World]
-"""Called once per WebSocket connection."""
+WorldFactory = Callable[[str], World]
+"""Called once per WebSocket connection, with the learner's nickname."""

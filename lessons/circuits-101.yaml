@@ -39,7 +39,7 @@ steps:
   - id: setup
     teaches: [closed_loop]
     build:
-      say: "Place the battery and one bulb on the mat."
+      say: "Find the battery, the bulb and the gap in the wire on your mat."
       done_when: { status: open, bulbs: 1 }
     observe:
       say: "Trace the wires with one finger and keep your other hand on the mouse."

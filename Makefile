@@ -10,7 +10,7 @@ setup:
 dev:
 	$(MAKE) -j2 server web
 
-# Tooling: the same app fed by the mock world, plus the camera bench.
+# Tooling: the real product on a virtual mat, plus the camera bench.
 # Open http://localhost:5173/devtools/
 bench:
 	$(MAKE) -j2 bench-server web

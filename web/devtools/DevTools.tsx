@@ -1,14 +1,14 @@
 // Tooling for the people building Tacto, at /devtools/. Not part of the product:
 // nothing under src/ may import from this folder (server/tests/test_boundaries.py).
-// Run it with `make bench`, which serves the mock world and the camera routes.
+// Run it with `make bench`, which serves the product on a virtual mat and the camera routes.
 
 import { useEffect, useState } from 'react'
 import CameraPanel from './camera/CameraPanel'
 import HapticTestPage from './haptics/HapticTestPage'
-import Harness from './Harness'
+import MatPanel from './mat/MatPanel'
 
 const TOOLS = [
-  { hash: '#harness', label: 'Loop harness', render: () => <Harness /> },
+  { hash: '#mat', label: 'Virtual mat', render: () => <MatPanel /> },
   {
     hash: '#camera',
     label: 'Camera',

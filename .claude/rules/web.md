@@ -13,4 +13,4 @@ paths:
 - The projected screen is what judges see from two metres away: large type, high contrast, one focal point at a time. The tutor's prompt is always visible as text as well as spoken.
 - Prediction buttons are always on screen during the predict phase, even when voice works.
 - No chat UI, no text input for the learner.
-- Tooling pages (dev harness, camera bench, haptics page) live in `web/devtools/`, served at `/devtools/` by `make bench`. Nothing under `web/src/` may import from `web/devtools/`.
+- Tooling pages (virtual mat, camera bench, haptics page) live in `web/devtools/`, served at `/devtools/` by `make bench`. Nothing under `web/src/` may import from `web/devtools/`.

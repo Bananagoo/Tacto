@@ -30,7 +30,10 @@ export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
 
     const open = () => {
       const scheme = location.protocol === 'https:' ? 'wss' : 'ws'
-      socket = new WebSocket(`${scheme}://${location.host}/ws`)
+      // ?learner=<nickname> on the page picks whose progress is loaded; there is no login.
+      const learner = new URLSearchParams(location.search).get('learner')
+      const query = learner ? `?learner=${encodeURIComponent(learner)}` : ''
+      socket = new WebSocket(`${scheme}://${location.host}/ws${query}`)
       socket.onopen = () =>
         useTacto.setState({
           connected: true,

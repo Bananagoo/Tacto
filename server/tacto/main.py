@@ -4,7 +4,7 @@ TACTO_SOURCE picks where the world comes from:
   replay  recorded frames from server/fixtures/   (not built yet)
   camera  the LogiInsight camera                  (not built yet)
 
-Until one of those exists, use `make bench`: the same app fed by a mock world.
+Until one of those exists, use `make bench`: the same product on a virtual mat.
 """
 
 from __future__ import annotations
@@ -21,9 +21,9 @@ load_dotenv()
 SOURCE = os.getenv("TACTO_SOURCE", "replay")
 
 
-def make_world() -> World:
+def make_world(nickname: str) -> World:
     raise NotImplementedError(
-        f"TACTO_SOURCE={SOURCE} is not built yet; run `make bench` for the mock world"
+        f"TACTO_SOURCE={SOURCE} is not built yet; run `make bench` for the virtual mat"
     )
 
 

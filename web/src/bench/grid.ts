@@ -11,8 +11,6 @@ export const GRID_ROWS = 6
 export const DOT_PITCH = 100
 
 // Room around the outer dots, so a part on an edge row is not clipped.
-// TODO(vision owner): this assumes the mat's edges (probe 0..1) are the edges of the view box,
-// with the dots inset by this margin. Set it from the printed mat once the kit is final.
 const MARGIN = 80
 
 export const VIEW_WIDTH = (GRID_COLS - 1) * DOT_PITCH + 2 * MARGIN
@@ -31,9 +29,15 @@ function clampUnit(value: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-/** Mat coordinates (0..1 from the left, 0..1 from the top) to SVG. Clamped to stay on the mat. */
+/**
+ * Mat position to SVG. As in the contract, 0..1 runs from the first dot column or row to
+ * the last. Clamped to stay on the mat.
+ */
 export function matToPoint(x: number, y: number): Point {
-  return { x: clampUnit(x) * VIEW_WIDTH, y: clampUnit(y) * VIEW_HEIGHT }
+  return {
+    x: MARGIN + clampUnit(x) * (GRID_COLS - 1) * DOT_PITCH,
+    y: MARGIN + clampUnit(y) * (GRID_ROWS - 1) * DOT_PITCH,
+  }
 }
 
 export interface Span {

@@ -51,7 +51,7 @@ HTTP endpoints (add as needed, keep them few): `GET /health`; later `POST /stt` 
 
 | `TACTO_SOURCE` | World comes from | Needs |
 |---|---|---|
-| (tooling, `make bench`) | `server/tacto_bench/mock_world.py`, a fake one-bulb circuit that reacts to the wheel. Not a product mode | Nothing |
+| (tooling, `make bench`) | `server/tacto_bench/virtual_mat.py`: a mat you change by clicking at `/devtools/#mat`. The real session, solver, lesson engine and database run on top of it. Not a product mode | Nothing |
 | `replay` | Frames in `server/fixtures/` plus a recorded fingertip track | Nothing |
 | `camera` | LogiInsight RGB stream and the Hands Tracker app | Camera, tracker app running |
 
