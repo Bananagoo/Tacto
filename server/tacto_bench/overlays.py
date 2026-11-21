@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from tacto.vision.hands import HAND_BONES, INDEX_TIP, HandTracker
+from tacto.vision.tracker import MatTracker
 
 # The printed test sheet (scripts/aruco_probe.py) puts these in the corners.
 CORNER_IDS = (0, 1, 2, 3)
@@ -29,6 +30,7 @@ def analyse(
         "width": width,
         "height": height,
         "brightness": round(float(frame.mean()), 1),
+        "sharpness": sharpness(frame),
     }
     drawn = frame
 
@@ -75,6 +77,27 @@ def analyse(
                 cv2.circle(drawn, points[INDEX_TIP], 18, (0, 0, 255), 4)
 
     return drawn, analysis
+
+
+def sharpness(frame: np.ndarray) -> float:
+    """How much fine detail the picture has: the variance of its Laplacian.
+
+    Only good for comparing the same scene with itself. On the demo desk a focused mat
+    read 50 to 110 and one focused on a hand in front of it read 3.
+    """
+    grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
+    return round(float(cv2.Laplacian(grey, cv2.CV_64F).var()), 1)
+
+
+def flat_view(frame: np.ndarray, tracker: MatTracker) -> tuple[np.ndarray | None, dict]:
+    """The mat squared up as the reader sees it, and whether its position is fresh or held."""
+    flattened = tracker.see(frame)
+    report = {
+        "mat_found": flattened is not None,
+        "mat_held": tracker.held,
+        "corners_seen": tracker.corners_seen,
+    }
+    return (None if flattened is None else flattened.image), report
 
 
 def encode_jpeg(frame: np.ndarray, width: int) -> bytes:

@@ -8,8 +8,9 @@ One server process on one laptop turns camera frames into state messages. The la
 camera frame (colour, 1080p, ~30 fps)
   │  vision/camera.py                      one worker thread per camera
   ▼
-flatten                                    vision/flatten.py
-  │  find the four ArUco corner markers, fit a homography, warp to a square-on page
+flatten                                    vision/flatten.py, vision/tracker.py
+  │  find the four ArUco corner markers, fit a homography, warp to a square-on page;
+  │  with a corner covered, keep the last position while the visible corners still agree
   ▼
 segment patches                            vision/patches.py
   │  one fixed-size crop for every gap between neighbouring dots

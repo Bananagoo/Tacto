@@ -20,6 +20,10 @@ export interface CameraStatus {
   width?: number
   height?: number
   brightness?: number
+  sharpness?: number
+  mat_found?: boolean
+  mat_held?: boolean
+  corners_seen?: number[]
   marker_ids?: number[]
   missing_corners?: number[]
   corners_visible?: boolean
@@ -33,6 +37,8 @@ export interface Exposure {
   camera_found: boolean
   manual: boolean
   gain: number
+  /** False holds the lens where it is: lock it once the mat is sharp. */
+  autofocus: boolean
 }
 
 export async function getExposure(): Promise<Exposure> {
@@ -41,11 +47,15 @@ export async function getExposure(): Promise<Exposure> {
   return (await response.json()) as Exposure
 }
 
-export async function setExposure(manual: boolean, gain: number): Promise<Exposure> {
+export async function setExposure(
+  manual: boolean,
+  gain: number,
+  autofocus: boolean,
+): Promise<Exposure> {
   const response = await fetch('/api/dev/camera/exposure', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ manual, gain }),
+    body: JSON.stringify({ manual, gain, autofocus }),
   })
   if (!response.ok) throw new Error(`server answered ${response.status}`)
   return (await response.json()) as Exposure
@@ -66,7 +76,15 @@ export async function cameraStatus(index: number): Promise<CameraStatus> {
   return (await response.json()) as CameraStatus
 }
 
-/** `nonce` forces a fresh connection when the same camera is restarted. */
-export function streamUrl(index: number, overlays: Overlay[], nonce: number): string {
-  return `/api/dev/camera/stream?index=${index}&overlay=${overlays.join(',')}&n=${nonce}`
+/**
+ * `nonce` forces a fresh connection when the same camera is restarted. `flat` asks for
+ * the mat squared up, as the reader sees it, instead of the camera's picture.
+ */
+export function streamUrl(
+  index: number,
+  overlays: Overlay[],
+  nonce: number,
+  flat: boolean,
+): string {
+  return `/api/dev/camera/stream?index=${index}&overlay=${overlays.join(',')}&flat=${flat ? 1 : 0}&n=${nonce}`
 }

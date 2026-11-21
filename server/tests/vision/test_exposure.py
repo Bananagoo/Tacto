@@ -9,7 +9,12 @@ class FakeTool:
     """Stands in for the uvc-util binary: remembers controls and records every call."""
 
     def __init__(self, controls: dict[str, int] | None = None, code: int = 0) -> None:
-        self.controls = {"auto-exposure-mode": 8, "exposure-time-abs": 156, "gain": 0}
+        self.controls: dict[str, int | str] = {
+            "auto-exposure-mode": 8,
+            "exposure-time-abs": 156,
+            "gain": 0,
+            "auto-focus": "true",
+        }
         self.controls.update(controls or {})
         self.code = code
         self.calls: list[list[str]] = []
@@ -21,8 +26,8 @@ class FakeTool:
         lines = []
         for flag, value in zip(args[::2], args[1::2], strict=True):
             if flag == "-s":
-                name, number = value.split("=")
-                self.controls[name] = int(number)
+                name, new = value.split("=")
+                self.controls[name] = new if name == "auto-focus" else int(new)
             elif flag == "-g":
                 lines.append(f"{value} = {self.controls[value]}")
         return 0, "\n".join(lines)
@@ -46,6 +51,7 @@ def test_apply_sets_manual_mode_before_the_values_it_unlocks():
         "auto-exposure-mode": exposure.MANUAL_MODE,
         "exposure-time-abs": exposure.EXPOSURE_TIME,
         "gain": 20,
+        "auto-focus": "true",
     }
     call = tool.calls[0]
     assert call[call.index("-s") + 1] == f"auto-exposure-mode={exposure.MANUAL_MODE}"
@@ -91,3 +97,12 @@ def test_a_missing_tool_is_not_an_error(monkeypatch, tmp_path):
 def test_gain_outside_the_camera_range_is_refused(gain):
     with pytest.raises(ValueError):
         exposure.Exposure(manual=True, gain=gain)
+
+
+def test_locking_focus_turns_autofocus_off_and_is_read_back():
+    tool = FakeTool()
+    exposure.apply(exposure.Exposure(autofocus=False), tool)
+    assert tool.controls["auto-focus"] == "false"
+    assert exposure.read(tool) == exposure.Exposure(manual=True, gain=0, autofocus=False)
+    exposure.apply(exposure.Exposure(autofocus=True), tool)
+    assert tool.controls["auto-focus"] == "true"

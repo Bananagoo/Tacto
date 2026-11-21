@@ -265,14 +265,14 @@ def test_status_combines_what_every_viewer_saw(client):
 
 
 def test_exposure_routes_set_and_report_the_camera(client, monkeypatch):
-    camera_now = {"auto-exposure-mode": 8, "gain": 0}
+    camera_now: dict[str, int | str] = {"auto-exposure-mode": 8, "gain": 0, "auto-focus": "true"}
 
     def tool(args: list[str]) -> tuple[int, str]:
         lines = []
         for flag, value in zip(args[::2], args[1::2], strict=True):
             if flag == "-s":
-                name, number = value.split("=")
-                camera_now[name] = int(number)
+                name, new = value.split("=")
+                camera_now[name] = new if name == "auto-focus" else int(new)
             elif flag == "-g":
                 lines.append(f"{value} = {camera_now[value]}")
         return 0, "\n".join(lines)
@@ -282,12 +282,20 @@ def test_exposure_routes_set_and_report_the_camera(client, monkeypatch):
     monkeypatch.setattr(exposure, "available", lambda: True)
 
     before = client.get("/dev/camera/exposure").json()
-    assert before == {"available": True, "camera_found": True, "manual": False, "gain": 0}
+    assert before == {
+        "available": True,
+        "camera_found": True,
+        "manual": False,
+        "gain": 0,
+        "autofocus": True,
+    }
 
-    after = client.post("/dev/camera/exposure", json={"manual": True, "gain": 25}).json()
-    assert after == {"available": True, "camera_found": True, "manual": True, "gain": 25}
+    setting = {"manual": True, "gain": 25, "autofocus": False}
+    after = client.post("/dev/camera/exposure", json=setting).json()
+    assert after == {"available": True, "camera_found": True, **setting}
+    assert camera_now["auto-focus"] == "false"
     assert camera_now["auto-exposure-mode"] == exposure.MANUAL_MODE
-    assert exposure.wanted() == exposure.Exposure(manual=True, gain=25)
+    assert exposure.wanted() == exposure.Exposure(manual=True, gain=25, autofocus=False)
 
     assert (
         client.post("/dev/camera/exposure", json={"manual": True, "gain": 300}).status_code == 422
@@ -299,3 +307,59 @@ def test_exposure_route_without_the_tool_says_so(client, monkeypatch, tmp_path):
     monkeypatch.setattr(exposure, "_wanted", exposure.Exposure())
     body = client.get("/dev/camera/exposure").json()
     assert body["available"] is False and body["camera_found"] is False
+
+
+# ---------- the flattened mat ----------
+
+
+def last_jpeg(multipart: bytes) -> np.ndarray:
+    start, end = multipart.rfind(b"\xff\xd8"), multipart.rfind(b"\xff\xd9")
+    return cv2.imdecode(np.frombuffer(multipart[start : end + 2], np.uint8), cv2.IMREAD_COLOR)
+
+
+def test_sharpness_falls_when_the_picture_is_blurred():
+    crisp = sheet()
+    soft = cv2.GaussianBlur(crisp, (0, 0), 6)
+    assert overlays.sharpness(crisp) > 10 * overlays.sharpness(soft)
+
+
+def test_flat_stream_shows_the_page_square_on_and_reports_the_mat(monkeypatch):
+    from tacto.mat import load_default_mat
+    from tacto.vision.kit_render import render_mat
+
+    # The rendered mat page lying on a grey desk, off-centre in a 1080p frame.
+    page = render_mat(load_default_mat(), dpi=100)
+    frame = np.full((1080, 1920, 3), 90, dtype=np.uint8)
+    frame[150 : 150 + page.shape[0], 400 : 400 + page.shape[1]] = page
+    hub = fake_hub(frame, [])
+    monkeypatch.setattr(routes, "hub", hub)
+    client = TestClient(app)
+    hub.acquire(0)  # keep the camera open so status can be read after the stream ends
+    try:
+        params = {"index": 0, "frames": 1, "flat": 1, "width": 1920}
+        page = last_jpeg(client.get("/dev/camera/stream", params=params).content)
+        # A4 landscape, and white paper right to the edge: no desk in the picture.
+        assert abs(page.shape[1] / page.shape[0] - 297 / 210) < 0.01
+        assert page[:, :8].mean() > 200 and page[:, -8:].mean() > 200
+        status = client.get("/dev/camera/status", params={"index": 0}).json()
+        assert status["mat_found"] is True and status["mat_held"] is False
+        assert status["corners_seen"] == [0, 1, 2, 3]
+        assert status["sharpness"] > 0
+    finally:
+        hub.release(0)
+
+
+def test_flat_stream_without_a_mat_shows_the_camera_and_says_so(monkeypatch):
+    blank = np.full((720, 1280, 3), 90, dtype=np.uint8)
+    hub = fake_hub(blank, [])
+    monkeypatch.setattr(routes, "hub", hub)
+    client = TestClient(app)
+    hub.acquire(0)
+    try:
+        params = {"index": 0, "frames": 1, "flat": 1, "width": 1280}
+        shown = last_jpeg(client.get("/dev/camera/stream", params=params).content)
+        assert shown.shape[:2] == (720, 1280)
+        status = client.get("/dev/camera/status", params={"index": 0}).json()
+        assert status["mat_found"] is False and status["corners_seen"] == []
+    finally:
+        hub.release(0)

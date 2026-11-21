@@ -1,10 +1,15 @@
-"""Manual exposure for the LogiInsight camera.
+"""Manual exposure and a focus lock for the LogiInsight camera.
 
 Left on auto, the camera exposes for the whole scene: on a dark desk or floor the white
 mat burns out, the dots vanish and the corner markers stop being read. In manual mode
 the camera no longer looks at the background at all.
 
-OpenCV cannot set this on macOS (every `capture.set` is refused), so the settings go
+Autofocus has the same kind of trouble: a hand reaching over the desk is nearer than the
+paper, the lens follows it and the whole mat goes soft. The camera has no focus distance
+to set, only autofocus on or off, so the lock is: wait until the mat is sharp, then turn
+autofocus off.
+
+OpenCV cannot set either on macOS (every `capture.set` is refused), so the settings go
 through the uvc-util command-line tool, built by `make camera-tool`. Without the tool,
 or without the camera, everything here does nothing and says so once.
 """
@@ -37,6 +42,9 @@ Runner = Callable[[list[str]], tuple[int, str]]
 class Exposure(BaseModel):
     manual: bool = True
     gain: int = Field(DEFAULT_GAIN, ge=0, le=255)
+    # False holds the lens where it is. On by default: locking is only right once the
+    # mat is in focus, which a person has to see (the bench shows a sharpness number).
+    autofocus: bool = True
 
 
 # What the camera should be set to whenever it is opened. The bench changes it.
@@ -70,19 +78,23 @@ def _run_tool(args: list[str]) -> tuple[int, str]:
 
 def read(run: Runner | None = None) -> Exposure | None:
     """What the camera is set to now. None when the tool or the camera is missing."""
-    code, output = (run or _run_tool)(["-V", DEVICE, "-g", "auto-exposure-mode", "-g", "gain"])
+    code, output = (run or _run_tool)(
+        ["-V", DEVICE, "-g", "auto-exposure-mode", "-g", "gain", "-g", "auto-focus"]
+    )
     if code != 0:
         return None
-    values: dict[str, int] = {}
+    values: dict[str, str] = {}
     for line in output.splitlines():
         name, _, value = line.partition("=")
-        try:
-            values[name.strip()] = int(value)
-        except ValueError:
-            continue
-    if "auto-exposure-mode" not in values or "gain" not in values:
+        values[name.strip()] = value.strip()
+    try:
+        return Exposure(
+            manual=int(values["auto-exposure-mode"]) == MANUAL_MODE,
+            gain=int(values["gain"]),
+            autofocus=values["auto-focus"] != "false",
+        )
+    except (KeyError, ValueError):
         return None
-    return Exposure(manual=values["auto-exposure-mode"] == MANUAL_MODE, gain=values["gain"])
 
 
 def apply(setting: Exposure | None = None, run: Runner | None = None) -> bool:
@@ -95,13 +107,14 @@ def apply(setting: Exposure | None = None, run: Runner | None = None) -> bool:
         _wanted = setting
     if _wanted.manual:
         # Mode first: the camera refuses an exposure time while it is still on auto.
-        controls = {
+        controls: dict[str, int | str] = {
             "auto-exposure-mode": MANUAL_MODE,
             "exposure-time-abs": EXPOSURE_TIME,
             "gain": _wanted.gain,
         }
     else:
         controls = {"gain": 0, "auto-exposure-mode": AUTO_MODE}
+    controls["auto-focus"] = "true" if _wanted.autofocus else "false"
     args = ["-V", DEVICE]
     for name, value in controls.items():
         args += ["-s", f"{name}={value}"]

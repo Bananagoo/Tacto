@@ -1,9 +1,10 @@
 """Routes for the camera bench (web page at /devtools/#camera). Not part of the product.
 
 GET /dev/cameras         camera names by index, and which are open
-GET /dev/camera/stream   live MJPEG; overlay=aruco,hand,mat draws or reports what was found
+GET /dev/camera/stream   live MJPEG; overlay=aruco,hand draws or reports what was found;
+                         flat=1 shows the mat squared up, as the reader sees it
 GET /dev/camera/status   what the stream last saw: fps, size, markers, fingertips
-GET /dev/camera/exposure   how the LogiInsight camera is exposing: manual or auto, and gain
+GET /dev/camera/exposure   the LogiInsight camera's exposure (manual or auto, gain) and autofocus
 POST /dev/camera/exposure  set it; it is applied again each time the camera is opened
 
 A camera is open only while someone is watching its stream.
@@ -19,7 +20,10 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from tacto.mat import load_default_mat
 from tacto.vision import camera, exposure, hands
+from tacto.vision.print_geometry import PrintGeometry
+from tacto.vision.tracker import MatTracker
 
 from . import overlays
 
@@ -72,6 +76,7 @@ async def stream(
     index: int = 0,
     overlay: str = "",
     width: int = Query(1280, ge=160, le=1920),
+    flat: bool = Query(False, description="send the flattened mat instead of the frame"),
     frames: int | None = Query(None, ge=1, description="stop after this many frames"),
 ) -> StreamingResponse:
     wanted = {name for name in overlay.split(",") if name}
@@ -84,6 +89,7 @@ async def stream(
         tracker = None
         hand_error = None
         viewer = next(_viewer_ids)
+        mat_tracker = MatTracker(PrintGeometry.for_mat(load_default_mat())) if flat else None
         try:
             if "hand" in wanted:
                 try:
@@ -104,6 +110,11 @@ async def stream(
                 drawn, analysis = await asyncio.to_thread(
                     overlays.analyse, frame, wanted, tracker, t_ms
                 )
+                if mat_tracker is not None:
+                    page, report = await asyncio.to_thread(overlays.flat_view, frame, mat_tracker)
+                    analysis.update(report)
+                    # While the mat is not found, show the camera so it can be put right.
+                    drawn = drawn if page is None else page
                 if hand_error is not None:
                     analysis["hand_error"] = hand_error
                 worker.analyses[viewer] = analysis

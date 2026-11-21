@@ -53,7 +53,7 @@ Run from the repo root.
 | `server/tacto/lesson.py`, `lessons/` | Lesson steps as data; each completes from the circuit |
 | `server/tacto/taps.py` | A switch tap is a half-second fingertip dwell |
 | `server/tacto/mat.py`, `kit/mats/` | The mat: grid size and dot spacing as data |
-| `server/tacto/vision/` | Camera, hand tracking, corner markers, flattening, the printable mat |
+| `server/tacto/vision/` | Camera, exposure and focus lock, hand tracking, corner markers, flattening, holding the mat's position (`tracker.py`), the printable mat |
 | `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the hand-set mat, the camera bench |
 | `web/devtools/` | Tooling pages for the vision lane (camera bench, haptics test page) |
 
@@ -64,13 +64,13 @@ Tooling may import the product (`server/tacto/`); the product never imports tool
 - Wires are card strips, classified like any other piece. There are no pen lines.
 - The mat has four ArUco corner markers. The pieces have none.
 - The circuit solver runs on the server.
-- The switch toggles by a finger tap on the paper switch (a half-second dwell), not a physical flap.
+- A switch is two printed pieces, open (cyan) and closed (green). The learner swaps the piece and the camera reads which one is down. Decided 21 Nov; it replaces the finger tap. `taps.py` and the tap wording in `contract/README.md` are still there until the camera reader lands.
 - Fingertip tracking is MediaPipe on our own colour frames.
 
 ## Still open: ask, do not assume
 
 - Grid size and dot spacing (config in `kit/mats/circuits-101.yaml`; the current values are placeholders).
-- The colour of each piece type (proposed: wire black, battery red, bulb yellow, resistor blue, switch green).
+- Nothing on colours: the printed pieces are in `kit/printed/` and their colours are listed in `kit/printed/README.md`. `kit/pieces.yaml` still holds the old proposal and does not match them yet.
 
 ## Rules
 
