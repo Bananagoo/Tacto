@@ -52,9 +52,9 @@ const WAVEFORM: Record<HapticPattern, number> = {
   // tick = 3, confirmed by feel on the real mouse via webhid (2026-11-21, Ananya Maheshwari).
   // The plugin names it damp_collision, but webhid ids are unconfirmed against those names.
   tick: 3,
-  nudge: 2,
-  short: 13,
-  success: 7,
+  // short = 14, chosen by Ananya Maheshwari on 2026-11-21 (the plugin names it square). It is
+  // looped fast for the buzz of a shorted wire; not yet felt in the product.
+  short: 14,
 }
 
 /** No hardware. Fires a window event so the UI can flash, and logs. */

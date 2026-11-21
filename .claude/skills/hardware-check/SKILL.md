@@ -15,7 +15,7 @@ Read `.claude/rules/hardware.md` first. Then follow the matching section. Ask fo
 2. Driver `plugin`: is Logi Options+ running and the Haptic Web plugin installed? Click Connect. If it errors, check that `local.jmw.nz` resolves (`ping -c1 local.jmw.nz`); if not, suggest adding `127.0.0.1 local.jmw.nz` to `/etc/hosts`.
 3. Press buttons 0–15. For each, ask for two or three words on how it feels (short tick, double tap, long buzz).
 4. Repeat with driver `webhid`. Note whether the ids feel like the same waveforms as the plugin's.
-5. Pick with them: the shortest, cleanest tick for `tick`; a gentle double for `nudge`; something harsh for `short`; something pleasant for `success`. Update `WAVEFORM` in `web/src/haptics/driver.ts`.
+5. Pick with them: the shortest, cleanest tick for `tick`; something harsh for `short`. Update `WAVEFORM` in `web/src/haptics/driver.ts`.
 6. Tick rate: scroll the wheel up in the harness so the pulse rate climbs. At what rate do ticks blur together? Set `MAX_PULSE_HZ` in `web/src/haptics/usePulse.ts` just below that.
 7. Wheel: does one notch change the voltage by one step? Try with smooth scrolling on and off; adjust `WHEEL_UNITS_PER_STEP` in `web/src/App.tsx`.
 

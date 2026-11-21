@@ -26,7 +26,7 @@ export function HapticsProvider({ children }: { children: ReactNode }) {
       await mouse.connect()
       setDriver(mouse)
       // So the person holding the mouse knows it worked without looking up.
-      mouse.play('success')
+      mouse.play('tick')
     } catch (error) {
       // The console driver stays in use, so the lesson carries on without the mouse.
       mouse.close()

@@ -5,8 +5,8 @@ import { pulsePeriodMs, useBeat } from './usePulse'
 
 // The mouse has no continuous vibration, so the buzz of a short is one preset looped fast
 // enough to run together.
-// TODO(haptics owner): both values are untested by feel; tune them on the real mouse.
-const BUZZ_WAVEFORM = 3
+// The preset is the `short` waveform in driver.ts.
+// TODO(haptics owner): BUZZ_HZ is untested by feel; tune it on the real mouse.
 const BUZZ_HZ = 25
 
 /**
@@ -24,7 +24,7 @@ export function useProbeHaptics(driver: HapticsDriver) {
 
   const buzzing = touching && buzz
   const fire = useCallback(() => {
-    if (buzzing) driver.playRaw(BUZZ_WAVEFORM)
+    if (buzzing) driver.play('short')
     else driver.play('tick')
   }, [driver, buzzing])
 

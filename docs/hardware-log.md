@@ -45,3 +45,7 @@ Format:
 ## 2026-11-21, mouse strength and speed, tested by Katherine
 - Passed: on the haptics test page with `webhid` over the receiver, the speed slider changes the tick rate and the strength slider changes how strong the vibration feels. Both confirmed by hand.
 - Not measured yet: the preferred preset, the fastest rate that still feels like separate ticks, and the strength to use in the demo.
+
+## 2026-11-21, haptic patterns trimmed, decided by Ananya Maheshwari
+- Decision: the `nudge` and `success` patterns are removed from the contract (`HapticPattern` is now `tick` and `short`). `short` = waveform 14, and the shorted-wire buzz now plays it through `play('short')` instead of a separate constant (it was waveform 3). Nothing sent `nudge` or `success`; the connect cue in `HapticsContext.tsx` now plays `tick`.
+- Not yet felt: waveform 14 looped at `BUZZ_HZ` as a short.
