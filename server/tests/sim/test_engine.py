@@ -1,5 +1,6 @@
 """Engine: the one place that talks to ngspice."""
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -28,6 +29,18 @@ def test_netlist_order_does_not_change_the_answer():
     forwards = solve_node_voltages(6.0, "top", resistors)
     backwards = solve_node_voltages(6.0, "top", resistors[::-1])
     assert forwards == backwards
+
+
+def test_solves_from_several_threads_do_not_interfere():
+    """ngspice is one shared instance. Each thread solves V across a 10 + 30 ohm divider
+    and must get back its own midpoint, V * 30 / 40, not another thread's."""
+    resistors = [Resistor("top", "mid", 10.0), Resistor("mid", GROUND, 30.0)]
+    source_volts = [float(v) for v in range(1, 41)]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        midpoints = list(
+            pool.map(lambda v: solve_node_voltages(v, "top", resistors)["mid"], source_volts)
+        )
+    assert midpoints == pytest.approx([v * 0.75 for v in source_volts])
 
 
 def test_library_from_environment_is_used(tmp_path: Path):
