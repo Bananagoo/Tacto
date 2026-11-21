@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react'
 import CameraPanel from './camera/CameraPanel'
 import HapticTestPage from './haptics/HapticTestPage'
 import MatPanel from './mat/MatPanel'
-import ScratchPanel from './scratch/ScratchPanel'
 
 const TOOLS = [
   { hash: '#mat', label: 'Virtual mat', render: () => <MatPanel /> },
@@ -20,7 +19,6 @@ const TOOLS = [
     ),
   },
   { hash: '#haptics', label: 'Haptics', render: () => <HapticTestPage /> },
-  { hash: '#scratch', label: 'Built from scratch', render: () => <ScratchPanel /> },
 ]
 
 export default function DevTools() {
