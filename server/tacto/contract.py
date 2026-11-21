@@ -32,7 +32,7 @@ HapticPattern = Literal["tick", "nudge", "short", "success"]
 class Part(BaseModel):
     id: str
     kind: PartKind
-    a: Dot
+    a: Dot  # for a battery, the positive terminal
     b: Dot
     closed: bool | None = None  # switches only
     current: float = 0.0  # amps, signed a -> b

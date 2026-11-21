@@ -47,10 +47,10 @@ class MockWorld:
                     Part(
                         id="battery1",
                         kind="battery",
-                        a=(1, 3),
-                        b=(1, 1),
+                        a=(1, 1),  # positive terminal
+                        b=(1, 3),
                         voltage=self.volts,
-                        current=amps,
+                        current=-amps,  # inside a battery current runs b -> a
                     ),
                     Part(
                         id="bulb1",

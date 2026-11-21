@@ -18,6 +18,7 @@ export type HapticPattern = 'tick' | 'nudge' | 'short' | 'success'
 export interface Part {
   id: string
   kind: PartKind
+  /** For a battery, the positive terminal. */
   a: Dot
   b: Dot
   closed: boolean | null
