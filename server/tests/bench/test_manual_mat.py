@@ -75,7 +75,7 @@ def test_the_routes_drive_the_state_message():
     mat = ManualMat(GRID)
     lab = Lab(GRID, mat, source_name="manual")
     app = create_lab_app(lab, source="manual")
-    app.include_router(manual_router(mat))
+    app.include_router(manual_router(mat, lab))
     client = TestClient(app)
 
     assert "Hand-set mat" in client.get("/manual").text

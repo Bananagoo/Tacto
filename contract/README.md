@@ -28,7 +28,9 @@ The real lab with the camera replaced by a page: pick a tool and click between
 two dots, or load a preset (open, one bulb, series, parallel, short). It runs
 the real solver, reacts to `set_voltage`, and serves the same `/ws`, so the lab
 UI can be put into any state on demand. It needs ngspice (`brew install libngspice`).
-`lesson` is empty here until the lesson steps are rebuilt.
+It runs the lesson in `lessons/lab/circuits-101.yaml`; "Restart lesson" on the page
+starts it again. With "Finger follows the pointer" on, resting the pointer on a
+switch for half a second taps it, exactly as a fingertip does on the paper.
 
 ## Reading a state
 
@@ -44,7 +46,11 @@ UI can be put into any state on demand. It needs ngspice (`brew install libngspi
   last. Play `pulse_hz` ticks a second on the mouse; if `buzz` is true play one hard
   continuous buzz. Vibration is current, never voltage.
 - `mat_visible: false` means the camera has lost the mat; pieces hold their last values.
-- `lesson.prompt` is the text to show. `step_done` turns true when the circuit meets the step's goal.
+- `lesson.prompt` is the text to show. `step_done` turns true once the circuit has met
+  the step's goal for half a second, and stays true; about six seconds later the next
+  step's prompt arrives. `lesson_done` turns true when the last step is done.
+- A switch's `closed` flips when a fingertip rests on it for half a second. The finger
+  must leave the switch before it can flip it again.
 
 ## After changing the models
 

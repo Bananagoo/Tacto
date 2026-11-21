@@ -28,7 +28,7 @@
 </head>
 <body>
 <h1>Hand-set mat</h1>
-<p>Pick a tool, click between two dots. The same tool again toggles a switch, turns a battery round, or removes the piece.</p>
+<p>Pick a tool, click between two dots. The same tool again toggles a switch, turns a battery round, or removes the piece. With the finger on, resting the pointer on a switch for half a second taps it.</p>
 <div class="row" id="tools"></div>
 <div class="row" id="presets"><span>Presets:</span></div>
 <div class="row">
@@ -38,6 +38,7 @@
 </div>
 <svg id="mat"></svg>
 <div class="row"><span id="status">connecting…</span></div>
+<div class="row"><span id="lesson"></span> <button id="restart">Restart lesson</button></div>
 <pre id="touch"></pre>
 <script>
 const TOOLS = ['wire', 'battery', 'bulb', 'resistor', 'switch', 'erase']
@@ -55,6 +56,7 @@ fetch('/manual/presets').then(r => r.json()).then(names => { for (const name of 
   const b = document.createElement('button'); b.textContent = name.replace('_', ' '); b.onclick = () => post('preset', { name })
   document.getElementById('presets').appendChild(b) } })
 document.getElementById('visible').onchange = e => post('mat_visible', { visible: e.target.checked })
+document.getElementById('restart').onclick = () => post('restart_lesson', {})
 document.getElementById('finger').onchange = e => { if (!e.target.checked) post('finger', { present: false }) }
 document.getElementById('volts').oninput = e => { const volts = Number(e.target.value)
   document.getElementById('voltsText').textContent = volts + ' V'
@@ -90,6 +92,8 @@ function draw(s) {
   const tip = document.getElementById('tip'); tip.setAttribute('visibility', s.touch.present ? 'visible' : 'hidden')
   tip.setAttribute('cx', s.touch.x * (s.grid.cols - 1)); tip.setAttribute('cy', s.touch.y * (s.grid.rows - 1))
   document.getElementById('status').textContent = `${s.circuit.status} · ${s.circuit.voltage} V · ${s.circuit.total_current.toFixed(3)} A · ${s.pieces.length} pieces · seq ${s.seq}${s.mat_visible ? '' : ' · mat not visible'}`
+  const L = s.lesson
+  document.getElementById('lesson').textContent = L.step_count ? `Step ${L.step_index + 1}/${L.step_count} (${L.step_id})${L.step_done ? ' ✓ done' : ''}${L.lesson_done ? ' · lesson done' : ''}: ${L.prompt}` : 'no lesson'
   document.getElementById('touch').textContent = 'touch ' + JSON.stringify(s.touch) + (s.circuit.shorted_path.length ? '\nshorted_path ' + JSON.stringify(s.circuit.shorted_path) : '')
 }
 function connect() {

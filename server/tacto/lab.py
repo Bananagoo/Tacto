@@ -3,6 +3,11 @@
 A `MatSource` says which pieces lie where and where the fingertip is. The camera
 is one source; a mat set by hand is another. The lab solves the circuit, works
 out what the finger is touching, and keeps the battery voltage the browser asks for.
+
+The camera cannot see whether a paper switch is open or closed: the learner taps it.
+So the lab remembers which switches have been tapped an odd number of times and
+flips those relative to what the source reports. A switch that leaves the mat is
+forgotten, so a new one starts as the source reports it (open, for the camera).
 """
 
 from __future__ import annotations
@@ -10,11 +15,23 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
-from typing import Protocol
+from dataclasses import dataclass, replace
+from typing import Protocol, TypeVar
 
-from tacto.contract_v2 import Circuit, Dot, Grid, Piece, SetVoltage, Source, State, Touch
+from tacto.contract_v2 import (
+    Circuit,
+    Dot,
+    Grid,
+    LessonStep,
+    Piece,
+    SetVoltage,
+    Source,
+    State,
+    Touch,
+)
+from tacto.lab_lesson import LessonRunner
 from tacto.pieces import Placed, solve_pieces, touch_for
+from tacto.taps import SwitchTaps
 
 DEFAULT_VOLTS = 6.0
 # How far from a piece, in dot spacings, a fingertip still counts as on it.
@@ -46,6 +63,7 @@ class Lab:
         source: MatSource,
         *,
         source_name: Source,
+        lesson: LessonRunner | None = None,
         now: Callable[[], float] = time.monotonic,
     ) -> None:
         self._grid = grid
@@ -55,27 +73,50 @@ class Lab:
         self._started = now()
         self._volts = DEFAULT_VOLTS
         self._seq = 0
+        self._lesson = lesson
+        self._taps = SwitchTaps()
+        self._flipped: set[str] = set()
         self._solved_for: tuple[tuple[Placed, ...], float] | None = None
         self._solved: tuple[list[Piece], Circuit] = ([], Circuit())
 
     def handle(self, message: SetVoltage) -> None:
         self._volts = message.volts
 
+    def restart_lesson(self) -> None:
+        if self._lesson is not None:
+            self._lesson.restart()
+
     def state(self) -> State:
         view = self._source.view()
-        pieces, circuit = self._solve(view.placed)
+        now = self._now()
+        pieces, circuit = self._solve(self._with_taps(view, now))
         state = State(
             seq=self._seq,
-            t=round(self._now() - self._started, 3),
+            t=round(now - self._started, 3),
             source=self._source_name,
             mat_visible=view.mat_visible,
             grid=self._grid,
             pieces=pieces,
             circuit=circuit,
             touch=self._touch(view, pieces),
+            lesson=self._lesson.update(pieces, circuit) if self._lesson else LessonStep(),
         )
         self._seq += 1
         return state
+
+    def _with_taps(self, view: MatView, now: float) -> tuple[Placed, ...]:
+        """The source's pieces, with every tapped switch flipped."""
+        switches = {p.id for p in view.placed if p.type == "switch"}
+        if view.mat_visible:
+            self._flipped &= switches
+        under_finger = piece_at(view.placed, self._grid, *view.finger) if view.finger else None
+        on_switch = under_finger.id if under_finger and under_finger.id in switches else None
+        tapped = self._taps.update(on_switch, now)
+        if tapped is not None:
+            self._flipped ^= {tapped}
+        return tuple(
+            replace(p, closed=not p.closed) if p.id in self._flipped else p for p in view.placed
+        )
 
     def _solve(self, placed: tuple[Placed, ...]) -> tuple[list[Piece], Circuit]:
         # The mat changes a few times a minute and the state goes out 15 times a
@@ -94,10 +135,20 @@ class Lab:
         return touch_for(pieces, x=x, y=y, piece_id=piece.id if piece else None)
 
 
-def piece_at(pieces: Sequence[Piece], grid: Grid, x: float, y: float) -> Piece | None:
+class _OnSegment(Protocol):
+    @property
+    def a(self) -> Dot: ...
+    @property
+    def b(self) -> Dot: ...
+
+
+SegmentT = TypeVar("SegmentT", bound=_OnSegment)
+
+
+def piece_at(pieces: Sequence[SegmentT], grid: Grid, x: float, y: float) -> SegmentT | None:
     """The nearest piece within reach of mat position (x, y), or None."""
     point = (x * (grid.cols - 1), y * (grid.rows - 1))
-    best: Piece | None = None
+    best: SegmentT | None = None
     best_distance = REACH_DOTS
     for piece in pieces:
         distance = _distance_to_segment(point, piece.a, piece.b)

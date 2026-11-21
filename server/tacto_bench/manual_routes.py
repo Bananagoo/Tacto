@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from tacto.contract_v2 import Dot
+from tacto.lab import Lab
 
 from .manual_mat import PRESETS, ManualMat, Tool
 
@@ -35,7 +36,7 @@ class MatVisible(BaseModel):
     visible: bool
 
 
-def manual_router(mat: ManualMat) -> APIRouter:
+def manual_router(mat: ManualMat, lab: Lab) -> APIRouter:
     router = APIRouter(prefix="/manual")
 
     @router.get("", response_class=HTMLResponse)
@@ -69,6 +70,11 @@ def manual_router(mat: ManualMat) -> APIRouter:
     @router.post("/mat_visible")
     def mat_visible(body: MatVisible) -> dict:
         mat.set_mat_visible(body.visible)
+        return {"ok": True}
+
+    @router.post("/restart_lesson")
+    def restart_lesson() -> dict:
+        lab.restart_lesson()
         return {"ok": True}
 
     return router
