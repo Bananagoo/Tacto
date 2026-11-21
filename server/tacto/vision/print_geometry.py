@@ -7,7 +7,6 @@ Everything is in millimetres from the page's top-left corner, x to the right, y 
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 from ..contract import Dot
@@ -28,10 +27,12 @@ CORNER_MARKER_INSET_MM = 8.0
 # to one. One marker cell is 20 / 6 = 3.3 mm; this leaves a little more.
 CORNER_QUIET_MM = 5.0
 
+# One pitch for every mat, so a tile cut for one lesson fits the slots of the next.
 # TODO(vision owner): pitch and tile sizes were chosen on screen. Check on the printed
 # kit that a fingertip fits between two rails and that a cut tile is easy to pick up.
-MAX_DOT_PITCH_MM = 30.0  # a small grid must not grow tiles too long to handle
+DOT_PITCH_MM = 28.0
 TILE_SPAN_DOTS = 2  # every slot joins two dots this far apart
+TILE_LENGTH_MM = TILE_SPAN_DOTS * DOT_PITCH_MM
 TILE_WIDTH_MM = 24.0
 TILE_MARKER_MM = 14.0
 TILE_MARKER_QUIET_MM = 2.5  # one marker cell is 14 / 6 = 2.3 mm
@@ -59,39 +60,38 @@ def mm_to_px(length_mm: float, *, dpi: float) -> float:
 
 @dataclass(frozen=True)
 class PrintGeometry:
-    """The dot grid's place on the page: its pitch and where its first dot is."""
+    """The dot grid's place on the page: where its first dot is."""
 
-    pitch_mm: float
     first_dot_x_mm: float
     first_dot_y_mm: float
 
     @classmethod
     def for_layout(cls, layout: MatLayout) -> PrintGeometry:
-        """The largest whole-millimetre grid that fits between the corner markers, centred.
+        """Centre the layout's grid on the page.
 
-        A whole number of millimetres, so a ruler can check the print.
+        Raises ValueError for a grid too large to keep clear of the corner markers.
         """
-        marker_centre_mm = CORNER_MARKER_INSET_MM + CORNER_MARKER_MM / 2
-        clearance_mm = marker_centre_mm + CORNER_MARKER_MM / 2 + CORNER_QUIET_MM
-        room_x_mm = PAGE_WIDTH_MM - 2 * clearance_mm
-        room_y_mm = PAGE_HEIGHT_MM - 2 * clearance_mm
-        fits_mm = math.floor(min(room_x_mm / (layout.cols - 1), room_y_mm / (layout.rows - 1)))
-        pitch_mm = min(MAX_DOT_PITCH_MM, float(fits_mm))
+        grid_width_mm = (layout.cols - 1) * DOT_PITCH_MM
+        grid_height_mm = (layout.rows - 1) * DOT_PITCH_MM
+        keep_clear_mm = CORNER_MARKER_INSET_MM + CORNER_MARKER_MM + CORNER_QUIET_MM
+        if (
+            grid_width_mm > PAGE_WIDTH_MM - 2 * keep_clear_mm
+            or grid_height_mm > PAGE_HEIGHT_MM - 2 * keep_clear_mm
+        ):
+            raise ValueError(
+                f"mat {layout.id!r}: a {layout.cols}x{layout.rows} grid at {DOT_PITCH_MM:g} mm "
+                "does not fit on A4 between the corner markers"
+            )
         return cls(
-            pitch_mm=pitch_mm,
-            first_dot_x_mm=(PAGE_WIDTH_MM - (layout.cols - 1) * pitch_mm) / 2,
-            first_dot_y_mm=(PAGE_HEIGHT_MM - (layout.rows - 1) * pitch_mm) / 2,
+            first_dot_x_mm=(PAGE_WIDTH_MM - grid_width_mm) / 2,
+            first_dot_y_mm=(PAGE_HEIGHT_MM - grid_height_mm) / 2,
         )
-
-    @property
-    def tile_length_mm(self) -> float:
-        return TILE_SPAN_DOTS * self.pitch_mm
 
     def dot_mm(self, dot: Dot) -> tuple[float, float]:
         col, row = dot
         return (
-            self.first_dot_x_mm + col * self.pitch_mm,
-            self.first_dot_y_mm + row * self.pitch_mm,
+            self.first_dot_x_mm + col * DOT_PITCH_MM,
+            self.first_dot_y_mm + row * DOT_PITCH_MM,
         )
 
     def corner_marker_centres_mm(self) -> list[tuple[float, float]]:

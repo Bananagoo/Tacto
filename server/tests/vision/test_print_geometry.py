@@ -5,8 +5,10 @@ import pytest
 from tacto.mat.models import MatLayout
 from tacto.vision.print_geometry import (
     CORNER_MARKER_IDS,
+    DOT_PITCH_MM,
     PAGE_HEIGHT_MM,
     PAGE_WIDTH_MM,
+    TILE_LENGTH_MM,
     TILE_MARKER_IDS,
     PrintGeometry,
     mm_to_px,
@@ -42,8 +44,8 @@ def test_corner_markers_are_listed_clockwise_from_the_top_left(geometry):
 def test_dot_pitch_is_the_same_in_both_directions(geometry):
     x0, y0 = geometry.dot_mm((0, 0))
     x1, y1 = geometry.dot_mm((1, 1))
-    assert x1 - x0 == pytest.approx(geometry.pitch_mm)
-    assert y1 - y0 == pytest.approx(geometry.pitch_mm)
+    assert x1 - x0 == pytest.approx(DOT_PITCH_MM)
+    assert y1 - y0 == pytest.approx(DOT_PITCH_MM)
 
 
 def test_the_grid_is_centred_on_the_page(layout, geometry):
@@ -53,13 +55,13 @@ def test_the_grid_is_centred_on_the_page(layout, geometry):
     assert first_y == pytest.approx(PAGE_HEIGHT_MM - last_y)
 
 
-def test_a_tile_spans_two_dots(geometry):
-    assert geometry.tile_length_mm == pytest.approx(2 * geometry.pitch_mm)
+def test_a_tile_spans_two_dots():
+    assert TILE_LENGTH_MM == pytest.approx(2 * DOT_PITCH_MM)
 
 
-def test_a_small_grid_does_not_get_giant_tiles():
-    small = PrintGeometry.for_layout(MatLayout(id="small", cols=3, rows=2, battery_volts=6))
-    assert small.pitch_mm <= 30
+def test_a_grid_too_large_for_the_page_is_refused():
+    with pytest.raises(ValueError, match="does not fit"):
+        PrintGeometry.for_layout(MatLayout(id="huge", cols=12, rows=6, battery_volts=6))
 
 
 def test_marker_ids_map_to_tile_kinds():
