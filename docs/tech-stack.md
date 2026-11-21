@@ -32,7 +32,7 @@ Logi Hands Tracker ─ws─>   vision → circuit → solver → tutor     bench
 | Circuit graph | `networkx` for connectivity, open-loop and short detection | networkx | — | verified by unit tests |
 | Circuit physics | ngspice through `InSpice` (operating-point analysis), behind one `solve()` function in `sim/solver.py`; open loops and shorts are caught by networkx before the engine is called | [InSpice](https://pypi.org/project/InSpice/) (GPL-3.0, maintained fork of PySpice) + `brew install libngspice`, with `NGSPICE_LIBRARY_PATH` set in `.env` | Own modified nodal analysis in NumPy (about 80 lines) behind the same function | **verified**: one bulb and two in series solved correctly on macOS arm64 with ngspice 47, 0.22 ms per solve; unit tests against hand-worked answers still to write |
 | Server and transport | FastAPI + uvicorn, one WebSocket, pydantic v2 models as the contract | FastAPI, pydantic | — | verified in the skeleton |
-| Web app | Vite + React + TypeScript, Tailwind, zustand store | Vite `react-ts` template | — | verified build in the skeleton |
+| Web app | Vite + React + TypeScript, Tailwind, zustand store; Space Grotesk font from `@fontsource-variable/space-grotesk` (bundled, no network) | Vite `react-ts` template; system font | — | verified build in the skeleton; font checked by eye |
 | Bench view | SVG parts in React, glow and motion with `motion` | `motion`; `@wokwi/elements` (MIT) as reference art for resistor and switch | Static images | **test**: glow follows the solver within 250 ms |
 | 3D parts (stretch) | `@react-three/fiber` + `@react-three/drei` | three.js ecosystem | Stay 2D | not started |
 | Concept map | Six fixed nodes in plain SVG | — | `@xyflow/react` if we want drag and zoom | — |
