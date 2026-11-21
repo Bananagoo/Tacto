@@ -26,3 +26,6 @@ scripts/out/
 # Personal Claude Code files
 .claude/settings.local.json
 CLAUDE.local.md
+
+# The local database: learners and their progress
+server/data/
