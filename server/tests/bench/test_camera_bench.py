@@ -1,4 +1,4 @@
-"""Hardware test bench, server side. No real camera is opened in these tests."""
+"""Camera bench routes and overlays. No real camera is opened in these tests."""
 
 import threading
 import time
@@ -8,10 +8,10 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from tacto import devtools as routes
-from tacto.main import app
-from tacto.vision import bench as overlays
-from tacto.vision import camera
+from tacto.vision import camera, hands
+from tacto_bench import camera_routes as routes
+from tacto_bench import overlays
+from tacto_bench.main import app
 
 
 def sheet(ids=(0, 1, 2, 3)) -> np.ndarray:
@@ -208,9 +208,9 @@ def test_stream_of_a_missing_camera_is_a_503(client):
 
 def test_hand_overlay_without_mediapipe_reports_why(client, monkeypatch):
     def broken(*_args, **_kwargs):
-        raise overlays.HandTrackingUnavailable("mediapipe is not installed")
+        raise hands.HandTrackingUnavailable("mediapipe is not installed")
 
-    monkeypatch.setattr(overlays, "HandTracker", broken)
+    monkeypatch.setattr(hands, "HandTracker", broken)
     hub = routes.hub
     hub.acquire(0)
     try:

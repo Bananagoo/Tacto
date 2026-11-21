@@ -45,3 +45,5 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# tacto_bench is tooling, not part of the installed package, so tests find it from here.
+pythonpath = ["."]

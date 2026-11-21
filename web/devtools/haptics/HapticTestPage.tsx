@@ -2,11 +2,11 @@
 // selected waveform at a chosen rate to find the fastest rate that still feels like separate ticks
 // (the value for MAX_PULSE_HZ in usePulse.ts). The strength slider changes how hard the mouse
 // vibrates; it is a setting stored on the mouse, so it is sent when the slider is released.
-// Served by `make web` at /src/haptics/test.html. It reuses DRIVERS from driver.ts so there is
+// Served at /devtools/#haptics. It reuses DRIVERS from src/haptics/driver.ts so there is
 // one code path to the mouse. The `console` driver needs no hardware (flashes a dot instead).
 
 import { useEffect, useMemo, useState } from 'react'
-import { DRIVERS, MAX_WAVEFORM_INDEX, type DriverName } from './driver'
+import { DRIVERS, MAX_WAVEFORM_INDEX, type DriverName } from '../../src/haptics/driver'
 
 const MIN_RATE_HZ = 1
 const MAX_RATE_HZ = 30

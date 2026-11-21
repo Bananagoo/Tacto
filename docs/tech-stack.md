@@ -81,7 +81,7 @@ Prices read from Together's serverless catalog on 21 Nov 2026. The frugality lin
 ## Not using
 
 - **LangChain or an agent framework.** One prompt, one JSON reply.
-- **A database.** State is in memory; the MVP cuts saved progress.
+- **A database server.** Data lives in a local SQLite file (decided 21 Nov; the row is added to the table above when the dependency lands).
 - **The LogiInsight SSH/AI link**, except once to switch the face AI off.
 - **Logi Gaze Tracker.** The camera is pointed at the desk.
 - **CircuitJS1 as the main simulator.** Driving an iframe from camera input is harder than solving the circuit.

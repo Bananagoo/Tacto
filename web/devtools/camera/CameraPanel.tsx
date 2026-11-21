@@ -32,7 +32,7 @@ export default function CameraPanel() {
         if (preferred) setIndex(preferred.index)
       })
       .catch((error: unknown) =>
-        setListError(`Could not reach the server (${String(error)}). Is make dev running?`),
+        setListError(`Could not reach the server (${String(error)}). Is make bench running?`),
       )
   }
   useEffect(loadCameras, [])

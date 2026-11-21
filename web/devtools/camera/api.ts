@@ -1,6 +1,6 @@
-// Calls to the server's /dev routes (server/tacto/devtools.py). The test bench is a
-// hardware tool, not the product, so it talks to the server directly instead of
-// going through the useTacto store. Nothing outside testbench/ should import this.
+// Calls to the tooling server's /dev routes (server/tacto_bench/camera_routes.py).
+// The camera bench is a hardware tool, not the product, so it talks to the server
+// directly instead of going through the useTacto store. Needs `make bench`.
 
 export interface CameraInfo {
   index: number

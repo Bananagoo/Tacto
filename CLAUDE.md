@@ -17,13 +17,18 @@ Run from the repo root.
 | Command | Does |
 |---|---|
 | `make setup` | Install server (uv) and web (pnpm) dependencies |
-| `make dev` | Server on :8000 and web on :5173, both with reload |
+| `make dev` | The product: server on :8000 and web on :5173, both with reload |
+| `make bench` | Tooling: the same app fed by a mock world, plus the camera bench. Open `localhost:5173/devtools/` |
 | `make server` / `make web` | One side only |
 | `make check` | Format check, lint, type-check, tests. Must pass before every commit |
 | `make fmt` | Format everything |
 | `make kit` | Render the printable mat and parts to `kit/out/` (once `kit/make_kit.py` exists) |
 
-`TACTO_SOURCE=mock|replay|camera` picks where the world comes from. Default is `mock`, which needs no hardware.
+`TACTO_SOURCE=replay|camera` picks where the product's world comes from. Neither is built yet, so until the session loop lands use `make bench`, which needs no hardware.
+
+## Product and tooling
+
+Product code is `server/tacto/` and `web/src/`. Test tooling (the mock world, the camera bench, the dev harness, the haptics page) is `server/tacto_bench/` and `web/devtools/`, with its tests in `server/tests/bench/`. Tooling may import the product; the product never imports tooling. `server/tests/test_boundaries.py` enforces this. The design is in `docs/superpowers/specs/2026-11-21-tacto-platform-design.md`.
 
 ## Layout and lanes
 

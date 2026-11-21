@@ -10,5 +10,5 @@ paths:
 - Additive changes only: new optional fields with defaults. Renaming or removing a field needs the team's agreement first, because three other sessions are building against it.
 - Field names are snake_case on both sides (the JSON is passed through untouched).
 - Units go in the name when a number could be misread: `pulse_hz`, `source_voltage`.
-- After any change run `make check`; `server/tests/test_contract.py` must still pass, and update `server/tacto/mock.py` so mock mode exercises the new field.
+- After any change run `make check`; `server/tests/test_contract.py` must still pass, and update `server/tacto_bench/mock_world.py` so the mock world exercises the new field.
 - Note the change in one line at the top of your commit message: `contract: add Probe.short`.

@@ -11,10 +11,12 @@ Needs [uv](https://docs.astral.sh/uv/), Node 20+, [pnpm](https://pnpm.io/) and t
 ```bash
 brew install libngspice   # macOS; the path goes in .env as NGSPICE_LIBRARY_PATH
 make setup     # installs server and web dependencies, creates .env
-make dev       # server on :8000, web on :5173
+make bench     # mock world and dev tools: server on :8000, web on :5173
 ```
 
-Open http://localhost:5173 in Chrome. With no hardware you get mock mode: scroll the wheel and the bulb brightens.
+Open http://localhost:5173/devtools/ in Chrome. With no hardware you get the mock world: scroll the wheel and the bulb brightens. The camera bench and the haptics page are on the same page.
+
+`make dev` runs the product itself at http://localhost:5173. It needs a real world source (recorded frames or the camera), which is not built yet.
 
 Put your keys in `.env`. Never commit it; this repository is public.
 
@@ -24,6 +26,8 @@ Put your keys in `.env`. Never commit it; this repository is public.
 |---|---|
 | `server/tacto/` | Python: `vision/` reads the mat, `sim/` solves the circuit, `tutor/` runs the lesson, `contract.py` defines every message |
 | `web/src/` | React: `bench/` draws the circuit, `ui/` the tutor and concept map, `haptics/` drives the mouse, `voice/` the microphone and audio |
+| `server/tacto_bench/`, `web/devtools/` | Test tooling, kept apart from the product: mock world, camera bench, dev harness, haptics page |
+| `scripts/` | One-off hardware probes |
 | `lessons/` | Lesson content as YAML |
 | `kit/` | Printable mat and parts |
 | `docs/` | `tech-stack.md` (decisions), `architecture.md`, `roadmap.md` (phases and gates), `hardware-log.md` |

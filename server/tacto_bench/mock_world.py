@@ -1,8 +1,8 @@
 """A fake world so the web app can be built before the camera works.
 
 One battery, one bulb, four wires. The scroll wheel changes the voltage and a
-pretend fingertip circles the loop. Replace nothing here: the real pipeline
-lives in vision/, sim/ and tutor/ and produces the same State.
+pretend fingertip circles the loop. It implements tacto.world.World, the same
+interface the real session will, so the web app cannot tell them apart.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 import time
 
-from .contract import Answer, Circuit, ClientMessage, Part, Probe, State, Tutor, Wheel, Wire
+from tacto.contract import Answer, Circuit, ClientMessage, Part, Probe, State, Tutor, Wheel, Wire
 
 BULB_OHMS = 10.0
 MAX_VOLTS = 9.0

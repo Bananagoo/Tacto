@@ -58,4 +58,6 @@ Concept map animation, zone gauge, the "break it" and "turn it up" challenges, t
 
 ## Not now
 
-Emotion detection, student accounts, teacher dashboard, saved progress between sessions, a database, any chat interface.
+Emotion detection, student accounts with logins, teacher dashboard, any chat interface.
+
+Moved into scope on 21 Nov 2026 (see `docs/superpowers/specs/2026-11-21-tacto-platform-design.md`): a local database for lesson content, a learner's nickname and their learning graph, and progress saved between sessions.

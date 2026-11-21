@@ -1,4 +1,4 @@
-"""Routes for the hardware test bench (web page at /#test). Not part of the product.
+"""Routes for the camera bench (web page at /devtools/#camera). Not part of the product.
 
 GET /dev/cameras         camera names by index, and which are open
 GET /dev/camera/stream   live MJPEG; overlay=aruco,hand draws what was found
@@ -17,7 +17,9 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from .vision import bench, camera
+from tacto.vision import camera, hands
+
+from . import overlays
 
 router = APIRouter(prefix="/dev", tags=["devtools"])
 hub = camera.CameraHub()
@@ -50,7 +52,7 @@ async def stream(
     width: int = Query(1280, ge=160, le=1920),
     frames: int | None = Query(None, ge=1, description="stop after this many frames"),
 ) -> StreamingResponse:
-    overlays = {name for name in overlay.split(",") if name}
+    wanted = {name for name in overlay.split(",") if name}
     try:
         worker = await asyncio.to_thread(hub.acquire, index)
     except camera.CameraUnavailable as error:
@@ -61,10 +63,10 @@ async def stream(
         hand_error = None
         viewer = next(_viewer_ids)
         try:
-            if "hand" in overlays:
+            if "hand" in wanted:
                 try:
-                    tracker = await asyncio.to_thread(bench.HandTracker)
-                except bench.HandTrackingUnavailable as error:
+                    tracker = await asyncio.to_thread(hands.HandTracker)
+                except hands.HandTrackingUnavailable as error:
                     hand_error = str(error)
             seq = -1
             sent = 0
@@ -78,12 +80,12 @@ async def stream(
                 seq, frame = got
                 t_ms = int((time.monotonic() - start) * 1000)
                 drawn, analysis = await asyncio.to_thread(
-                    bench.analyse, frame, overlays, tracker, t_ms
+                    overlays.analyse, frame, wanted, tracker, t_ms
                 )
                 if hand_error is not None:
                     analysis["hand_error"] = hand_error
                 worker.analyses[viewer] = analysis
-                jpeg = await asyncio.to_thread(bench.encode_jpeg, drawn, width)
+                jpeg = await asyncio.to_thread(overlays.encode_jpeg, drawn, width)
                 yield (
                     (
                         f"--{BOUNDARY}\r\nContent-Type: image/jpeg\r\n"
