@@ -239,3 +239,19 @@ def test_hand_overlay_reports_and_draws_all_21_points():
     assert analysis["fingertips"] == [{"handedness": "Right", "x": 260, "y": 280}]
     assert not np.array_equal(drawn, frame)
     assert np.array_equal(frame, sheet()), "the camera's frame must not be drawn on"
+
+
+def test_status_combines_what_every_viewer_saw(client):
+    # Two tabs can watch one camera with different overlays; neither should blank the other.
+    worker = routes.hub.acquire(0)
+    try:
+        worker.analyses[1] = {"width": 1280, "marker_ids": [0, 3]}
+        worker.analyses[2] = {
+            "width": 1280,
+            "fingertips": [{"handedness": "Right", "x": 5, "y": 6}],
+        }
+        status = client.get("/dev/camera/status", params={"index": 0}).json()
+        assert status["marker_ids"] == [0, 3]
+        assert status["fingertips"][0]["x"] == 5
+    finally:
+        routes.hub.release(0)

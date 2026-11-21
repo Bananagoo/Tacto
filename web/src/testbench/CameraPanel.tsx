@@ -122,6 +122,9 @@ export default function CameraPanel() {
         <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-black">
           {running ? (
             <img
+              // A new element per stream: changing an overlay then starts a fresh
+              // connection, and closing the old one cannot blank the new one.
+              key={source}
               ref={image}
               src={source}
               alt="Live camera"

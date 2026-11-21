@@ -10,6 +10,7 @@ A camera is open only while someone is watching its stream.
 from __future__ import annotations
 
 import asyncio
+import itertools
 import time
 from collections.abc import AsyncIterator
 
@@ -23,6 +24,7 @@ hub = camera.CameraHub()
 
 BOUNDARY = "frame"
 FRAME_TIMEOUT_S = 1.0
+_viewer_ids = itertools.count(1)
 
 
 @router.get("/cameras")
@@ -35,7 +37,10 @@ def status(index: int = 0) -> dict:
     worker = hub.get(index)
     if worker is None:
         return {"open": False}
-    return {"open": True, "fps": worker.fps, "error": worker.error, **worker.analysis}
+    seen: dict = {}
+    for analysis in list(worker.analyses.values()):
+        seen.update(analysis)
+    return {"open": True, "fps": worker.fps, "error": worker.error, **seen}
 
 
 @router.get("/camera/stream")
@@ -54,6 +59,7 @@ async def stream(
     async def body() -> AsyncIterator[bytes]:
         tracker = None
         hand_error = None
+        viewer = next(_viewer_ids)
         try:
             if "hand" in overlays:
                 try:
@@ -76,7 +82,7 @@ async def stream(
                 )
                 if hand_error is not None:
                     analysis["hand_error"] = hand_error
-                worker.analysis = analysis
+                worker.analyses[viewer] = analysis
                 jpeg = await asyncio.to_thread(bench.encode_jpeg, drawn, width)
                 yield (
                     (
@@ -89,6 +95,9 @@ async def stream(
                 sent += 1
         finally:
             # Runs when the browser closes the stream too, so the camera never stays on.
+            # Keep the last viewer's reading so a status check just after still has it.
+            if len(worker.analyses) > 1:
+                worker.analyses.pop(viewer, None)
             await asyncio.shield(asyncio.to_thread(hub.release, index))
             if tracker is not None:
                 tracker.close()

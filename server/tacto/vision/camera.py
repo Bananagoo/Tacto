@@ -81,7 +81,9 @@ class CameraWorker:
     def __init__(self, index: int, capture: Capture) -> None:
         self.index = index
         self.error: str | None = None
-        self.analysis: dict = {}  # filled in by whoever is looking at the frames
+        # What each viewer of this camera last saw, keyed by viewer. Two browser tabs can
+        # watch with different overlays, so one must not overwrite the other.
+        self.analyses: dict[int, dict] = {}
         self._capture = capture
         self._condition = threading.Condition()
         self._frame: np.ndarray | None = None
