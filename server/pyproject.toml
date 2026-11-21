@@ -19,11 +19,12 @@ dependencies = [
     "together>=1.3",
     "openai>=1.50",
     "inspice>=1.6.3.3",
+    "mediapipe>=1.2.3",
 ]
 
 [project.optional-dependencies]
 # Fallback hand tracking if the Logi Hands Tracker does not pass its check.
-mediapipe = ["mediapipe>=0.10.14"]
+mediapipe = []
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]

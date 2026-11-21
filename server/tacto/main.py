@@ -16,6 +16,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import TypeAdapter, ValidationError
 
 from .contract import ClientMessage
+from .devtools import router as devtools_router
 from .mock import MockWorld
 
 load_dotenv()
@@ -24,6 +25,7 @@ SOURCE = os.getenv("TACTO_SOURCE", "mock")
 STATE_HZ = 15
 
 app = FastAPI(title="Tacto")
+app.include_router(devtools_router)  # hardware test bench, see devtools.py
 _client_message = TypeAdapter(ClientMessage)
 
 

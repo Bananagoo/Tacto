@@ -19,6 +19,8 @@ web/dist/
 server/vendor/
 server/logs/
 kit/out/
+# Probe frames show people and the room; never commit them
+scripts/out/
 .DS_Store
 
 # Personal Claude Code files
