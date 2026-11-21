@@ -5,7 +5,9 @@ export type Dot = [col: number, row: number]
 
 export type PartKind = 'battery' | 'bulb' | 'resistor' | 'switch'
 export type CircuitStatus = 'empty' | 'open' | 'closed' | 'short'
-export type Concept = 'closed_loop' | 'current' | 'voltage' | 'resistance' | 'series' | 'parallel'
+export type Topology = 'none' | 'single' | 'series' | 'parallel' | 'mixed'
+/** A concept id from the lesson being taught. */
+export type Concept = string
 export type Mastery = 'unseen' | 'shaky' | 'solid'
 export type Zone = 'too_easy' | 'productive' | 'stuck'
 export type Phase = 'build' | 'predict' | 'test' | 'explain' | 'done'
@@ -28,10 +30,12 @@ export interface Wire {
   a: Dot
   b: Dot
   current: number
+  overloaded: boolean
 }
 
 export interface Circuit {
   status: CircuitStatus
+  topology: Topology
   source_voltage: number
   total_current: number
   parts: Part[]
@@ -45,13 +49,20 @@ export interface Probe {
   on: string | null
   current: number
   pulse_hz: number
+  buzz: boolean
 }
 
 export interface Tutor {
+  lesson_id: string
   challenge_id: string
+  step_index: number
+  step_count: number
   phase: Phase
   prompt: string
   choices: string[]
+  correct: boolean | null
+  feedback: string
+  hint: string
   audio_url: string | null
   zone: Zone
   score: number

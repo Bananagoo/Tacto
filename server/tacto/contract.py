@@ -16,7 +16,10 @@ Dot = tuple[int, int]
 
 PartKind = Literal["battery", "bulb", "resistor", "switch"]
 CircuitStatus = Literal["empty", "open", "closed", "short"]
-Concept = Literal["closed_loop", "current", "voltage", "resistance", "series", "parallel"]
+# How the lit bulbs are arranged. "mixed" is anything that is neither pure series nor parallel.
+Topology = Literal["none", "single", "series", "parallel", "mixed"]
+# A concept id from the lesson being taught (lessons define their own concepts).
+Concept = str
 Mastery = Literal["unseen", "shaky", "solid"]
 Zone = Literal["too_easy", "productive", "stuck"]
 Phase = Literal["build", "predict", "test", "explain", "done"]
@@ -41,10 +44,12 @@ class Wire(BaseModel):
     a: Dot
     b: Dot
     current: float = 0.0  # amps, signed a -> b
+    overloaded: bool = False  # on the path of a short circuit; the screen draws it hot
 
 
 class Circuit(BaseModel):
     status: CircuitStatus = "empty"
+    topology: Topology = "none"
     source_voltage: float = 0.0  # set by the scroll wheel
     total_current: float = 0.0
     parts: list[Part] = []
@@ -60,13 +65,20 @@ class Probe(BaseModel):
     on: str | None = None  # part id, or "wire:c,r-c,r", or None
     current: float = 0.0
     pulse_hz: float = 0.0  # tick rate for the mouse; 0 means silent
+    buzz: bool = False  # fingertip is on a shorted path: one hard continuous buzz, not ticks
 
 
 class Tutor(BaseModel):
-    challenge_id: str = ""
+    lesson_id: str = ""
+    challenge_id: str = ""  # id of the current lesson step
+    step_index: int = 0  # 0-based position of the current step
+    step_count: int = 0
     phase: Phase = "build"
     prompt: str = ""
     choices: list[str] = []  # non-empty only in the predict phase
+    correct: bool | None = None  # was this step's prediction right; None before an answer
+    feedback: str = ""  # reply to a known wrong idea, shown with the explanation
+    hint: str = ""  # current hint when the learner is stuck, else empty
     audio_url: str | None = None
     zone: Zone = "productive"
     score: int = 0

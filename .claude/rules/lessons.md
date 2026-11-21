@@ -9,7 +9,7 @@ paths:
 
 The learner is someone who has never seen a circuit. Scholé judges whether it teaches, not whether it is polished.
 
-- Every challenge follows build → predict → test → explain. The explanation comes only after the learner has seen their prediction succeed or fail.
+- Every step follows predict → build → test → explain: the learner predicts what a change will do, makes it, feels the result, then hears why. The prediction is optional per step. The explanation comes only after the learner has seen their prediction succeed or fail.
 - Predictions are a closed set of two to four spoken choices ("brighter", "dimmer", "the same"). Match keywords first; call a model only when no keyword matches.
 - Hints form a ladder: a smaller question, then a pointer to where to look or touch, then a worked example on the learner's own circuit. One step per request. No step states the answer to the prediction.
 - Tutor lines are spoken: one sentence, under 20 words, no symbols or units that read badly aloud, second person, no praise inflation.

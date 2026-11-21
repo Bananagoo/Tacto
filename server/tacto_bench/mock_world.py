@@ -40,6 +40,7 @@ class MockWorld:
             source="mock",
             circuit=Circuit(
                 status="closed" if self.volts > 0 else "open",
+                topology="single" if self.volts > 0 else "none",
                 source_voltage=self.volts,
                 total_current=amps,
                 parts=[
@@ -75,7 +76,10 @@ class MockWorld:
                 pulse_hz=round(1.0 + 8.0 * amps, 2) if amps > 0 else 0.0,
             ),
             tutor=Tutor(
+                lesson_id="mock",
                 challenge_id="turn_it_up",
+                step_index=0,
+                step_count=1,
                 phase=self.phase,
                 prompt="If you turn the voltage up, what will the bulb do?",
                 choices=["brighter", "dimmer", "same"] if self.phase == "predict" else [],
