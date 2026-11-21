@@ -7,6 +7,7 @@ import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
 import { Readout } from './Readout'
 import { readingAt } from './readingAt'
+import { Toolbar } from './Toolbar'
 import { WireLine } from './WireLine'
 
 // The server still sends the printed lesson layout (a battery, a bulb, wire stubs) whatever the
@@ -30,10 +31,17 @@ export function Bench({ children }: { children?: ReactNode }) {
   const short = connected && circuit?.status === 'short'
   // The multimeter is the mouse's pointer: where it is on the mat, and what it reads there.
   const svgRef = useRef<SVGSVGElement>(null)
+  const [probing, setProbing] = useState(false)
   const [pointer, setPointer] = useState<Point | null>(null)
-  const reading = pointer ? readingAt(pointer, circuit, wireKeys) : null
+  const reading = probing && pointer ? readingAt(pointer, circuit, wireKeys) : null
+
+  const toggleProbe = () => {
+    setProbing(!probing)
+    setPointer(null)
+  }
 
   const movePointer = (event: PointerEvent<SVGSVGElement>) => {
+    if (!probing) return
     const svg = svgRef.current
     const toMat = svg?.getScreenCTM()?.inverse()
     if (!svg || !toMat) return
@@ -57,7 +65,7 @@ export function Bench({ children }: { children?: ReactNode }) {
         onPointerLeave={() => setPointer(null)}
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         // A stale picture is dimmed while the server is away, so it is not taken for live.
-        className={`absolute inset-0 h-full w-full cursor-none transition-opacity ${connected ? '' : 'opacity-25'}`}
+        className={`absolute inset-y-0 right-0 left-40 h-full w-[calc(100%-10rem)] transition-opacity ${probing ? 'cursor-none' : ''} ${connected ? '' : 'opacity-25'}`}
         role="img"
         aria-label="The circuit on the mat"
       >
@@ -84,7 +92,8 @@ export function Bench({ children }: { children?: ReactNode }) {
         connected={connected}
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
-      <Readout reading={reading} />
+      {probing && <Readout reading={reading} />}
+      <Toolbar probing={probing} onToggle={toggleProbe} />
       {children}
     </figure>
   )
