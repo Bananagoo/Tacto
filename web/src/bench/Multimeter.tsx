@@ -1,5 +1,6 @@
 import multimeterUrl from '../assets/Multimeter.png'
 import type { Point } from './grid'
+import { SKIP_IN_SCREENSHOT } from './screenshot'
 
 // The drawing is 608 x 842 and its red probe tip is at (340, 815). It is drawn at WIDTH_UNITS
 // across, positioned so that tip lands on the pointer: the multimeter is the mouse's cursor.
@@ -22,6 +23,7 @@ export function Multimeter({ point }: { point: Point | null }) {
       width={WIDTH_UNITS}
       height={HEIGHT_UNITS}
       pointerEvents="none"
+      {...{ [SKIP_IN_SCREENSHOT]: true }}
       aria-label="The multimeter"
     />
   )

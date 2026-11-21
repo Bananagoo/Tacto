@@ -7,6 +7,7 @@ import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
 import { Readout } from './Readout'
 import { readingAt } from './readingAt'
+import { saveScreenshot } from './screenshot'
 import { Toolbar } from './Toolbar'
 import { WireLine } from './WireLine'
 
@@ -38,6 +39,11 @@ export function Bench({ children }: { children?: ReactNode }) {
   const toggleProbe = () => {
     setProbing(!probing)
     setPointer(null)
+  }
+
+  const takeScreenshot = () => {
+    if (svgRef.current)
+      saveScreenshot(svgRef.current).catch((error: unknown) => console.error('bench:', error))
   }
 
   const movePointer = (event: PointerEvent<SVGSVGElement>) => {
@@ -93,7 +99,7 @@ export function Bench({ children }: { children?: ReactNode }) {
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
       <Readout reading={reading} />
-      <Toolbar probing={probing} onToggle={toggleProbe} />
+      <Toolbar probing={probing} onToggle={toggleProbe} onScreenshot={takeScreenshot} />
       {children}
     </figure>
   )

@@ -18,13 +18,12 @@ function WarningSign() {
 
 /**
  * Words laid over the mat (they let the pointer through, so the multimeter still tracks) for the states the drawing cannot explain by itself: no server,
- * nothing on the mat yet, and a short circuit. A short says so in words and with a sign,
+ * and a short circuit. A short says so in words and with a sign,
  * because colour alone does not reach the back of the room.
  */
 export function BenchNotice({ connected, status }: BenchNoticeProps) {
   if (!connected) return <Quiet>Connecting to the mat…</Quiet>
   if (status === undefined) return <Quiet>Waiting for the camera…</Quiet>
-  if (status === 'empty') return <Quiet>Place a component on the mat to begin</Quiet>
   if (status !== 'short') return null
   return (
     <p
