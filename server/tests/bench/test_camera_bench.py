@@ -292,7 +292,6 @@ def test_exposure_routes_set_and_report_the_camera(client, monkeypatch):
     setting = {"manual": True, "gain": 25}
     after = client.post("/dev/camera/exposure", json=setting).json()
     assert after == {"available": True, "camera_found": True, **setting}
-    assert camera_now["auto-focus"] == "true"
     assert camera_now["auto-exposure-mode"] == exposure.MANUAL_MODE
     assert exposure.wanted() == exposure.Exposure(manual=True, gain=25)
 

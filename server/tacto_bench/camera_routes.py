@@ -22,6 +22,7 @@ from fastapi.responses import StreamingResponse
 
 from tacto.mat import load_default_mat
 from tacto.vision import camera, exposure, hands
+from tacto.vision.focus import FocusKeeper
 from tacto.vision.print_geometry import PrintGeometry
 from tacto.vision.tracker import MatTracker
 
@@ -90,6 +91,7 @@ async def stream(
         hand_error = None
         viewer = next(_viewer_ids)
         mat_tracker = MatTracker(PrintGeometry.for_mat(load_default_mat())) if flat else None
+        focus = FocusKeeper()
         try:
             if "hand" in wanted:
                 try:
@@ -111,7 +113,9 @@ async def stream(
                     overlays.analyse, frame, wanted, tracker, t_ms
                 )
                 if mat_tracker is not None:
-                    page, report = await asyncio.to_thread(overlays.flat_view, frame, mat_tracker)
+                    page, report = await asyncio.to_thread(
+                        overlays.flat_view, frame, mat_tracker, focus
+                    )
                     analysis.update(report)
                     # While the mat is not found, show the camera so it can be put right.
                     drawn = drawn if page is None else page

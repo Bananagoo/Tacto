@@ -7,7 +7,9 @@ the camera no longer looks at the background at all.
 Focus cannot be locked. The camera has no focus distance to set, only autofocus on or
 off, and off does not hold the lens: it parks it where the mat is a blur (measured twice
 on 21 Nov 2026: sharpness 80 to 95 with autofocus on, 7 within a second of turning it
-off). So autofocus is switched on every time, in case something left it off.
+off). Nothing here touches autofocus when the camera is opened: "autofocus on" sent
+before frames are flowing left the lens parked the same way. `refocus` sends it while
+frames are flowing, which starts a sweep, and `vision/focus.py` decides when.
 
 OpenCV cannot set either on macOS (every `capture.set` is refused), so the settings go
 through the uvc-util command-line tool, built by `make camera-tool`. Without the tool,
@@ -108,13 +110,18 @@ def apply(setting: Exposure | None = None, run: Runner | None = None) -> bool:
         }
     else:
         controls = {"gain": 0, "auto-exposure-mode": AUTO_MODE}
-    controls["auto-focus"] = "true"
     args = ["-V", DEVICE]
     for name, value in controls.items():
         args += ["-s", f"{name}={value}"]
     code, output = (run or _run_tool)(args)
     if code != 0 and output:
         _tell_once(f"camera exposure not set: {output.strip()}")
+    return code == 0
+
+
+def refocus(run: Runner | None = None) -> bool:
+    """Start an autofocus sweep. Only works while the camera is sending frames."""
+    code, _ = (run or _run_tool)(["-V", DEVICE, "-s", "auto-focus=true"])
     return code == 0
 
 

@@ -60,3 +60,12 @@ Format:
 - Failed: focus cannot be locked. With autofocus on, the mat settled at sharpness 70 to 95 and 3 or 4 corner markers were read. Each time autofocus was turned off (`auto-focus=false`, three times) sharpness fell to about 7 within a second and no marker was read; turning it back on recovered in about 2 seconds. The camera offers no focus distance control.
 - Failed: with autofocus on, hands on the laptop in front of the camera pull the focus off the mat (sharpness 3 to 8, no markers) for as long as they stay there.
 - Decision: autofocus stays on; the server switches it on whenever it opens the camera. Keep near objects (the laptop, hands on its trackpad) out of the camera's view. Readings must hold through soft frames.
+
+## 2026-11-21, camera focus kick and gain, measured by script (Claude), arms clear of the mat (Katherine)
+- Setup: camera behind the laptop as before, the v2 reference mat on the desk, nothing moving. Sharpness and corner markers sampled every half second.
+- Failed: with the server sending `auto-focus=true` as it opened the camera (before frames), the picture stayed at sharpness 7 to 8 with no markers for 12 seconds on a still scene, autofocus reported on.
+- Passed: sending `auto-focus=true` again while frames were flowing brought sharpness to 72 to 80 and all 4 markers in about 2 seconds (twice). Off then on one second apart did the same. Off and on in the same command did nothing.
+- Passed: with the server no longer sending it at open, a freshly opened camera reached sharpness 80 and 4 markers in about 2 seconds with no kick.
+- Measured, gain on the flattened v2 mat (paper brightness of 255, colour squares' saturation): gain 0: paper 181, nothing clipped, squares 0.75 to 0.99. Gain 30: paper 245, squares 0.44 to 0.89. Gain 40 and 50: paper clipped.
+- Measured, squares' hue at gain 0: blue 226, cyan 204, green 148, yellow 50, red 6, magenta 340 degrees. Black reads value 31 against paper 181.
+- Decision: gain stays 0. The server kicks the autofocus when no corner marker has been readable for 2 seconds, at most every 5 seconds (`vision/focus.py`).

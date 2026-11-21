@@ -26,6 +26,8 @@ export interface CameraStatus {
   /** A corner was read in this frame. False while the picture is too soft to read any. */
   mat_confirmed?: boolean
   corners_seen?: number[]
+  /** Autofocus sweeps started because no corner could be read. */
+  focus_kicks?: number
   marker_ids?: number[]
   missing_corners?: number[]
   corners_visible?: boolean

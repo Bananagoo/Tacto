@@ -8,6 +8,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
+from tacto.vision.focus import FocusKeeper
 from tacto.vision.hands import HAND_BONES, INDEX_TIP, HandTracker
 from tacto.vision.tracker import MatTracker
 
@@ -89,10 +90,14 @@ def sharpness(frame: np.ndarray) -> float:
     return round(float(cv2.Laplacian(grey, cv2.CV_64F).var()), 1)
 
 
-def flat_view(frame: np.ndarray, tracker: MatTracker) -> tuple[np.ndarray | None, dict]:
+def flat_view(
+    frame: np.ndarray, tracker: MatTracker, focus: FocusKeeper
+) -> tuple[np.ndarray | None, dict]:
     """The mat squared up as the reader sees it, and whether its position is fresh or held."""
     flattened = tracker.see(frame)
+    focus.saw(bool(tracker.corners_seen))
     report = {
+        "focus_kicks": focus.kicks,
         "mat_found": flattened is not None,
         "mat_held": tracker.held,
         "mat_confirmed": tracker.confirmed,

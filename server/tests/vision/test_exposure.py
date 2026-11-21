@@ -51,7 +51,7 @@ def test_apply_sets_manual_mode_before_the_values_it_unlocks():
         "auto-exposure-mode": exposure.MANUAL_MODE,
         "exposure-time-abs": exposure.EXPOSURE_TIME,
         "gain": 20,
-        "auto-focus": "true",
+        "auto-focus": "true",  # untouched: as the fake camera started
     }
     call = tool.calls[0]
     assert call[call.index("-s") + 1] == f"auto-exposure-mode={exposure.MANUAL_MODE}"
@@ -99,9 +99,18 @@ def test_gain_outside_the_camera_range_is_refused(gain):
         exposure.Exposure(manual=True, gain=gain)
 
 
-def test_autofocus_is_switched_back_on_whatever_else_is_set():
-    # Off parks the lens where the mat is a blur, so nothing may leave it off.
-    for setting in (exposure.Exposure(manual=True, gain=10), exposure.Exposure(manual=False)):
-        tool = FakeTool({"auto-focus": "false"})
-        exposure.apply(setting, tool)
-        assert tool.controls["auto-focus"] == "true"
+def test_refocus_sends_autofocus_on_and_nothing_else():
+    tool = FakeTool({"auto-focus": "false", "gain": 17})
+    assert exposure.refocus(tool) is True
+    assert tool.calls == [["-V", exposure.DEVICE, "-s", "auto-focus=true"]]
+    assert tool.controls["auto-focus"] == "true" and tool.controls["gain"] == 17
+
+
+def test_changing_the_gain_does_not_start_a_focus_sweep():
+    tool = FakeTool()
+    exposure.apply(exposure.Exposure(manual=True, gain=10), tool)
+    assert not any("auto-focus" in arg for arg in tool.calls[0])
+
+
+def test_refocus_without_the_camera_is_not_an_error():
+    assert exposure.refocus(FakeTool(code=19)) is False
