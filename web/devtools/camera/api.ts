@@ -28,6 +28,13 @@ export interface CameraStatus {
   corners_seen?: number[]
   /** Autofocus sweeps started because no corner could be read. */
   focus_kicks?: number
+  /** Milliseconds this frame took to flatten and to read. */
+  flatten_ms?: number
+  read_ms?: number
+  /** Segment id -> what the reader saw there, for every segment that is not empty. */
+  pieces?: Record<string, string>
+  /** How many of the seven colour squares have been read off the mat. */
+  squares_seen?: number
   marker_ids?: number[]
   missing_corners?: number[]
   corners_visible?: boolean
@@ -83,6 +90,7 @@ export function streamUrl(
   overlays: Overlay[],
   nonce: number,
   flat: boolean,
+  read: boolean,
 ): string {
-  return `/api/dev/camera/stream?index=${index}&overlay=${overlays.join(',')}&flat=${flat ? 1 : 0}&n=${nonce}`
+  return `/api/dev/camera/stream?index=${index}&overlay=${overlays.join(',')}&flat=${flat ? 1 : 0}&read=${read ? 1 : 0}&n=${nonce}`
 }

@@ -2,7 +2,8 @@
 
 GET /dev/cameras         camera names by index, and which are open
 GET /dev/camera/stream   live MJPEG; overlay=aruco,hand draws or reports what was found;
-                         flat=1 shows the mat squared up, as the reader sees it
+                         flat=1 shows the mat squared up, as the reader sees it;
+                         read=1 also writes each segment's reading on it
 GET /dev/camera/status   what the stream last saw: fps, size, markers, fingertips
 GET /dev/camera/exposure   how the LogiInsight camera is exposing: manual or auto, and gain
 POST /dev/camera/exposure  set it; it is applied again each time the camera is opened
@@ -22,6 +23,7 @@ from fastapi.responses import StreamingResponse
 
 from tacto.mat import load_default_mat
 from tacto.vision import camera, exposure, hands
+from tacto.vision.classify import MatReader, load_colours
 from tacto.vision.focus import FocusKeeper
 from tacto.vision.print_geometry import PrintGeometry
 from tacto.vision.tracker import MatTracker
@@ -78,6 +80,7 @@ async def stream(
     overlay: str = "",
     width: int = Query(1280, ge=160, le=1920),
     flat: bool = Query(False, description="send the flattened mat instead of the frame"),
+    read: bool = Query(False, description="with flat: read the pieces and label them"),
     frames: int | None = Query(None, ge=1, description="stop after this many frames"),
 ) -> StreamingResponse:
     wanted = {name for name in overlay.split(",") if name}
@@ -90,7 +93,10 @@ async def stream(
         tracker = None
         hand_error = None
         viewer = next(_viewer_ids)
-        mat_tracker = MatTracker(PrintGeometry.for_mat(load_default_mat())) if flat else None
+        mat = load_default_mat()
+        geometry = PrintGeometry.for_mat(mat)
+        mat_tracker = MatTracker(geometry) if flat else None
+        reader = MatReader(mat, geometry, load_colours()) if flat and read else None
         focus = FocusKeeper()
         try:
             if "hand" in wanted:
@@ -114,7 +120,7 @@ async def stream(
                 )
                 if mat_tracker is not None:
                     page, report = await asyncio.to_thread(
-                        overlays.flat_view, frame, mat_tracker, focus
+                        overlays.flat_view, frame, mat_tracker, focus, reader
                     )
                     analysis.update(report)
                     # While the mat is not found, show the camera so it can be put right.
@@ -137,6 +143,7 @@ async def stream(
             # Keep the last viewer's reading so a status check just after still has it.
             if len(worker.analyses) > 1:
                 worker.analyses.pop(viewer, None)
+            await asyncio.shield(asyncio.to_thread(focus.close))
             await asyncio.shield(asyncio.to_thread(hub.release, index))
             if tracker is not None:
                 tracker.close()

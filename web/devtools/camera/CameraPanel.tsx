@@ -34,6 +34,7 @@ export default function CameraPanel() {
   const [hand, setHand] = useState(false)
   const [view, setView] = useState<View>('mirror')
   const [flat, setFlat] = useState(false)
+  const [read, setRead] = useState(false)
   const [status, setStatus] = useState<CameraStatus | null>(null)
   const [streamError, setStreamError] = useState('')
   const [exposure, setExposureState] = useState<Exposure | null>(null)
@@ -70,7 +71,7 @@ export default function CameraPanel() {
     ...(aruco ? (['aruco'] as const) : []),
     ...(hand ? (['hand'] as const) : []),
   ]
-  const source = running ? streamUrl(index, overlays, nonce, flat) : ''
+  const source = running ? streamUrl(index, overlays, nonce, flat || read, read) : ''
 
   // The server keeps the camera open for as long as this <img> holds the stream,
   // so drop the connection explicitly when stopping or leaving the page.
@@ -147,6 +148,10 @@ export default function CameraPanel() {
           Flattened mat
         </label>
         <label className="flex items-center gap-2">
+          <input type="checkbox" checked={read} onChange={(e) => setRead(e.target.checked)} />
+          Read pieces
+        </label>
+        <label className="flex items-center gap-2">
           View
           <select
             className="rounded bg-white/10 px-2 py-1"
@@ -209,7 +214,7 @@ export default function CameraPanel() {
               ref={image}
               src={source}
               alt="Live camera"
-              className={`h-full w-full object-contain ${flat && shown?.mat_found ? '' : VIEWS[view].className}`}
+              className={`h-full w-full object-contain ${(flat || read) && shown?.mat_found ? '' : VIEWS[view].className}`}
               onError={() => {
                 setStreamError(
                   'The camera stream stopped. Check it is plugged in and that the terminal running the server has Camera permission.',
@@ -231,7 +236,7 @@ export default function CameraPanel() {
           <dd>{shown?.brightness != null ? `${shown.brightness.toFixed(0)} / 255` : '–'}</dd>
           <dt className="opacity-60">Sharpness</dt>
           <dd>{shown?.sharpness != null ? shown.sharpness.toFixed(0) : '–'}</dd>
-          {flat && (
+          {(flat || read) && (
             <>
               <dt className="opacity-60">Mat</dt>
               <dd
@@ -252,6 +257,22 @@ export default function CameraPanel() {
                         ? `held (corners ${shown.corners_seen?.join(', ')})`
                         : 'held blind: no corner readable, not reading pieces'
                       : 'all four corners'}
+              </dd>
+            </>
+          )}
+          {read && (
+            <>
+              <dt className="opacity-60">Pieces</dt>
+              <dd>
+                {shown?.pieces
+                  ? `${Object.keys(shown.pieces).length} (squares ${shown.squares_seen ?? 0}/7)`
+                  : '–'}
+              </dd>
+              <dt className="opacity-60">Time</dt>
+              <dd>
+                {shown?.read_ms != null
+                  ? `flatten ${shown.flatten_ms} ms, read ${shown.read_ms} ms`
+                  : '–'}
               </dd>
             </>
           )}

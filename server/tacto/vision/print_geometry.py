@@ -28,6 +28,22 @@ CORNER_MARKER_INSET_MM = 8.0
 CORNER_QUIET_MM = 5.0
 
 
+# A square of each piece colour along the top edge, one above each dot column from the
+# second on, in this order (kit/printed/mat-with-reference-v2.pdf). The reader samples
+# them in every frame to learn what each colour looks like in the light of the moment.
+REFERENCE_SQUARES = (
+    "wire",
+    "bulb",
+    "resistor",
+    "switch_closed",
+    "switch_open",
+    "battery_positive",
+    "battery_negative",
+)
+REFERENCE_SQUARE_MM = 12.0
+REFERENCE_SQUARE_CENTRE_Y_MM = 14.0
+
+
 def mm_to_px(length_mm: float, *, dpi: float) -> float:
     return length_mm / MM_PER_INCH * dpi
 
@@ -81,3 +97,12 @@ class PrintGeometry:
             (right_mm, bottom_mm),
             (near_mm, bottom_mm),
         ]
+
+    def reference_square_centres_mm(self, cols: int) -> dict[str, tuple[float, float]]:
+        """Colour name -> the centre of its square. Empty for a mat too narrow to carry them."""
+        if cols < len(REFERENCE_SQUARES) + 1:
+            return {}
+        return {
+            name: (self.dot_mm((index + 1, 0))[0], REFERENCE_SQUARE_CENTRE_Y_MM)
+            for index, name in enumerate(REFERENCE_SQUARES)
+        }

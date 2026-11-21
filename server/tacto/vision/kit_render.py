@@ -1,8 +1,9 @@
-"""Draw the printable mat: a grid of dots between four corner markers.
+"""Draw the printable mat: a grid of dots between four corner markers, with a square of
+each piece colour along the top edge.
 
 The page is a plain image so the tests (and the reader's tests) can look at exactly
-what gets printed. `kit/make_kit.py` saves it as a PDF. The pieces are cut by hand
-from coloured card and carry no markers, so nothing else is printed.
+what gets printed. `kit/make_kit.py` saves it as a PDF. The pieces are printed from
+their own sheet (kit/printed/) and carry no markers.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from .print_geometry import (
     CORNER_MARKER_MM,
     PAGE_HEIGHT_MM,
     PAGE_WIDTH_MM,
+    REFERENCE_SQUARE_MM,
     PrintGeometry,
 )
 
@@ -32,10 +34,17 @@ _RULER_MM = 50.0
 _RULER_TICK_MM = 2.0
 
 
-def render_mat(mat: Mat, *, dpi: int = 150) -> np.ndarray:
-    """The mat page as a BGR image."""
+def render_mat(
+    mat: Mat, *, dpi: int = 150, colours: dict[str, tuple[int, int, int]] | None = None
+) -> np.ndarray:
+    """The mat page as a BGR image. `colours` is colour name -> (red, green, blue) for the
+    reference squares; without it the mat is printed without them."""
     geometry = PrintGeometry.for_mat(mat)
     canvas = PageCanvas(PAGE_WIDTH_MM, PAGE_HEIGHT_MM, dpi=dpi)
+    for name, centre in geometry.reference_square_centres_mm(mat.cols).items():
+        if colours and name in colours:
+            red, green, blue = colours[name]
+            canvas.square(centre, REFERENCE_SQUARE_MM, colour=(blue, green, red))
     for col in range(mat.cols):
         for row in range(mat.rows):
             canvas.circle(geometry.dot_mm((col, row)), _DOT_RADIUS_MM, colour=_DOT_GREY)

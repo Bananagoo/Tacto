@@ -69,3 +69,10 @@ Format:
 - Measured, gain on the flattened v2 mat (paper brightness of 255, colour squares' saturation): gain 0: paper 181, nothing clipped, squares 0.75 to 0.99. Gain 30: paper 245, squares 0.44 to 0.89. Gain 40 and 50: paper clipped.
 - Measured, squares' hue at gain 0: blue 226, cyan 204, green 148, yellow 50, red 6, magenta 340 degrees. Black reads value 31 against paper 181.
 - Decision: gain stays 0. The server kicks the autofocus when no corner marker has been readable for 2 seconds, at most every 5 seconds (`vision/focus.py`).
+
+## 2026-11-22, piece reader on the printed mat, measured by script (Claude), layout laid by Katherine
+- Setup: v2 reference mat, camera behind the laptop, gain 0, nobody's hands in view. Eight pieces on the mat.
+- Passed: all 8 read right (bulb, closed switch, open switch, three wires, resistor, battery with its positive end at the red half), checked against the flattened picture by eye (Claude, from the frame). All 7 colour squares read. The reading was identical in 33 of 33 samples over 8 seconds.
+- Measured: flatten 4.8 ms, read 26 ms a frame. Cover (share of the patch showing the piece's colour): 68 to 99%.
+- Failed earlier the same night: re-sending `auto-focus=true` while it was already on did not refocus a parked lens (three tries, sharpness stayed 8). Off, one second, on did. The kick now does that.
+- Not tested: more than one layout; hands over the mat; other lighting.

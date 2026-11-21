@@ -93,6 +93,19 @@ class PageCanvas:
         for a, b in zip(points, points[1:], strict=False):
             self.line(a, b, width_mm=width_mm, colour=colour)
 
+    def square(self, centre: PointMm, side_mm: float, *, colour: Colour) -> None:
+        """A filled square."""
+        half = side_mm / 2
+        cv2.rectangle(
+            self.image,
+            self._point((centre[0] - half, centre[1] - half)),
+            self._point((centre[0] + half, centre[1] + half)),
+            colour,
+            cv2.FILLED,
+            cv2.LINE_AA,
+            _SHIFT,
+        )
+
     def circle(
         self,
         centre: PointMm,

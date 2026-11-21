@@ -5,11 +5,19 @@ For checking the hardware by eye. The lab's own mat reading lives in tacto.visio
 
 from __future__ import annotations
 
+import time
+
 import cv2
 import numpy as np
 
+from tacto.contract import segment_id
+from tacto.mat import Mat
+from tacto.vision.classify import MatReader, Reading
+from tacto.vision.flatten import FLAT_DPI
 from tacto.vision.focus import FocusKeeper
 from tacto.vision.hands import HAND_BONES, INDEX_TIP, HandTracker
+from tacto.vision.patches import segments
+from tacto.vision.print_geometry import PrintGeometry, mm_to_px
 from tacto.vision.tracker import MatTracker
 
 # The printed test sheet (scripts/aruco_probe.py) puts these in the corners.
@@ -90,20 +98,82 @@ def sharpness(frame: np.ndarray) -> float:
     return round(float(cv2.Laplacian(grey, cv2.CV_64F).var()), 1)
 
 
+# What the debug view writes on each segment, and in which colour (blue, green, red).
+_LABELS: dict[str, tuple[str, tuple[int, int, int]]] = {
+    "wire": ("W", (210, 70, 30)),
+    "bulb": ("Bu", (0, 140, 200)),
+    "resistor": ("R", (170, 0, 215)),
+    "switch_closed": ("Sc", (50, 140, 20)),
+    "switch_open": ("So", (160, 130, 0)),
+    "battery": ("Ba", (20, 20, 220)),
+    "unsure": ("?", (120, 120, 120)),
+}
+
+
+def draw_readings(
+    page: np.ndarray, readings: dict[str, Reading], mat: Mat, geometry: PrintGeometry
+) -> np.ndarray:
+    """The flattened mat with each segment's reading written beside it: the piece, how much
+    of the patch showed its colour, and a + at a battery's positive end."""
+    drawn = page.copy()
+    px_per_mm = mm_to_px(1.0, dpi=FLAT_DPI)
+    for a, b in segments(mat):
+        reading = readings.get(segment_id(a, b))
+        if reading is None or reading.piece == "empty":
+            continue
+        (ax, ay), (bx, by) = geometry.dot_mm(a), geometry.dot_mm(b)
+        text, colour = _LABELS[reading.piece]
+        x, y = (ax + bx) / 2 * px_per_mm, (ay + by) / 2 * px_per_mm
+        runs_down = a[0] == b[0]
+        # Beside the piece, not on it: below a piece lying across, right of one lying down.
+        at = (round(x + 24), round(y + 6)) if runs_down else (round(x - 22), round(y + 34))
+        label = f"{text} {round(reading.cover * 100)}"
+        cv2.putText(drawn, label, at, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 4)
+        cv2.putText(drawn, label, at, cv2.FONT_HERSHEY_SIMPLEX, 0.5, colour, 1, cv2.LINE_AA)
+        if reading.positive is not None:
+            px, py = (ax, ay) if reading.positive == "a" else (bx, by)
+            plus = (round(px * px_per_mm) - 8, round(py * px_per_mm) - 8)
+            cv2.putText(drawn, "+", plus, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 5)
+            cv2.putText(drawn, "+", plus, cv2.FONT_HERSHEY_SIMPLEX, 0.9, (20, 20, 220), 2)
+    return drawn
+
+
 def flat_view(
-    frame: np.ndarray, tracker: MatTracker, focus: FocusKeeper
+    frame: np.ndarray,
+    tracker: MatTracker,
+    focus: FocusKeeper,
+    reader: MatReader | None = None,
 ) -> tuple[np.ndarray | None, dict]:
-    """The mat squared up as the reader sees it, and whether its position is fresh or held."""
+    """The mat squared up as the reader sees it, and whether its position is fresh or held.
+    With a reader, each segment's reading is drawn on it and listed in the report."""
+    started = time.perf_counter()
     flattened = tracker.see(frame)
+    flatten_ms = (time.perf_counter() - started) * 1000
     focus.saw(bool(tracker.corners_seen))
     report = {
+        "flatten_ms": round(flatten_ms, 1),
         "focus_kicks": focus.kicks,
         "mat_found": flattened is not None,
         "mat_held": tracker.held,
         "mat_confirmed": tracker.confirmed,
         "corners_seen": tracker.corners_seen,
     }
-    return (None if flattened is None else flattened.image), report
+    if flattened is None:
+        return None, report
+    if reader is None or not tracker.confirmed:
+        # Nothing is read off a frame whose position no corner backs: it may be soft.
+        return flattened.image, report
+    started = time.perf_counter()
+    readings = reader.read(flattened)
+    report["read_ms"] = round((time.perf_counter() - started) * 1000, 1)
+    report["pieces"] = {
+        segment: reading.piece + ("+" + reading.positive if reading.positive else "")
+        for segment, reading in readings.items()
+        if reading.piece != "empty"
+    }
+    report["squares_seen"] = sum(reader.palette.seen)
+    mat, geometry = reader.mat, reader.geometry
+    return draw_readings(flattened.image, readings, mat, geometry), report
 
 
 def encode_jpeg(frame: np.ndarray, width: int) -> bytes:

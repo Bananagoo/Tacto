@@ -99,10 +99,14 @@ def test_gain_outside_the_camera_range_is_refused(gain):
         exposure.Exposure(manual=True, gain=gain)
 
 
-def test_refocus_sends_autofocus_on_and_nothing_else():
-    tool = FakeTool({"auto-focus": "false", "gain": 17})
-    assert exposure.refocus(tool) is True
-    assert tool.calls == [["-V", exposure.DEVICE, "-s", "auto-focus=true"]]
+def test_set_autofocus_sends_that_one_control_and_nothing_else():
+    tool = FakeTool({"gain": 17})
+    assert exposure.set_autofocus(False, tool) is True
+    assert exposure.set_autofocus(True, tool) is True
+    assert tool.calls == [
+        ["-V", exposure.DEVICE, "-s", "auto-focus=false"],
+        ["-V", exposure.DEVICE, "-s", "auto-focus=true"],
+    ]
     assert tool.controls["auto-focus"] == "true" and tool.controls["gain"] == 17
 
 
@@ -112,5 +116,5 @@ def test_changing_the_gain_does_not_start_a_focus_sweep():
     assert not any("auto-focus" in arg for arg in tool.calls[0])
 
 
-def test_refocus_without_the_camera_is_not_an_error():
-    assert exposure.refocus(FakeTool(code=19)) is False
+def test_set_autofocus_without_the_camera_is_not_an_error():
+    assert exposure.set_autofocus(True, FakeTool(code=19)) is False
