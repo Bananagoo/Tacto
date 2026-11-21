@@ -24,7 +24,7 @@ function WarningSign() {
 export function BenchNotice({ connected, status }: BenchNoticeProps) {
   if (!connected) return <Quiet>Connecting to the mat…</Quiet>
   if (status === undefined) return <Quiet>Waiting for the camera…</Quiet>
-  if (status === 'empty') return <Quiet>Place a part on the mat to begin.</Quiet>
+  if (status === 'empty') return <Quiet>Place a component on the mat to begin</Quiet>
   if (status !== 'short') return null
   return (
     <p
