@@ -100,3 +100,17 @@ def test_two_files_with_the_same_lesson_id_are_rejected(tmp_path):
 
     with pytest.raises(LessonFileError, match="two.yaml.*twin.*one.yaml"):
         load_lessons(tmp_path)
+
+
+def test_the_lessons_shipped_in_the_repository_load():
+    lessons_directory = Path(__file__).resolve().parents[3] / "lessons"
+
+    lessons = {lesson.id: lesson for lesson in load_lessons(lessons_directory)}
+
+    assert [step.id for step in lessons["circuits-101"].steps] == [
+        "setup",
+        "close_the_loop",
+        "series",
+        "parallel",
+        "short",
+    ]
