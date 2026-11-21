@@ -17,6 +17,12 @@ export function Bench() {
   const wireKeys = placeKeys(wires)
   const parts = circuit?.parts ?? []
   const short = connected && circuit?.status === 'short'
+  // The wire under the fingertip, as the same place key the wires are drawn under. The server
+  // names it "wire:c,r-c,r" (probe.on), and null for a part or nothing.
+  const touchedWire = useTacto((store) => {
+    const on = store.state?.probe.on
+    return on?.startsWith('wire:') ? on.slice('wire:'.length) : null
+  })
 
   return (
     <figure
@@ -42,6 +48,7 @@ export function Bench() {
             bRow={wire.b[1]}
             current={wire.current}
             overloaded={wire.overloaded}
+            touched={wireKeys[index] === touchedWire}
           />
         ))}
         {parts.map((part) => (
