@@ -4,7 +4,9 @@ import type { Reading } from './readingAt'
 
 // The drawing is 608 x 842 and its red probe tip is at (340, 815). It is drawn at WIDTH_UNITS
 // across, positioned so that tip lands on the pointer: the multimeter is the mouse's cursor.
-const WIDTH_UNITS = 170
+const WIDTH_UNITS = 100
+// The readout's sizes were set at 170 wide, so they follow the drawing's size.
+const TEXT = WIDTH_UNITS / 170
 const SCALE = WIDTH_UNITS / 608
 const HEIGHT_UNITS = 842 * SCALE
 const TIP = { x: 340 * SCALE, y: 815 * SCALE }
@@ -43,15 +45,15 @@ export function Multimeter({ point, reading }: MultimeterProps) {
         className="fill-stone-800 tabular-nums"
       >
         {reading?.short ? (
-          <text y={8} fontSize={19}>
+          <text y={8 * TEXT} fontSize={19 * TEXT}>
             SHORT
           </text>
         ) : (
           <>
-            <text y={-4} fontSize={19}>
+            <text y={-4 * TEXT} fontSize={19 * TEXT}>
               {reading ? `${reading.current.toFixed(2)} A` : '-- A'}
             </text>
-            <text y={17} fontSize={19}>
+            <text y={17 * TEXT} fontSize={19 * TEXT}>
               {reading ? `${reading.volts.toFixed(1)} V` : '-- V'}
             </text>
           </>
