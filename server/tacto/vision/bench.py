@@ -19,6 +19,16 @@ MODEL_URL = (
     "hand_landmarker/float16/1/hand_landmarker.task"
 )
 INDEX_TIP = 8  # MediaPipe hand landmark number for the index fingertip
+# How MediaPipe's 21 hand points join up: wrist 0, thumb 1-4, index 5-8, middle 9-12,
+# ring 13-16, little 17-20.
+HAND_BONES = (
+    (0, 1), (1, 2), (2, 3), (3, 4),
+    (0, 5), (5, 6), (6, 7), (7, 8),
+    (5, 9), (9, 10), (10, 11), (11, 12),
+    (9, 13), (13, 14), (14, 15), (15, 16),
+    (13, 17), (17, 18), (18, 19), (19, 20),
+    (0, 17),
+)  # fmt: skip
 JPEG_QUALITY = 80
 
 _DICTIONARY = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
@@ -52,8 +62,8 @@ class HandTracker:
         )
         self._last_ms = -1
 
-    def fingertips(self, frame: np.ndarray, t_ms: int) -> list[dict]:
-        """Index fingertips in pixels: [{handedness, x, y}]."""
+    def hands(self, frame: np.ndarray, t_ms: int) -> list[dict]:
+        """Every hand in the frame: [{handedness, points}], 21 [x, y] pixel points each."""
         # Video mode rejects a timestamp that does not increase.
         t_ms = max(t_ms, self._last_ms + 1)
         self._last_ms = t_ms
@@ -62,17 +72,13 @@ class HandTracker:
         )
         result = self._landmarker.detect_for_video(image, t_ms)
         height, width = frame.shape[:2]
-        tips = []
-        for landmarks, handedness in zip(result.hand_landmarks, result.handedness, strict=False):
-            tip = landmarks[INDEX_TIP]
-            tips.append(
-                {
-                    "handedness": handedness[0].category_name,
-                    "x": round(tip.x * width),
-                    "y": round(tip.y * height),
-                }
-            )
-        return tips
+        return [
+            {
+                "handedness": handedness[0].category_name,
+                "points": [[round(p.x * width), round(p.y * height)] for p in landmarks],
+            }
+            for landmarks, handedness in zip(result.hand_landmarks, result.handedness, strict=False)
+        ]
 
     def close(self) -> None:
         self._landmarker.close()
@@ -102,13 +108,35 @@ def analyse(
             cv2.aruco.drawDetectedMarkers(drawn, corners, ids)
 
     if "hand" in overlays and tracker is not None:
-        tips = tracker.fingertips(frame, t_ms)
-        analysis["fingertips"] = tips
-        if tips:
+        hands = tracker.hands(frame, t_ms)
+        analysis["hands"] = hands
+        analysis["fingertips"] = [
+            {
+                "handedness": hand["handedness"],
+                "x": hand["points"][INDEX_TIP][0],
+                "y": hand["points"][INDEX_TIP][1],
+            }
+            for hand in hands
+        ]
+        if hands:
             if drawn is frame:
                 drawn = drawn.copy()
-            for tip in tips:
-                cv2.circle(drawn, (tip["x"], tip["y"]), 18, (0, 0, 255), 4)
+            for hand in hands:
+                points = [tuple(point) for point in hand["points"]]
+                for start, end in HAND_BONES:
+                    cv2.line(drawn, points[start], points[end], (255, 200, 0), 3)
+                for number, point in enumerate(points):
+                    cv2.circle(drawn, point, 7, (0, 255, 0), -1)
+                    cv2.putText(
+                        drawn,
+                        str(number),
+                        (point[0] + 9, point[1] - 9),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (255, 255, 255),
+                        2,
+                    )
+                cv2.circle(drawn, points[INDEX_TIP], 18, (0, 0, 255), 4)
 
     return drawn, analysis
 
