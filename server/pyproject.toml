@@ -1,0 +1,45 @@
+[project]
+name = "tacto"
+version = "0.1.0"
+description = "Tacto server: reads the paper mat, solves the circuit, runs the tutor"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "numpy>=1.26",
+    "opencv-python>=4.10",
+    "networkx>=3.3",
+    "pyyaml>=6",
+    "pillow>=10",
+    "httpx>=0.27",
+    "websockets>=12",
+    "python-dotenv>=1",
+    "python-multipart>=0.0.9",
+    "together>=1.3",
+    "openai>=1.50",
+]
+
+[project.optional-dependencies]
+# Fallback hand tracking if the Logi Hands Tracker does not pass its check.
+mediapipe = ["mediapipe>=0.10.14"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tacto"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

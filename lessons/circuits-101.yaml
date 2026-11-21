@@ -1,0 +1,27 @@
+# DRAFT: shows the shape of a lesson file. Wording is placeholder.
+id: circuits-101
+title: Light, series, parallel
+language: en
+concepts: [closed_loop, current, voltage, resistance, series, parallel]
+
+challenges:
+  - id: light_the_bulb
+    teaches: [closed_loop, current]
+    build:
+      say: "Place the battery and one bulb on the mat, then draw wires to join them in a loop."
+      # The step is done when the circuit on the mat satisfies this.
+      done_when: { status: closed, bulbs: 1 }
+    predict:
+      say: "Before you touch the wire: will you feel anything in the mouse?"
+      choices:
+        "yes": [yes, yeah, pulse, vibrate, buzz]
+        "no": [no, nothing, nope]
+      answer: "yes"
+    test:
+      say: "Put a finger on any wire and rest your other hand on the mouse."
+    explain:
+      say: "Current runs all the way round a closed loop, so you feel the same pulse on every wire."
+    hints:
+      - "Follow the loop with your finger. Is there a gap anywhere?"
+      - "Try touching the wire on the other side of the bulb. Same or different?"
+      - "Lift the bulb off the mat and touch the wire again. What changed?"

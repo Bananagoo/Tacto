@@ -1,0 +1,26 @@
+# Secrets: this repository is public
+.env
+.env.*
+!.env.example
+
+# Python
+server/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Web
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# Local and generated
+server/vendor/
+server/logs/
+kit/out/
+.DS_Store
+
+# Personal Claude Code files
+.claude/settings.local.json
+CLAUDE.local.md
