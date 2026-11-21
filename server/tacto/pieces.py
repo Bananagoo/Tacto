@@ -118,3 +118,20 @@ def _walk_loop(shorted: Sequence[Piece]) -> list[str]:
         dot = step.b if step.a == dot else step.a
         del remaining[step.id]
     return order + sorted(remaining)
+
+
+def warm_up_solver() -> None:
+    """Load ngspice now. Its first solve takes about 0.4 s; every later one about 1 ms.
+
+    Call once at startup so the learner's first closed loop is not the slow one.
+    """
+    solve_pieces([Placed("battery", (0, 0), (0, 1)), Placed("bulb", (0, 0), (1, 0))], 1.0)
+    solve_pieces(
+        [
+            Placed("battery", (0, 0), (0, 1)),
+            Placed("bulb", (0, 0), (1, 0)),
+            Placed("wire", (1, 0), (1, 1)),
+            Placed("wire", (1, 1), (0, 1)),
+        ],
+        1.0,
+    )

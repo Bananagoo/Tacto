@@ -13,7 +13,7 @@ All of them use this mat (dots are col,row):
 
 import pytest
 
-from tacto.pieces import Placed, solve_pieces, touch_for
+from tacto.pieces import Placed, solve_pieces, touch_for, warm_up_solver
 
 
 def loop(*, switch_closed: bool = True, bottom: str = "wire") -> list[Placed]:
@@ -141,3 +141,13 @@ def test_touch_on_a_shorted_piece_buzzes():
     pieces, _ = solve_pieces(loop() + branch("wire"), 6.0)
     touch = touch_for(pieces, x=0.3, y=0.3, piece_id="2,2-3,2")
     assert touch.buzz is True and touch.pulse_hz == 0
+
+
+def test_warm_up_runs_a_real_solve(monkeypatch):
+    solved = []
+    real = solve_pieces
+    monkeypatch.setattr(
+        "tacto.pieces.solve_pieces", lambda placed, volts: solved.append(real(placed, volts)[1])
+    )
+    warm_up_solver()
+    assert [circuit.status for circuit in solved] == ["open", "working"]

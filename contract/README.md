@@ -20,6 +20,16 @@ It replays `sample-states.jsonl` on `ws://localhost:8000/ws`, looping, with `seq
 and `t` counting up. It needs no camera, mouse or solver. It accepts
 `set_voltage` and logs it, but a recording does not react to it.
 
+## Set the mat by hand
+
+    make manual      # then open http://localhost:8000/manual
+
+The real lab with the camera replaced by a page: pick a tool and click between
+two dots, or load a preset (open, one bulb, series, parallel, short). It runs
+the real solver, reacts to `set_voltage`, and serves the same `/ws`, so the lab
+UI can be put into any state on demand. It needs ngspice (`brew install libngspice`).
+`lesson` is empty here until the lesson steps are rebuilt.
+
 ## Reading a state
 
 - Dots are `[col, row]`, origin top-left. `grid` gives the number of dots.

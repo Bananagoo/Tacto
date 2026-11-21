@@ -1,4 +1,4 @@
-.PHONY: setup dev bench server bench-server web check check-server check-web contract sample mock fmt test kit
+.PHONY: setup dev bench server bench-server web check check-server check-web contract sample mock manual fmt test kit
 
 setup:
 	cd server && uv sync
@@ -46,6 +46,10 @@ sample:
 # For the UI team: replay the recorded sample on ws://localhost:8000/ws. No hardware needed.
 mock:
 	cd server && uv run uvicorn tacto_mock.main:app --port 8000
+
+# The lab on a mat you set by hand, with the real solver. Open http://localhost:8000/manual
+manual:
+	cd server && uv run uvicorn tacto_bench.manual_main:app --port 8000 --timeout-graceful-shutdown 2
 
 fmt:
 	cd server && uv run ruff check --select I --fix . && uv run ruff format .
