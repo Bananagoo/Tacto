@@ -73,6 +73,9 @@ def solve_node_voltages(
             netlist, temperature=TEMPERATURE_CELSIUS, nominal_temperature=TEMPERATURE_CELSIUS
         ).operating_point()
         volts = {name: float(waveform[0]) for name, waveform in analysis.nodes.items()}
+        # ngspice keeps every circuit it is given. The loop solves many times a second,
+        # so drop this one or memory grows by about 100 MB every ten minutes.
+        simulator.ngspice.remove_circuit()
     volts[GROUND] = 0.0
     return volts
 
