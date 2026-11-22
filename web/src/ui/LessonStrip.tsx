@@ -34,7 +34,6 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
   const mode = useTacto((store) => store.state?.mode ?? 'tinker')
   const send = useTacto((store) => store.send)
   const lesson = useTacto((store) => store.state?.lesson)
-  const volts = useTacto((store) => store.state?.circuit.source_voltage)
 
   useEffect(() => {
     // Once, by the bar: the panel comes and goes with the mode.
@@ -181,12 +180,6 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               </button>
             </div>
           )}
-          <p className="m-0 mt-3 text-lg text-stone-300">
-            {connected && volts !== undefined && (
-              <span className="font-semibold">{volts.toFixed(1)} V · </span>
-            )}
-            Wheel controls voltage · Mouse pulse represents current
-          </p>
         </section>
       )}
     </>
