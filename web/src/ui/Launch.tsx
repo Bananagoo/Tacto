@@ -69,6 +69,10 @@ export function Launch({
           <p className="m-0 -rotate-1 font-['Patrick_Hand'] text-[13cqh] leading-none text-[#6b4a2b]">
             science within reach
           </p>
+          {/* Stamped on the paper's corner, like an edition mark: this kit is the circuits one. */}
+          <span className="absolute right-[3%] bottom-[5%] rotate-[-8deg] rounded-[1.2cqh] border-[0.9cqh] border-[#c2412d] px-[2.4cqw] pt-[1.2cqh] pb-[0.6cqh] font-['Patrick_Hand'] text-[9.5cqh] leading-none tracking-wide text-[#c2412d] uppercase opacity-85 select-none">
+            Circuitry edition
+          </span>
         </div>
         {/* The circuit board grows under the pointer and opens the bench to build freely. */}
         <button
