@@ -82,30 +82,55 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
   if (part === 'bar')
     return (
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div
-          role="group"
-          aria-label="Learning mode"
-          className="flex gap-1 rounded-2xl bg-white/5 p-1"
-        >
-          {(['tinker', 'lab'] as const).map((choice) => (
-            <button
-              key={choice}
-              type="button"
-              aria-pressed={mode === choice}
-              disabled={!connected}
-              onClick={() => {
-                if (mode !== choice) send({ type: 'set_mode', mode: choice })
-              }}
-              title={
-                choice === 'lab'
-                  ? 'Start a guided lab at step 1 and 3 V'
-                  : 'Explore freely with your current circuit'
-              }
-              className={`cursor-pointer rounded-xl px-6 py-2 text-xl font-semibold focus-visible:outline-4 focus-visible:outline-sky-300 disabled:opacity-40 ${mode === choice ? 'bg-white/15 text-white' : 'text-stone-400 hover:text-white'}`}
+        <div className="flex items-center gap-3">
+          {/* Back to the opening page (Root.tsx shows it whenever the address is not #lab). */}
+          <button
+            type="button"
+            onClick={() => {
+              location.hash = ''
+            }}
+            title="Back to the opening page"
+            className="flex cursor-pointer items-center gap-2 rounded-2xl bg-white/5 px-4 py-2 text-xl font-semibold text-stone-300 hover:bg-white/10 hover:text-white focus-visible:outline-4 focus-visible:outline-sky-300"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="h-6 w-6 fill-none stroke-current"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {choice === 'tinker' ? 'Tinker' : 'Lab'}
-            </button>
-          ))}
+              <path d="M3 11.5 12 4l9 7.5" />
+              <path d="M5.5 10v9.5h13V10" />
+              <path d="M10 19.5v-5h4v5" />
+            </svg>
+            Home
+          </button>
+          <div
+            role="group"
+            aria-label="Learning mode"
+            className="flex gap-1 rounded-2xl bg-white/5 p-1"
+          >
+            {(['tinker', 'lab'] as const).map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                aria-pressed={mode === choice}
+                disabled={!connected}
+                onClick={() => {
+                  if (mode !== choice) send({ type: 'set_mode', mode: choice })
+                }}
+                title={
+                  choice === 'lab'
+                    ? 'Start a guided lab at step 1 and 3 V'
+                    : 'Explore freely with your current circuit'
+                }
+                className={`cursor-pointer rounded-xl px-6 py-2 text-xl font-semibold focus-visible:outline-4 focus-visible:outline-sky-300 disabled:opacity-40 ${mode === choice ? 'bg-white/15 text-white' : 'text-stone-400 hover:text-white'}`}
+              >
+                {choice === 'tinker' ? 'Tinker' : 'Lab'}
+              </button>
+            ))}
+          </div>
         </div>
         <p className="m-0 text-lg text-stone-300">
           {mode === 'tinker'
