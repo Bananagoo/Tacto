@@ -6,17 +6,17 @@ import { Bulb } from './parts/Bulb'
 import { Resistor } from './parts/Resistor'
 import { Switch } from './parts/Switch'
 
-function Symbol({ part, length }: { part: Part; length: number }) {
+function Symbol({ part, length, angleDeg }: { part: Part; length: number; angleDeg: number }) {
   switch (part.kind) {
     case 'battery':
       return <Battery length={length} />
     case 'bulb':
-      return <Bulb length={length} brightness={part.brightness} />
+      return <Bulb length={length} angleDeg={angleDeg} brightness={part.brightness} />
     case 'resistor':
       return <Resistor length={length} />
     case 'switch':
       // `closed` is null for anything the camera could not read; an unknown switch is open.
-      return <Switch length={length} closed={part.closed === true} />
+      return <Switch length={length} angleDeg={angleDeg} closed={part.closed === true} />
   }
 }
 
@@ -47,7 +47,7 @@ export const PartView = memo(function PartView({ part }: { part: Part }) {
       strokeWidth={6}
       strokeLinecap="round"
     >
-      <Symbol part={part} length={length} />
+      <Symbol part={part} length={length} angleDeg={angleDeg} />
     </g>
   )
 }, sameDrawing)

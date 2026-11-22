@@ -165,6 +165,9 @@ interface Hid {
 
 const LOGITECH = 0x046d
 const MOUSE_PRODUCT_IDS = [0xb042, 0xb048] // MX Master 4 and the Business edition, over Bluetooth
+/** Said when the device picker is closed without choosing: the person changed their mind, which
+ *  is not a fault, so the page shows nothing for it. */
+export const PICKER_CLOSED = 'No mouse was selected'
 const BOLT_RECEIVER_PRODUCT_ID = 0xc548
 const LONG_REPORT = 0x11
 const LONG_REPORT_BYTES = 19
@@ -207,7 +210,7 @@ export class WebHidHaptics implements HapticsDriver {
           collection.outputReports?.some((report) => report.reportId === LONG_REPORT),
         ),
       ) ?? devices[0]
-    if (!device) throw new Error('No MX Master 4 or Logi receiver selected')
+    if (!device) throw new Error(PICKER_CLOSED)
     if (!device.opened) await device.open()
     this.device = device
 

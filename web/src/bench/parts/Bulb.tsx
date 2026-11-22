@@ -1,46 +1,63 @@
+import ledBrightUrl from '../../assets/LedBright.png'
+import ledDimUrl from '../../assets/LedDim.png'
+import ledOffUrl from '../../assets/LedOff.png'
 import { Leads } from './Leads'
 
-const RADIUS = 36
-// The cross of the lamp symbol reaches the circle at 45 degrees.
-const CROSS = RADIUS * Math.SQRT1_2
-// How far the halo spreads at full brightness, as a multiple of the bulb's radius.
-const HALO_REACH = 1.5
+// The LED is drawn this wide (a dot pitch is 100), with its legs bent out to the two sides. Its
+// dome then stands about 120 above the wire, which fits the margin round the mat's top row (grid.ts). Where the
+// dots are closer than this it shrinks to fit, so the leg tips always reach them; where they are
+// further apart a plain lead joins each dot to a leg tip.
+const MAX_WIDTH = 160
+// The box is a little taller than any picture, and each picture sits at its bottom, so the three
+// line up when one swaps for another.
+const BOX_HEIGHT_PER_WIDTH = 0.8
+// The legs' middle sits this far (as a share of the width) above the pictures' bottom edge, so
+// they lie on the line between the dots.
+const LEG_DROP_PER_WIDTH = 0.036
+// Where the three pictures change, on the server's 0 to 1 brightness.
+// TODO(front end owner): tune by eye once real circuits run. Series bulbs sit at 0.25, a
+// single bulb or a parallel branch at 1.
+const OFF_BELOW = 0.02
+const BRIGHT_FROM = 0.6
 
 interface BulbProps {
   length: number
+  /** The part's direction, so an LED pointing left is not drawn upside down. */
+  angleDeg: number
   /** 0 (off) to 1 (full), from the server. */
   brightness: number
 }
 
+function pictureFor(brightness: number): { url: string; words: string } {
+  const level = Number.isFinite(brightness) ? brightness : 0
+  if (level < OFF_BELOW) return { url: ledOffUrl, words: 'LED, off' }
+  if (level < BRIGHT_FROM) return { url: ledDimUrl, words: 'LED, dim' }
+  return { url: ledBrightUrl, words: 'LED, bright' }
+}
+
 /**
- * A lamp. Brightness shows as light, not hue: the fill and the halo fade in and the halo
- * grows, so a dim bulb, a bright one and a dark one read differently in greyscale too.
+ * A lamp, drawn as an LED in one of three pictures: off, dim or bright. Brightness shows in
+ * the glow, and the three also differ in colour depth, so they read apart in greyscale. Its
+ * legs run along the part's two dots (a plain lead fills any gap), and its dome points up unless the part is turned past
+ * a quarter turn, where it is flipped so it is never upside down.
  */
-export function Bulb({ length, brightness }: BulbProps) {
-  const level = Number.isFinite(brightness) ? Math.min(1, Math.max(0, brightness)) : 0
+export function Bulb({ length, angleDeg, brightness }: BulbProps) {
+  const { url, words } = pictureFor(brightness)
+  const flip = Math.abs(angleDeg) > 90
+  const width = Math.min(MAX_WIDTH, length)
+  const height = width * BOX_HEIGHT_PER_WIDTH
   return (
     <>
-      <Leads length={length} bodyWidth={RADIUS * 2} />
-      <g transform={`translate(${length / 2} 0)`}>
-        {/* The transitions carry the glow from one state message to the next without a jump. */}
-        <circle
-          r={RADIUS}
-          className="fill-amber-300 stroke-none transition-[opacity,transform] duration-300 ease-out"
-          style={{ opacity: 0.4 * level, transform: `scale(${1 + HALO_REACH * level})` }}
-        />
-        {/* An opaque disc, so the dots and wires behind do not show through an unlit bulb. */}
-        <circle r={RADIUS} className="fill-[#0f1115] stroke-none" />
-        <circle
-          r={RADIUS}
-          className="fill-amber-200 stroke-none transition-opacity duration-300 ease-out"
-          style={{ opacity: level }}
-        />
-        <circle r={RADIUS} />
-        {/* On a lit bulb the pale strokes would vanish into the fill, so the cross goes dark. */}
-        <path
-          d={`M ${-CROSS} ${-CROSS} L ${CROSS} ${CROSS} M ${-CROSS} ${CROSS} L ${CROSS} ${-CROSS}`}
-          className={level > 0.5 ? 'stroke-stone-900' : undefined}
-          strokeWidth={4}
+      <Leads length={length} bodyWidth={width} />
+      <g transform={`translate(${length / 2} 0) rotate(${flip ? 180 : 0})`}>
+        <image
+          href={url}
+          x={-width / 2}
+          y={width * LEG_DROP_PER_WIDTH - height}
+          width={width}
+          height={height}
+          preserveAspectRatio="xMidYMax meet"
+          aria-label={words}
         />
       </g>
     </>
