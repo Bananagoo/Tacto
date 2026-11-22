@@ -1,9 +1,16 @@
 import multimeterUrl from '../assets/Multimeter.png'
+import { MARKER_COLORS } from './markers'
+
+/** What the pointer is doing over the mat: nothing, reading as the multimeter, or drawing. */
+export type Tool = 'none' | 'multimeter' | 'marker'
 
 interface ToolbarProps {
-  /** The multimeter is picked up: it is the pointer over the mat. */
-  probing: boolean
-  onToggle: () => void
+  tool: Tool
+  /** Pick a tool up, or put it down if it is already in hand. */
+  onPick: (tool: 'multimeter' | 'marker') => void
+  markerColor: string
+  onMarkerColor: (color: string) => void
+  onClearMarker: () => void
   /** Save a picture of the circuit. */
   onScreenshot: () => void
 }
@@ -11,12 +18,25 @@ interface ToolbarProps {
 /** Its width. The mat is drawn to the right of it, so no tool ever covers the circuit. */
 export const TOOLBAR_WIDTH_CLASS = 'w-40'
 
+const TOOL_BUTTON =
+  'flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl border-4 px-2 py-3 text-lg font-semibold focus-visible:outline-4 focus-visible:outline-sky-300'
+// Filled and outlined as well as coloured: the tool in hand is not carried by colour alone.
+const IN_HAND = 'border-amber-300 bg-amber-300 text-stone-900'
+const PUT_DOWN = 'border-stone-100/40 bg-transparent text-stone-100 hover:border-stone-100'
+
 /**
  * The tool bar: a tall block down the left edge of the mat, with room for more tools below the
  * multimeter. Click a tool to pick it up and again to let go. Big and filled when in hand,
  * because the room has to see which tool it is.
  */
-export function Toolbar({ probing, onToggle, onScreenshot }: ToolbarProps) {
+export function Toolbar({
+  tool,
+  onPick,
+  markerColor,
+  onMarkerColor,
+  onClearMarker,
+  onScreenshot,
+}: ToolbarProps) {
   return (
     <nav
       aria-label="Tools"
@@ -24,18 +44,57 @@ export function Toolbar({ probing, onToggle, onScreenshot }: ToolbarProps) {
     >
       <button
         type="button"
-        aria-pressed={probing}
-        onClick={onToggle}
-        className={`flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl border-4 px-2 py-3 text-lg font-semibold focus-visible:outline-4 focus-visible:outline-sky-300 ${
-          // Filled and outlined as well as coloured: the state is not carried by colour alone.
-          probing
-            ? 'border-amber-300 bg-amber-300 text-stone-900'
-            : 'border-stone-100/40 bg-transparent text-stone-100 hover:border-stone-100'
-        }`}
+        aria-pressed={tool === 'multimeter'}
+        onClick={() => onPick('multimeter')}
+        className={`${TOOL_BUTTON} ${tool === 'multimeter' ? IN_HAND : PUT_DOWN}`}
       >
         <img src={multimeterUrl} alt="" className="h-20 object-contain" />
         Multimeter
       </button>
+      <button
+        type="button"
+        aria-pressed={tool === 'marker'}
+        onClick={() => onPick('marker')}
+        className={`${TOOL_BUTTON} ${tool === 'marker' ? IN_HAND : PUT_DOWN}`}
+      >
+        <svg viewBox="0 0 64 64" className="h-20 w-20" aria-hidden="true">
+          <path
+            d="M10 54 14 40 42 12a6 6 0 0 1 8 0l2 2a6 6 0 0 1 0 8L24 50Z"
+            className="fill-none stroke-current"
+            strokeWidth={4}
+            strokeLinejoin="round"
+          />
+          <path d="M36 18 46 28" className="stroke-current" strokeWidth={4} />
+        </svg>
+        Marker
+      </button>
+      {tool === 'marker' && (
+        <div className="flex flex-col items-center gap-3 rounded-xl bg-white/10 p-3">
+          <div className="grid grid-cols-2 gap-3">
+            {MARKER_COLORS.map((ink) => (
+              <button
+                key={ink.value}
+                type="button"
+                aria-label={`${ink.name} ink`}
+                aria-pressed={markerColor === ink.value}
+                onClick={() => onMarkerColor(ink.value)}
+                style={{ backgroundColor: ink.value }}
+                // A thick ring on the chosen ink, so it is not told by colour alone.
+                className={`h-9 w-9 cursor-pointer rounded-full border-2 border-stone-100/60 focus-visible:outline-4 focus-visible:outline-sky-300 ${
+                  markerColor === ink.value ? 'ring-4 ring-amber-300' : ''
+                }`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={onClearMarker}
+            className="w-full cursor-pointer rounded-lg border-2 border-stone-100/40 py-1 text-lg font-semibold text-stone-100 hover:border-stone-100 focus-visible:outline-4 focus-visible:outline-sky-300"
+          >
+            Clear
+          </button>
+        </div>
+      )}
       <button
         type="button"
         onClick={onScreenshot}

@@ -3,12 +3,13 @@ import { useTacto } from '../useTacto'
 import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
 import { placeKeys, VIEW_HEIGHT, VIEW_WIDTH, type Point } from './grid'
+import { MARKER_COLORS, MARKER_WIDTH, strokePath, type Stroke } from './markers'
 import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
 import { Readout } from './Readout'
 import { readingAt } from './readingAt'
 import { saveScreenshot } from './screenshot'
-import { Toolbar } from './Toolbar'
+import { Toolbar, type Tool } from './Toolbar'
 import { WireLine } from './WireLine'
 
 // The server still sends the printed lesson layout (a battery, a bulb, wire stubs) whatever the
@@ -32,12 +33,18 @@ export function Bench({ children }: { children?: ReactNode }) {
   const short = connected && circuit?.status === 'short'
   // The multimeter is the mouse's pointer: where it is on the mat, and what it reads there.
   const svgRef = useRef<SVGSVGElement>(null)
-  const [probing, setProbing] = useState(false)
+  const [tool, setTool] = useState<Tool>('none')
+  const probing = tool === 'multimeter'
   const [pointer, setPointer] = useState<Point | null>(null)
   const reading = probing && pointer ? readingAt(pointer, circuit, wireKeys) : null
+  // The marker: lines drawn over the mat for fun. They never reach the server or the solver.
+  const [strokes, setStrokes] = useState<Stroke[]>([])
+  const [markerColor, setMarkerColor] = useState<string>(MARKER_COLORS[0].value)
+  const inking = useRef(false)
 
-  const toggleProbe = () => {
-    setProbing(!probing)
+  // Clicking the tool in hand puts it down; clicking another swaps to it.
+  const pickTool = (next: Tool) => {
+    setTool(tool === next ? 'none' : next)
     setPointer(null)
   }
 
@@ -46,16 +53,34 @@ export function Bench({ children }: { children?: ReactNode }) {
       saveScreenshot(svgRef.current).catch((error: unknown) => console.error('bench:', error))
   }
 
-  const movePointer = (event: PointerEvent<SVGSVGElement>) => {
-    if (!probing) return
+  const spotOnMat = (event: PointerEvent<SVGSVGElement>): Point | null => {
     const svg = svgRef.current
     const toMat = svg?.getScreenCTM()?.inverse()
-    if (!svg || !toMat) return
+    if (!svg || !toMat) return null
     const spot = svg.createSVGPoint()
     spot.x = event.clientX
     spot.y = event.clientY
     const onMat = spot.matrixTransform(toMat)
-    setPointer({ x: onMat.x, y: onMat.y })
+    return { x: onMat.x, y: onMat.y }
+  }
+
+  const startInk = (event: PointerEvent<SVGSVGElement>) => {
+    const spot = tool === 'marker' ? spotOnMat(event) : null
+    if (!spot) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    inking.current = true
+    setStrokes((all) => [...all, { color: markerColor, points: [spot] }])
+  }
+
+  const movePointer = (event: PointerEvent<SVGSVGElement>) => {
+    const spot = spotOnMat(event)
+    if (!spot) return
+    if (probing) setPointer(spot)
+    else if (tool === 'marker' && inking.current)
+      setStrokes((all) => {
+        const last = all[all.length - 1]
+        return last ? [...all.slice(0, -1), { ...last, points: [...last.points, spot] }] : all
+      })
   }
 
   return (
@@ -67,11 +92,15 @@ export function Bench({ children }: { children?: ReactNode }) {
     >
       <svg
         ref={svgRef}
+        onPointerDown={startInk}
         onPointerMove={movePointer}
+        onPointerUp={() => (inking.current = false)}
+        onPointerCancel={() => (inking.current = false)}
         onPointerLeave={() => setPointer(null)}
+        style={{ touchAction: tool === 'marker' ? 'none' : undefined }}
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         // A stale picture is dimmed while the server is away, so it is not taken for live.
-        className={`absolute inset-y-0 right-0 left-40 h-full w-[calc(100%-10rem)] transition-opacity ${probing ? 'cursor-none' : ''} ${connected ? '' : 'opacity-25'}`}
+        className={`absolute inset-y-0 right-0 left-40 h-full w-[calc(100%-10rem)] transition-opacity ${probing ? 'cursor-none' : tool === 'marker' ? 'cursor-crosshair' : ''} ${connected ? '' : 'opacity-25'}`}
         role="img"
         aria-label="The circuit on the mat"
       >
@@ -91,6 +120,17 @@ export function Bench({ children }: { children?: ReactNode }) {
         {parts.map((part) => (
           <PartView key={part.id} part={part} />
         ))}
+        {strokes.map((stroke, index) => (
+          <path
+            key={index}
+            d={strokePath(stroke.points)}
+            fill="none"
+            stroke={stroke.color}
+            strokeWidth={MARKER_WIDTH}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
         <Multimeter point={pointer} />
       </svg>
       {/* With the server's circuit hidden, a mat that is connected reads as empty. */}
@@ -99,7 +139,14 @@ export function Bench({ children }: { children?: ReactNode }) {
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
       <Readout reading={reading} />
-      <Toolbar probing={probing} onToggle={toggleProbe} onScreenshot={takeScreenshot} />
+      <Toolbar
+        tool={tool}
+        onPick={pickTool}
+        markerColor={markerColor}
+        onMarkerColor={setMarkerColor}
+        onClearMarker={() => setStrokes([])}
+        onScreenshot={takeScreenshot}
+      />
       {children}
     </figure>
   )
