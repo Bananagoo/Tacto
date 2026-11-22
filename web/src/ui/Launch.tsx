@@ -14,6 +14,8 @@ const SCENE_ASPECT = 3593 / 1620
 const BOARD = { centreX: 52.5, centreY: 81.5, width: 27 } // percent of the scene
 // The clipboard's paper on the wall (percent of the scene): "Tacto" is written on it.
 const PAPER = { centreX: 51.4, centreY: 29.8, width: 26.5, height: 22.5 }
+// The edition stamp, on the wall under the right end of the clipboard (percent of the scene).
+const EDITION = { centreX: 74, centreY: 50 }
 // Where the sticky note hung in the picture before it was taken out and made a button. It is the
 // note's own picture put back in the same place.
 const NOTE = { centreX: 81.75, centreY: 21.7, width: 15.1 } // percent of the scene
@@ -69,11 +71,15 @@ export function Launch({
           <p className="m-0 -rotate-1 font-['Patrick_Hand'] text-[13cqh] leading-none text-[#6b4a2b]">
             science within reach
           </p>
-          {/* Stamped on the paper's corner, like an edition mark: this kit is the circuits one. */}
-          <span className="absolute right-[3%] bottom-[5%] rotate-[-8deg] rounded-[1.2cqh] border-[0.9cqh] border-[#c2412d] px-[2.4cqw] pt-[1.2cqh] pb-[0.6cqh] font-['Patrick_Hand'] text-[9.5cqh] leading-none tracking-wide text-[#c2412d] uppercase opacity-85 select-none">
-            Circuitry edition
-          </span>
         </div>
+        {/* Stamped on the green wall beside the clipboard, like an edition mark: this kit is
+            the circuits one. */}
+        <span
+          className="absolute -translate-x-1/2 -translate-y-1/2 rotate-[-14deg] rounded-[0.6vw] border-[0.35vw] border-[#c2412d] bg-[#fff6ea]/70 px-[1.1vw] pt-[0.5vw] pb-[0.25vw] font-['Patrick_Hand'] text-[clamp(1.3rem,3vw,3.2rem)] leading-none tracking-wide whitespace-nowrap text-[#c2412d] uppercase shadow-sm select-none"
+          style={{ left: `${EDITION.centreX}%`, top: `${EDITION.centreY}%` }}
+        >
+          Circuitry edition
+        </span>
         {/* The circuit board grows under the pointer and opens the bench to build freely. */}
         <button
           type="button"
