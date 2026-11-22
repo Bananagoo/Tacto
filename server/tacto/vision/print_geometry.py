@@ -1,7 +1,7 @@
 """Where the mat sits on the printed page.
 
 The kit renderer draws from this and the camera reader measures against it, so the
-paper and the software cannot disagree about where a dot, a marker or a tile is.
+paper and the software cannot disagree about where a dot or a marker is.
 Everything is in millimetres from the page's top-left corner, x to the right, y down.
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..contract import Dot
-from ..mat.models import MatLayout, SlotContent
+from ..mat import Mat
 
 MM_PER_INCH = 25.4
 
@@ -27,31 +27,21 @@ CORNER_MARKER_INSET_MM = 8.0
 # to one. One marker cell is 20 / 6 = 3.3 mm; this leaves a little more.
 CORNER_QUIET_MM = 5.0
 
-# One pitch for every mat, so a tile cut for one lesson fits the slots of the next.
-# TODO(vision owner): pitch and tile sizes were chosen on screen. Check on the printed
-# kit that a fingertip fits between two rails and that a cut tile is easy to pick up.
-DOT_PITCH_MM = 28.0
-TILE_SPAN_DOTS = 2  # every slot joins two dots this far apart
-TILE_LENGTH_MM = TILE_SPAN_DOTS * DOT_PITCH_MM
-TILE_WIDTH_MM = 24.0
-TILE_MARKER_MM = 14.0
-TILE_MARKER_QUIET_MM = 2.5  # one marker cell is 14 / 6 = 2.3 mm
 
-# Five ids per kind, so a kit can hold several tiles of a kind and still tell them apart.
-TILE_MARKER_IDS: dict[SlotContent, tuple[int, ...]] = {
-    "bulb": (10, 11, 12, 13, 14),
-    "wire": (20, 21, 22, 23, 24),
-    "resistor": (30, 31, 32, 33, 34),
-    "switch": (40, 41, 42, 43, 44),
-}
-_KIND_OF_MARKER: dict[int, SlotContent] = {
-    marker_id: kind for kind, ids in TILE_MARKER_IDS.items() for marker_id in ids
-}
-
-
-def tile_kind(marker_id: int) -> SlotContent | None:
-    """The kind of tile that carries this marker, or None for any other marker."""
-    return _KIND_OF_MARKER.get(marker_id)
+# A square of each piece colour along the top edge, one above each dot column from the
+# second on, in this order (kit/printed/mat-with-reference-v2.pdf). The reader samples
+# them in every frame to learn what each colour looks like in the light of the moment.
+REFERENCE_SQUARES = (
+    "wire",
+    "bulb",
+    "resistor",
+    "switch_closed",
+    "switch_open",
+    "battery_positive",
+    "battery_negative",
+)
+REFERENCE_SQUARE_MM = 12.0
+REFERENCE_SQUARE_CENTRE_Y_MM = 14.0
 
 
 def mm_to_px(length_mm: float, *, dpi: float) -> float:
@@ -60,38 +50,40 @@ def mm_to_px(length_mm: float, *, dpi: float) -> float:
 
 @dataclass(frozen=True)
 class PrintGeometry:
-    """The dot grid's place on the page: where its first dot is."""
+    """The dot grid's place on the page: where its first dot is, and the dot spacing."""
 
     first_dot_x_mm: float
     first_dot_y_mm: float
+    dot_pitch_mm: float
 
     @classmethod
-    def for_layout(cls, layout: MatLayout) -> PrintGeometry:
-        """Centre the layout's grid on the page.
+    def for_mat(cls, mat: Mat) -> PrintGeometry:
+        """Centre the mat's grid on the page.
 
         Raises ValueError for a grid too large to keep clear of the corner markers.
         """
-        grid_width_mm = (layout.cols - 1) * DOT_PITCH_MM
-        grid_height_mm = (layout.rows - 1) * DOT_PITCH_MM
+        grid_width_mm = (mat.cols - 1) * mat.dot_pitch_mm
+        grid_height_mm = (mat.rows - 1) * mat.dot_pitch_mm
         keep_clear_mm = CORNER_MARKER_INSET_MM + CORNER_MARKER_MM + CORNER_QUIET_MM
         if (
             grid_width_mm > PAGE_WIDTH_MM - 2 * keep_clear_mm
             or grid_height_mm > PAGE_HEIGHT_MM - 2 * keep_clear_mm
         ):
             raise ValueError(
-                f"mat {layout.id!r}: a {layout.cols}x{layout.rows} grid at {DOT_PITCH_MM:g} mm "
+                f"mat {mat.id!r}: a {mat.cols}x{mat.rows} grid at {mat.dot_pitch_mm:g} mm "
                 "does not fit on A4 between the corner markers"
             )
         return cls(
             first_dot_x_mm=(PAGE_WIDTH_MM - grid_width_mm) / 2,
             first_dot_y_mm=(PAGE_HEIGHT_MM - grid_height_mm) / 2,
+            dot_pitch_mm=mat.dot_pitch_mm,
         )
 
     def dot_mm(self, dot: Dot) -> tuple[float, float]:
         col, row = dot
         return (
-            self.first_dot_x_mm + col * DOT_PITCH_MM,
-            self.first_dot_y_mm + row * DOT_PITCH_MM,
+            self.first_dot_x_mm + col * self.dot_pitch_mm,
+            self.first_dot_y_mm + row * self.dot_pitch_mm,
         )
 
     def corner_marker_centres_mm(self) -> list[tuple[float, float]]:
@@ -105,3 +97,12 @@ class PrintGeometry:
             (right_mm, bottom_mm),
             (near_mm, bottom_mm),
         ]
+
+    def reference_square_centres_mm(self, cols: int) -> dict[str, tuple[float, float]]:
+        """Colour name -> the centre of its square. Empty for a mat too narrow to carry them."""
+        if cols < len(REFERENCE_SQUARES) + 1:
+            return {}
+        return {
+            name: (self.dot_mm((index + 1, 0))[0], REFERENCE_SQUARE_CENTRE_Y_MM)
+            for index, name in enumerate(REFERENCE_SQUARES)
+        }

@@ -2,21 +2,19 @@ import { useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { useTacto } from '../useTacto'
 import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
-import { placeKeys, VIEW_HEIGHT, VIEW_WIDTH, type Point } from './grid'
+import { matToPoint, placeKeys, VIEW_HEIGHT, VIEW_WIDTH, type Point } from './grid'
 import { MARKER_COLORS, MARKER_WIDTH, strokePath, type Stroke } from './markers'
 import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
 import { Readout } from './Readout'
-import { readingAt } from './readingAt'
+import { readingAt, readingOf } from './readingAt'
 import { saveScreenshot } from './screenshot'
 import { Toolbar, type Tool } from './Toolbar'
 import { WireLine } from './WireLine'
 
-// The server still sends the printed lesson layout (a battery, a bulb, wire stubs) whatever the
-// camera sees, because vision does not detect parts yet. Nothing is drawn from it, so the learner
-// sees an empty mat. TODO(front end owner): set this to true once vision sends only what it
-// detected; the bench then draws it with no other change.
-const DRAW_SERVER_CIRCUIT = false
+// Vision now sends only what the camera reads off the mat (22 Nov 2026), so the bench draws
+// it. Set to false to show an empty mat whatever the server sends.
+const DRAW_SERVER_CIRCUIT = true
 
 /**
  * The mat as the camera reads it, drawn straight from the latest state. Nothing here knows
@@ -36,7 +34,17 @@ export function Bench({ children }: { children?: ReactNode }) {
   const [tool, setTool] = useState<Tool>('none')
   const probing = tool === 'multimeter'
   const [pointer, setPointer] = useState<Point | null>(null)
-  const reading = probing && pointer ? readingAt(pointer, circuit, wireKeys) : null
+  // The learner's fingertip on the paper mat, as the camera places it.
+  const probe = useTacto((store) => store.state?.probe)
+  const finger = connected && probe?.present ? matToPoint(probe.x, probe.y) : null
+  // The multimeter on screen wins while it is picked up; otherwise the readout follows the
+  // fingertip on the paper, which is also what the mouse is vibrating for.
+  const reading =
+    probing && pointer
+      ? readingAt(pointer, circuit, wireKeys)
+      : finger && probe
+        ? readingOf(probe.on, circuit, wireKeys)
+        : null
   // The marker: lines drawn over the mat for fun. They never reach the server or the solver.
   const [strokes, setStrokes] = useState<Stroke[]>([])
   const [markerColor, setMarkerColor] = useState<string>(MARKER_COLORS[0].value)
@@ -131,6 +139,17 @@ export function Bench({ children }: { children?: ReactNode }) {
             strokeLinejoin="round"
           />
         ))}
+        {finger && (
+          <circle
+            cx={finger.x}
+            cy={finger.y}
+            r={22}
+            className="fill-white/20 stroke-white"
+            strokeWidth={5}
+            pointerEvents="none"
+            aria-label="The fingertip on the mat"
+          />
+        )}
         <Multimeter point={pointer} />
       </svg>
       {/* With the server's circuit hidden, a mat that is connected reads as empty. */}

@@ -1,0 +1,28 @@
+# How the camera tells the printed pieces apart: one colour per piece.
+#
+# These are the colours in kit/printed/components-v3.pdf, as red, green, blue. The mat
+# carries a square of each along its top edge (kit/printed/mat-with-reference-v2.pdf),
+# in this order from the left. The camera reads those squares in every frame and matches
+# each piece to the nearest one, so what is written here is only used to draw the squares
+# (`make kit`) and as a fallback while a square is covered or has not been seen yet.
+#
+# Change a colour here only together with the piece sheet.
+
+colours:
+  wire: [30, 70, 210]              # blue
+  bulb: [255, 225, 0]              # yellow
+  resistor: [215, 0, 170]          # magenta
+  switch_closed: [20, 165, 50]     # green
+  switch_open: [0, 175, 180]       # cyan
+  battery_positive: [220, 20, 20]  # red: the battery's + half
+  battery_negative: [0, 0, 0]      # black: the battery's - half
+
+# TODO(Katie): the three fractions below are first guesses; tune on the real mat.
+# A segment holds a piece when this much of its patch is that piece's colour. Symbols
+# printed on the pieces (the bulb's cross, the resistor's zigzag) take some of it away.
+cover_fraction: 0.35
+# Between this and cover_fraction the reader says "unsure" and the last answer is kept.
+unsure_fraction: 0.18
+# When this much of a patch is neither paper nor a piece colour (a hand, a sleeve),
+# the reader says "unsure" as well.
+covered_fraction: 0.3

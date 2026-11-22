@@ -9,7 +9,6 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 
-from tacto.contract import Circuit, Dot, Part, Topology, Wire
 from tacto.sim import engine
 from tacto.sim.graph import (
     GraphAnalysis,
@@ -18,6 +17,7 @@ from tacto.sim.graph import (
     is_zero_resistance,
     joins_two_dots,
 )
+from tacto.sim.types import Circuit, Dot, Part, Topology, Wire
 
 # TODO(sim owner): measure the kit's real bulb and resistor and set these to match.
 BULB_OHMS = 10.0

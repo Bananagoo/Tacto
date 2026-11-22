@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from tacto.vision import camera, hands
+from tacto.vision import camera, exposure, hands
 from tacto_bench import camera_routes as routes
 from tacto_bench import overlays
 
@@ -261,37 +261,103 @@ def test_status_combines_what_every_viewer_saw(client):
         routes.hub.release(0)
 
 
-def test_mat_overlay_reports_the_reader_result_for_the_frame(client, monkeypatch):
-    from tacto.mat.loader import load_mat
-    from tacto.platform import MATS_DIR
+# ---------- exposure ----------
+
+
+def test_exposure_routes_set_and_report_the_camera(client, monkeypatch):
+    camera_now: dict[str, int | str] = {"auto-exposure-mode": 8, "gain": 0, "auto-focus": "false"}
+
+    def tool(args: list[str]) -> tuple[int, str]:
+        lines = []
+        for flag, value in zip(args[::2], args[1::2], strict=True):
+            if flag == "-s":
+                name, new = value.split("=")
+                camera_now[name] = new if name == "auto-focus" else int(new)
+            elif flag == "-g":
+                lines.append(f"{value} = {camera_now[value]}")
+        return 0, "\n".join(lines)
+
+    monkeypatch.setattr(exposure, "_run_tool", tool)
+    monkeypatch.setattr(exposure, "_wanted", exposure.Exposure())
+    monkeypatch.setattr(exposure, "available", lambda: True)
+
+    before = client.get("/dev/camera/exposure").json()
+    assert before == {
+        "available": True,
+        "camera_found": True,
+        "manual": False,
+        "gain": 0,
+    }
+
+    setting = {"manual": True, "gain": 25}
+    after = client.post("/dev/camera/exposure", json=setting).json()
+    assert after == {"available": True, "camera_found": True, **setting}
+    assert camera_now["auto-exposure-mode"] == exposure.MANUAL_MODE
+    assert exposure.wanted() == exposure.Exposure(manual=True, gain=25)
+
+    assert (
+        client.post("/dev/camera/exposure", json={"manual": True, "gain": 300}).status_code == 422
+    )
+
+
+def test_exposure_route_without_the_tool_says_so(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(exposure, "TOOL", tmp_path / "uvc-util")
+    monkeypatch.setattr(exposure, "_wanted", exposure.Exposure())
+    body = client.get("/dev/camera/exposure").json()
+    assert body["available"] is False and body["camera_found"] is False
+
+
+# ---------- the flattened mat ----------
+
+
+def last_jpeg(multipart: bytes) -> np.ndarray:
+    start, end = multipart.rfind(b"\xff\xd8"), multipart.rfind(b"\xff\xd9")
+    return cv2.imdecode(np.frombuffer(multipart[start : end + 2], np.uint8), cv2.IMREAD_COLOR)
+
+
+def test_sharpness_falls_when_the_picture_is_blurred():
+    crisp = sheet()
+    soft = cv2.GaussianBlur(crisp, (0, 0), 6)
+    assert overlays.sharpness(crisp) > 10 * overlays.sharpness(soft)
+
+
+def test_flat_stream_shows_the_page_square_on_and_reports_the_mat(monkeypatch):
+    from tacto.mat import load_default_mat
     from tacto.vision.kit_render import render_mat
 
-    layout = load_mat(MATS_DIR / "circuits-101.yaml")
-    monkeypatch.setattr(routes, "hub", fake_hub(render_mat(layout), []))
-    hub = routes.hub
-    hub.acquire(0)
+    # The rendered mat page lying on a grey desk, off-centre in a 1080p frame.
+    page = render_mat(load_default_mat(), dpi=100)
+    frame = np.full((1080, 1920, 3), 90, dtype=np.uint8)
+    frame[150 : 150 + page.shape[0], 400 : 400 + page.shape[1]] = page
+    hub = fake_hub(frame, [])
+    monkeypatch.setattr(routes, "hub", hub)
+    client = TestClient(app)
+    hub.acquire(0)  # keep the camera open so status can be read after the stream ends
     try:
-        client.get("/dev/camera/stream", params={"index": 0, "overlay": "mat", "frames": 1})
+        params = {"index": 0, "frames": 1, "flat": 1, "width": 1920}
+        page = last_jpeg(client.get("/dev/camera/stream", params=params).content)
+        # A4 landscape, and white paper right to the edge: no desk in the picture.
+        assert abs(page.shape[1] / page.shape[0] - 297 / 210) < 0.01
+        assert page[:, :8].mean() > 200 and page[:, -8:].mean() > 200
         status = client.get("/dev/camera/status", params={"index": 0}).json()
-        assert status["mat"] == {
-            "found": True,
-            "drawn": [],
-            "slots": {"tile": "empty", "side": "empty"},
-        }
+        assert status["mat_found"] is True and status["mat_held"] is False
+        assert status["corners_seen"] == [0, 1, 2, 3]
+        assert status["sharpness"] > 0
     finally:
         hub.release(0)
 
 
-def test_mat_overlay_says_when_the_mat_is_not_in_view(client, monkeypatch):
-    # A bare desk. (The shared test frame has markers 0-3 in its corners, which is a mat.)
-    desk = np.full((720, 1280, 3), 120, dtype=np.uint8)
-    monkeypatch.setattr(routes, "hub", fake_hub(desk, []))
-    hub = routes.hub
+def test_flat_stream_without_a_mat_shows_the_camera_and_says_so(monkeypatch):
+    blank = np.full((720, 1280, 3), 90, dtype=np.uint8)
+    hub = fake_hub(blank, [])
+    monkeypatch.setattr(routes, "hub", hub)
+    client = TestClient(app)
     hub.acquire(0)
     try:
-        client.get("/dev/camera/stream", params={"index": 0, "overlay": "mat", "frames": 1})
-        assert client.get("/dev/camera/status", params={"index": 0}).json()["mat"] == {
-            "found": False
-        }
+        params = {"index": 0, "frames": 1, "flat": 1, "width": 1280}
+        shown = last_jpeg(client.get("/dev/camera/stream", params=params).content)
+        assert shown.shape[:2] == (720, 1280)
+        status = client.get("/dev/camera/status", params={"index": 0}).json()
+        assert status["mat_found"] is False and status["corners_seen"] == []
     finally:
         hub.release(0)

@@ -1,21 +1,18 @@
-"""The printed pages: the mat and the tiles sheet, checked by detecting what was drawn."""
+"""The printed mat page, checked by detecting what was drawn."""
 
 import cv2
 import numpy as np
 import pytest
 
-from tacto.mat.models import MatLayout, Slot
-from tacto.vision.kit_render import render_mat, render_tile, render_tiles
+from tacto.mat import Mat
+from tacto.vision.kit_render import render_mat
 from tacto.vision.markers import find_markers
 from tacto.vision.print_geometry import (
     CORNER_MARKER_IDS,
     PAGE_HEIGHT_MM,
     PAGE_WIDTH_MM,
-    TILE_LENGTH_MM,
-    TILE_MARKER_IDS,
-    TILE_WIDTH_MM,
+    PrintGeometry,
     mm_to_px,
-    tile_kind,
 )
 
 DPI = 150
@@ -30,100 +27,52 @@ def pixel_at(image: np.ndarray, point_mm: tuple[float, float]) -> int:
     return int(grey(image)[y_px, x_px])
 
 
-def midpoint_mm(geometry, a, b) -> tuple[float, float]:
-    (ax, ay), (bx, by) = geometry.dot_mm(a), geometry.dot_mm(b)
-    return (ax + bx) / 2, (ay + by) / 2
-
-
 @pytest.fixture(scope="module")
-def mat_page(layout) -> np.ndarray:
-    return render_mat(layout, dpi=DPI)
+def mat_page(mat) -> np.ndarray:
+    return render_mat(mat, dpi=DPI)
 
 
 def test_the_mat_page_is_a4_landscape_in_colour(mat_page):
-    height_px, width_px, channels = mat_page.shape
-    assert width_px == round(mm_to_px(PAGE_WIDTH_MM, dpi=DPI))
-    assert height_px == round(mm_to_px(PAGE_HEIGHT_MM, dpi=DPI))
-    assert channels == 3
+    assert mat_page.shape == (
+        round(mm_to_px(PAGE_HEIGHT_MM, dpi=DPI)),
+        round(mm_to_px(PAGE_WIDTH_MM, dpi=DPI)),
+        3,
+    )
 
 
 def test_the_mat_page_has_exactly_the_four_corner_markers_in_place(mat_page, geometry):
-    found = {marker.id: marker for marker in find_markers(grey(mat_page))}
+    found = {m.id: (m.x_px, m.y_px) for m in find_markers(grey(mat_page))}
     assert sorted(found) == list(CORNER_MARKER_IDS)
-    for marker_id, (x_mm, y_mm) in zip(
+    for marker_id, centre_mm in zip(
         CORNER_MARKER_IDS, geometry.corner_marker_centres_mm(), strict=True
     ):
-        assert found[marker_id].x_px == pytest.approx(mm_to_px(x_mm, dpi=DPI), abs=2)
-        assert found[marker_id].y_px == pytest.approx(mm_to_px(y_mm, dpi=DPI), abs=2)
+        expected_px = [mm_to_px(value, dpi=DPI) for value in centre_mm]
+        assert found[marker_id] == pytest.approx(expected_px, abs=1.5)
 
 
-def test_printed_wires_are_solid_black(mat_page, layout, geometry):
-    for wire in layout.wires:
-        assert pixel_at(mat_page, midpoint_mm(geometry, wire.a, wire.b)) < 40
+def test_every_dot_is_printed_grey_with_paper_between(mat_page, mat, geometry):
+    for col in range(mat.cols):
+        for row in range(mat.rows):
+            x_mm, y_mm = geometry.dot_mm((col, row))
+            assert 100 < pixel_at(mat_page, (x_mm, y_mm)) < 200
+            assert pixel_at(mat_page, (x_mm + geometry.dot_pitch_mm / 2, y_mm)) == 255
 
 
-def test_an_empty_slot_and_an_undrawn_line_are_left_mostly_white(mat_page, layout, geometry):
-    # The learner must see that these are gaps, and the reader must not see ink in them.
-    for gap in (*layout.slots, *layout.drawables):
-        x_mm, y_mm = midpoint_mm(geometry, gap.a, gap.b)
-        x_px, y_px = round(mm_to_px(x_mm, dpi=DPI)), round(mm_to_px(y_mm, dpi=DPI))
-        patch = grey(mat_page)[y_px - 10 : y_px + 10, x_px - 10 : x_px + 10]
-        assert np.mean(patch) > 200
-
-
-@pytest.mark.parametrize(("kind", "marker_ids"), TILE_MARKER_IDS.items())
-def test_a_tile_carries_one_marker_of_its_kind_in_the_middle(kind, marker_ids):
-    for marker_id in marker_ids:
-        tile = render_tile(kind, marker_id, dpi=DPI)
-        height_px, width_px = tile.shape[:2]
-        assert width_px == round(mm_to_px(TILE_LENGTH_MM, dpi=DPI))
-        assert height_px == round(mm_to_px(TILE_WIDTH_MM, dpi=DPI))
-        # A tile is only ever seen lying on paper, so look for it with paper around it.
-        on_paper = cv2.copyMakeBorder(tile, 30, 30, 30, 30, cv2.BORDER_CONSTANT, value=(255,) * 3)
-        (marker,) = find_markers(grey(on_paper))
-        assert marker.id == marker_id
-        assert tile_kind(marker.id) == kind
-        assert marker.x_px - 30 == pytest.approx(width_px / 2, abs=2)
-        assert marker.y_px - 30 == pytest.approx(height_px / 2, abs=2)
-
-
-def test_a_tile_cannot_be_rendered_with_another_kinds_marker():
-    with pytest.raises(ValueError, match="marker 20"):
-        render_tile("bulb", 20)
-    with pytest.raises(ValueError):
-        render_tile("empty", 10)
-
-
-def test_the_tiles_sheet_holds_two_of_each_kind_the_slots_accept(layout):
-    sheet = render_tiles(layout, dpi=DPI)
-    assert sheet.shape == render_mat(layout, dpi=DPI).shape
-    kinds = sorted(tile_kind(marker.id) for marker in find_markers(grey(sheet)))
-    assert kinds == ["bulb", "bulb", "wire", "wire"]
-    assert len({marker.id for marker in find_markers(grey(sheet))}) == 4
-
-
-def test_the_tiles_sheet_follows_the_layout():
-    layout = MatLayout(
-        id="other",
-        cols=4,
-        rows=3,
-        battery_volts=3,
-        slots=[
-            Slot(id="s1", a=(0, 0), b=(2, 0), accepts=["resistor", "switch"]),
-            Slot(id="s2", a=(0, 2), b=(2, 2), accepts=["switch", "bulb", "wire"]),
-        ],
+def test_between_the_dots_the_page_is_almost_all_paper(mat_page, mat, geometry):
+    """Pieces are told from the paper by colour, so nothing else may be printed there."""
+    left_mm, top_mm = geometry.dot_mm((0, 0))
+    right_mm, bottom_mm = geometry.dot_mm((mat.cols - 1, mat.rows - 1))
+    left, top, right, bottom = (
+        round(mm_to_px(v, dpi=DPI)) for v in (left_mm, top_mm, right_mm, bottom_mm)
     )
-    kinds = sorted(tile_kind(m.id) for m in find_markers(grey(render_tiles(layout, dpi=DPI))))
-    assert kinds == ["bulb"] * 2 + ["resistor"] * 2 + ["switch"] * 2 + ["wire"] * 2
+    area = grey(mat_page)[top:bottom, left:right]
+    assert (area < 250).mean() < 0.01
 
 
-def test_the_dot_grid_is_printed_except_under_the_middle_of_a_slot(mat_page, layout, geometry):
-    # The outer columns and the bottom row of Circuits 101 carry no wire or part.
-    free_dots = [(col, row) for col in (0, layout.cols - 1) for row in range(layout.rows)]
-    free_dots += [(col, layout.rows - 1) for col in range(layout.cols)]
-    for dot in free_dots:
-        shade = pixel_at(mat_page, geometry.dot_mm(dot))
-        assert 100 < shade < 200, "a free dot is grey: seen, but not mistaken for ink"
-    # The "tile" slot's label is two lines either side of its middle, so the middle
-    # itself shows whether a dot was printed there.
-    assert pixel_at(mat_page, geometry.dot_mm((7, 2))) > 240, "no dot through a slot's label"
+def test_the_dot_spacing_follows_the_mat_file():
+    wide = Mat(id="wide", cols=4, rows=3, dot_pitch_mm=40)
+    geometry = PrintGeometry.for_mat(wide)
+    page = render_mat(wide, dpi=DPI)
+    (x0, y0), (x1, _) = geometry.dot_mm((0, 0)), geometry.dot_mm((1, 0))
+    assert x1 - x0 == pytest.approx(40)
+    assert pixel_at(page, (x1, y0)) < 200

@@ -1,8 +1,12 @@
 """Routes for the camera bench (web page at /devtools/#camera). Not part of the product.
 
 GET /dev/cameras         camera names by index, and which are open
-GET /dev/camera/stream   live MJPEG; overlay=aruco,hand,mat draws or reports what was found
+GET /dev/camera/stream   live MJPEG; overlay=aruco,hand draws or reports what was found;
+                         flat=1 shows the mat squared up, as the reader sees it;
+                         read=1 also writes each segment's reading on it
 GET /dev/camera/status   what the stream last saw: fps, size, markers, fingertips
+GET /dev/camera/exposure   how the LogiInsight camera is exposing: manual or auto, and gain
+POST /dev/camera/exposure  set it; it is applied again each time the camera is opened
 
 A camera is open only while someone is watching its stream.
 """
@@ -17,17 +21,17 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from tacto.mat.loader import load_mat
-from tacto.platform import DEFAULT_LESSON_ID, MATS_DIR
-from tacto.vision import camera, hands
+from tacto.mat import load_default_mat
+from tacto.vision import camera, exposure, hands
+from tacto.vision.classify import MatReader, load_colours
+from tacto.vision.focus import FocusKeeper
+from tacto.vision.print_geometry import PrintGeometry
+from tacto.vision.tracker import MatTracker
 
 from . import overlays
-from .mat_reading import FrameMatReader
 
 router = APIRouter(prefix="/dev", tags=["devtools"])
 hub = camera.CameraHub()
-# The mat the camera bench checks frames against.
-mat_reader = FrameMatReader(load_mat(MATS_DIR / f"{DEFAULT_LESSON_ID}.yaml"))
 
 BOUNDARY = "frame"
 FRAME_TIMEOUT_S = 1.0
@@ -50,11 +54,33 @@ def status(index: int = 0) -> dict:
     return {"open": True, "fps": worker.fps, "error": worker.error, **seen}
 
 
+def _exposure_report() -> dict:
+    now = exposure.read()
+    return {
+        "available": exposure.available(),
+        "camera_found": now is not None,
+        **(now or exposure.wanted()).model_dump(),
+    }
+
+
+@router.get("/camera/exposure")
+def get_exposure() -> dict:
+    return _exposure_report()
+
+
+@router.post("/camera/exposure")
+def set_exposure(setting: exposure.Exposure) -> dict:
+    exposure.apply(setting)
+    return _exposure_report()
+
+
 @router.get("/camera/stream")
 async def stream(
     index: int = 0,
     overlay: str = "",
     width: int = Query(1280, ge=160, le=1920),
+    flat: bool = Query(False, description="send the flattened mat instead of the frame"),
+    read: bool = Query(False, description="with flat: read the pieces and label them"),
     frames: int | None = Query(None, ge=1, description="stop after this many frames"),
 ) -> StreamingResponse:
     wanted = {name for name in overlay.split(",") if name}
@@ -67,6 +93,11 @@ async def stream(
         tracker = None
         hand_error = None
         viewer = next(_viewer_ids)
+        mat = load_default_mat()
+        geometry = PrintGeometry.for_mat(mat)
+        mat_tracker = MatTracker(geometry) if flat else None
+        reader = MatReader(mat, geometry, load_colours()) if flat and read else None
+        focus = FocusKeeper()
         try:
             if "hand" in wanted:
                 try:
@@ -85,8 +116,15 @@ async def stream(
                 seq, frame = got
                 t_ms = int((time.monotonic() - start) * 1000)
                 drawn, analysis = await asyncio.to_thread(
-                    overlays.analyse, frame, wanted, tracker, t_ms, mat_reader
+                    overlays.analyse, frame, wanted, tracker, t_ms
                 )
+                if mat_tracker is not None:
+                    page, report = await asyncio.to_thread(
+                        overlays.flat_view, frame, mat_tracker, focus, reader
+                    )
+                    analysis.update(report)
+                    # While the mat is not found, show the camera so it can be put right.
+                    drawn = drawn if page is None else page
                 if hand_error is not None:
                     analysis["hand_error"] = hand_error
                 worker.analyses[viewer] = analysis
@@ -105,6 +143,7 @@ async def stream(
             # Keep the last viewer's reading so a status check just after still has it.
             if len(worker.analyses) > 1:
                 worker.analyses.pop(viewer, None)
+            await asyncio.shield(asyncio.to_thread(focus.close))
             await asyncio.shield(asyncio.to_thread(hub.release, index))
             if tracker is not None:
                 tracker.close()

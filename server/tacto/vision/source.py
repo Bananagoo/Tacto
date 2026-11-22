@@ -1,190 +1,264 @@
-"""The camera as a `tacto.observation.Source`: frames in, a steady Observation out.
+"""The camera as a mat source: frames in, what is on the mat and where the fingertip is out.
 
-Hands are over the mat all the time, hiding corners, tiles and lines for a moment.
-So the source never trusts one frame: it keeps what it last knew whenever the mat
-cannot be seen, and lets a change through only once it has held for a few frames.
+One thread takes the newest frame and puts it through every step:
+
+    find the mat (tracker) -> keep the focus (focus) -> find the hand (hands)
+    -> read every segment (classify) -> smooth (stable) -> pieces and fingertip
+
+`view()` hands the lab the latest result without waiting. Nothing is read off a frame
+whose mat position no corner marker backs: such a frame may be out of focus, so the pieces
+hold. Recorded frames go through the same code (`frames.FramesOnAClock`).
 """
 
 from __future__ import annotations
 
+import math
 import threading
-from pathlib import Path
-from typing import Generic, Protocol, TypeVar
+import time
+from collections.abc import Callable
 
 import cv2
 import numpy as np
 
-from ..mat.models import MatLayout, MatReading
-from ..observation import Fingertip, Observation
-from .flatten import flatten, frame_point_to_mat
-from .print_geometry import PrintGeometry
-from .reader import read_mat
+from ..lab import MatView
+from ..mat import Mat
+from ..pieces import Placed
+from .classify import MatReader, PieceColours, load_colours, to_placed
+from .flatten import frame_point_to_mat
+from .focus import FocusKeeper
+from .hands import INDEX_TIP
+from .live import FrameWaiter, HandFinder
+from .patches import segments
+from .print_geometry import REFERENCE_SQUARES, PrintGeometry
+from .stable import StableReadings
+from .tracker import MatTracker
 
-# A changed line or slot is believed after this many frames in a row agree on it.
-# TODO(vision owner): at 30 frames a second this is a tenth of a second, which also
-# means a hand resting on a tile empties its slot that fast. Raise it if tiles flicker
-# on the real desk; every extra frame adds 33 ms before a real change shows.
-STABLE_FRAMES = 3
-# A fingertip this far outside the dot grid, in dot spacings, is no longer on the mat.
-FINGER_MARGIN_DOTS = 0.5
-# How long the background thread sleeps when the camera has nothing new.
-IDLE_POLL_S = 0.005
-
-IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
-
-T = TypeVar("T")
-
-
-class FrameSource(Protocol):
-    """Where frames come from: a camera worker, a folder of recordings, or a test."""
-
-    def latest_frame(self) -> np.ndarray | None:
-        """The newest frame without waiting for one, or None if there is none yet.
-
-        Every new frame must be a new array: the source tells frames apart by identity.
-        """
-        ...
-
-
-class FingerFinder(Protocol):
-    def index_tip_px(self, frame: np.ndarray) -> tuple[float, float] | None:
-        """The index fingertip in frame pixels, or None when no hand is in the frame."""
-        ...
+# TODO(Katie): tune with a real hand on the real mat.
+# The tracker gives 21 joints, not the hand's outline. The hand is taken to be the shape
+# stretched round them, this much wider all round: fingers are thick and joints jitter.
+HAND_MARGIN_MM = 14.0
+# The arm is not tracked at all. It is taken to run on from the wrist, away from the
+# fingers, as wide as the knuckles, off the edge of the page.
+FOREARM_MM = 400.0
+WRIST, INDEX_KNUCKLE, MIDDLE_KNUCKLE, LITTLE_KNUCKLE = 0, 5, 9, 17
+# A fast hand is lost for a few frames at a time. What it covered stays covered this long
+# after it was last seen there, so those frames cannot change anything under it.
+HAND_LINGER_S = 0.5
+# While a hand is about, a change anywhere needs this many agreeing frames, not three:
+# shadows and the edges of a moving hand reach further than its outline.
+FRAMES_TO_CHANGE_NEAR_HAND = 8
+# A fingertip this far outside the dot grid (in grid widths) is not over the mat.
+FINGER_MARGIN = 0.12
+FRAME_TIMEOUT_S = 0.5
+TIMING_SMOOTHING = 0.9
 
 
-class _Steady(Generic[T]):
-    """One value that changes only after a new value has been offered several times running."""
+def _hand_and_arm(joints: dict[int, tuple[float, float]]) -> np.ndarray:
+    """The page area a hand and its arm lie over, from the hand's joints in page
+    millimetres: the points of a shape to stretch a hull round."""
+    points = list(joints.values())
+    needed = (WRIST, INDEX_KNUCKLE, MIDDLE_KNUCKLE, LITTLE_KNUCKLE)
+    if all(joint in joints for joint in needed):
+        wrist = np.array(joints[WRIST])
+        up_the_arm = wrist - np.array(joints[MIDDLE_KNUCKLE])
+        length = float(np.linalg.norm(up_the_arm))
+        half_width = math.dist(joints[INDEX_KNUCKLE], joints[LITTLE_KNUCKLE]) / 2
+        if length > 1e-6 and half_width > 1e-6:
+            up_the_arm /= length
+            across = np.array([-up_the_arm[1], up_the_arm[0]]) * half_width
+            elbow = wrist + up_the_arm * FOREARM_MM
+            points += [tuple(wrist + across), tuple(wrist - across)]
+            points += [tuple(elbow + across), tuple(elbow - across)]
+    return np.float32(points)
 
-    def __init__(self, value: T) -> None:
-        self.value = value
-        self._candidate = value
-        self._times_seen = 0
 
-    def offer(self, value: T) -> None:
-        if value == self.value:
-            self._times_seen = 0
-            return
-        if value != self._candidate:
-            self._candidate, self._times_seen = value, 0
-        self._times_seen += 1
-        if self._times_seen >= STABLE_FRAMES:
-            self.value, self._times_seen = value, 0
-
-
-class VisionSource:
-    """Reads the mat and the fingertip from frames. Satisfies `tacto.observation.Source`.
-
-    By default each new frame is processed inside `observe()`, which suits replay and
-    tests. With a live camera call `start()`: frames are then processed on a thread of
-    their own and `observe()` only hands back the latest result, so the server's event
-    loop never waits on OpenCV or the hand tracker.
-    """
+class CameraMatSource:
+    """A `MatSource` fed by camera frames. Call `start()`, or drive it with `step()`."""
 
     def __init__(
-        self, layout: MatLayout, frames: FrameSource, fingers: FingerFinder | None = None
+        self,
+        mat: Mat,
+        frames: FrameWaiter,
+        *,
+        colours: PieceColours | None = None,
+        hands: HandFinder | None = None,
+        focus: FocusKeeper | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        self._layout = layout
-        self._geometry = PrintGeometry.for_layout(layout)
+        self._mat = mat
         self._frames = frames
-        self._fingers = fingers
-        initial = layout.initial_reading()
-        # Each line and each slot settles on its own, so a hand fidgeting over one
-        # tile does not hold back a line drawn somewhere else.
-        self._drawn = {drawable.id: _Steady(False) for drawable in layout.drawables}
-        self._slots = {slot.id: _Steady(initial.slots[slot.id]) for slot in layout.slots}
-        self._frame_to_page: np.ndarray | None = None
-        self._last_frame: np.ndarray | None = None
-        self._observation = Observation(reading=initial)
+        self._geometry = PrintGeometry.for_mat(mat)
+        self._tracker = MatTracker(self._geometry, clock=clock)
+        self._reader = MatReader(mat, self._geometry, colours or load_colours())
+        self._stable = StableReadings()
+        self._hands = hands
+        self._focus = focus
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._view = MatView(mat_visible=False)
+        self._placed: tuple[Placed, ...] = ()
+        self._covered_until: dict[str, float] = {}
+        self._timings_ms: dict[str, float] = {}
+        self._frames_seen = 0
+        self._seen: dict = {"corners_seen": [], "position_confirmed": False}
+        self._stopping = False
         self._thread: threading.Thread | None = None
-        self._stopping = threading.Event()
 
-    def observe(self) -> Observation:
-        if self._thread is None:
-            self._process_new_frame()
-        return self._observation
+    # ---------- the lab's side ----------
+
+    def view(self) -> MatView:
+        with self._lock:
+            return self._view
+
+    def report(self) -> dict:
+        """For the people running it: where each frame's time goes and what was last seen."""
+        with self._lock:
+            return {
+                "frames": self._frames_seen,
+                "mat_visible": self._view.mat_visible,
+                **self._seen,
+                "squares_seen": sum(self._reader.palette.seen),
+                # What each colour square reads as now (CIELAB, paper = 100, 0, 0). If two
+                # of these come close together, the reader will confuse those two pieces.
+                "squares": {
+                    name: [round(float(value), 1) for value in row]
+                    for name, row in zip(REFERENCE_SQUARES, self._reader.palette.lab, strict=True)
+                },
+                "focus_kicks": self._focus.kicks if self._focus else 0,
+                "pieces": len(self._view.placed),
+                "finger": self._view.finger,
+                "stage_ms": {stage: round(ms, 1) for stage, ms in self._timings_ms.items()},
+            }
+
+    # ---------- the camera's side ----------
 
     def start(self) -> None:
-        """Process frames on a background thread from now on."""
-        if self._thread is not None:
-            return
-        self._stopping.clear()
-        self._thread = threading.Thread(target=self._run, name="vision-source", daemon=True)
-        self._thread.start()
+        if self._thread is None:
+            self._stopping = False
+            self._thread = threading.Thread(target=self._run, name="mat-reader", daemon=True)
+            self._thread.start()
 
     def stop(self) -> None:
-        if self._thread is None:
-            return
-        self._stopping.set()
-        self._thread.join(timeout=3)
-        self._thread = None
+        self._stopping = True
+        if self._thread is not None:
+            self._thread.join(timeout=3)
+            self._thread = None
+        if self._focus is not None:
+            self._focus.close()
 
     def _run(self) -> None:
-        while not self._stopping.is_set():
-            if not self._process_new_frame():
-                self._stopping.wait(IDLE_POLL_S)
+        seq = -1
+        while not self._stopping:
+            got = self._frames.wait_for_frame(seq, FRAME_TIMEOUT_S)
+            if got is None:
+                continue
+            seq, frame = got
+            try:
+                self.step(frame)
+            except Exception as error:  # noqa: BLE001 - one bad frame must not end the reader
+                print(f"vision.source: frame skipped: {error!r}")
 
-    def _process_new_frame(self) -> bool:
-        """Look at the latest frame if it has not been looked at yet. True if it was new."""
-        frame = self._frames.latest_frame()
-        if frame is None or frame is self._last_frame:
-            return False
-        self._last_frame = frame
-        flattened = flatten(frame, self._geometry)
-        # With a corner hidden the mat cannot be read; what was last seen still stands,
-        # and the last mapping still places the fingertip.
-        if flattened is not None:
-            self._frame_to_page = flattened.frame_to_page
-            self._take_in(read_mat(flattened, self._layout, self._geometry))
-        self._observation = Observation(reading=self._reading(), fingertip=self._fingertip(frame))
-        return True
+    def step(self, frame: np.ndarray) -> None:
+        """Put one frame through the whole reader."""
+        timings: dict[str, float] = {}
+        started = time.perf_counter()
 
-    def _take_in(self, seen: MatReading) -> None:
-        for drawable_id, steady in self._drawn.items():
-            steady.offer(drawable_id in seen.drawn)
-        for slot_id, steady in self._slots.items():
-            steady.offer(seen.slots.get(slot_id, "empty"))
+        def lap(stage: str) -> None:
+            nonlocal started
+            now = time.perf_counter()
+            timings[stage] = (now - started) * 1000
+            started = now
 
-    def _reading(self) -> MatReading:
-        return MatReading(
-            drawn=frozenset(drawable_id for drawable_id, s in self._drawn.items() if s.value),
-            slots={slot_id: steady.value for slot_id, steady in self._slots.items()},
-        )
+        flattened = self._tracker.see(frame)
+        lap("flatten")
+        if self._focus is not None:
+            self._focus.saw(bool(self._tracker.corners_seen))
 
-    def _fingertip(self, frame: np.ndarray) -> Fingertip | None:
-        if self._fingers is None or self._frame_to_page is None:
-            return None
-        tip_px = self._fingers.index_tip_px(frame)
-        if tip_px is None:
-            return None
-        x, y = frame_point_to_mat(self._frame_to_page, self._geometry, self._layout, *tip_px)
-        margin_x = FINGER_MARGIN_DOTS / (self._layout.cols - 1)
-        margin_y = FINGER_MARGIN_DOTS / (self._layout.rows - 1)
-        if not (-margin_x <= x <= 1 + margin_x and -margin_y <= y <= 1 + margin_y):
-            return None
-        return Fingertip(x=x, y=y)
+        finger: tuple[float, float] | None = None
+        if flattened is not None and self._tracker.confirmed:
+            now = self._clock()
+            if self._hands is not None and frame.ndim == 3 and frame.shape[2] == 3:
+                hands = self._hands.hands(frame, round(now * 1000))
+                finger, under_hand = self._locate(hands, flattened.frame_to_page)
+                for segment in under_hand:
+                    self._covered_until[segment] = now + HAND_LINGER_S
+                lap("hand")
+            self._covered_until = {s: t for s, t in self._covered_until.items() if t >= now}
+            readings = self._reader.read(flattened)
+            lap("read")
+            stable = self._stable.update(
+                readings,
+                self._covered_until,
+                frames_to_change=FRAMES_TO_CHANGE_NEAR_HAND if self._covered_until else None,
+            )
+            self._placed = to_placed(stable, self._mat)
+            lap("smooth")
 
+        with self._lock:
+            self._frames_seen += 1
+            self._seen = {
+                "corners_seen": self._tracker.corners_seen,
+                "position_confirmed": self._tracker.confirmed,
+            }
+            self._view = MatView(
+                placed=self._placed, finger=finger, mat_visible=flattened is not None
+            )
+            for stage, ms in timings.items():
+                old = self._timings_ms.get(stage, ms)
+                self._timings_ms[stage] = TIMING_SMOOTHING * old + (1 - TIMING_SMOOTHING) * ms
 
-class FolderFrames:
-    """Recorded frames from a folder, one per call in name order, round and round.
+    def _locate(
+        self, hands: list[dict], frame_to_page: np.ndarray
+    ) -> tuple[tuple[float, float] | None, set[str]]:
+        """The pointing fingertip as a mat position, and the segments any hand is over."""
+        outlines: list[np.ndarray] = []
+        tips: list[tuple[float, float]] = []
+        for hand in hands:
+            joints: dict[int, tuple[float, float]] = {}
+            for number, (x_px, y_px) in enumerate(hand["points"]):
+                x, y, w = frame_to_page @ np.array([x_px, y_px, 1.0])
+                if abs(w) < 1e-12:
+                    continue
+                joints[number] = (float(x / w), float(y / w))
+                if number == INDEX_TIP:
+                    tips.append(
+                        frame_point_to_mat(frame_to_page, self._geometry, self._mat, x_px, y_px)
+                    )
+            if joints:
+                outlines.append(_hand_and_arm(joints))
+        covered = self._under(outlines)
+        over_mat = [
+            tip
+            for tip in tips
+            if -FINGER_MARGIN <= tip[0] <= 1 + FINGER_MARGIN
+            and -FINGER_MARGIN <= tip[1] <= 1 + FINGER_MARGIN
+        ]
+        if not over_mat:
+            return None, covered
+        # Two hands over the mat: the one nearer its middle is the one pointing.
+        return min(over_mat, key=lambda tip: math.dist(tip, (0.5, 0.5))), covered
 
-    This is replay mode: the product runs from `server/fixtures/` with no camera.
-    """
-
-    def __init__(self, directory: Path) -> None:
-        self._paths = (
-            sorted(p for p in directory.iterdir() if p.suffix.lower() in IMAGE_SUFFIXES)
-            if directory.is_dir()
-            else []
-        )
-        self._next = 0
-
-    def latest_frame(self) -> np.ndarray | None:
-        # A file that is not a picture after all is passed over; one full round of
-        # those means there is nothing to show.
-        for _ in range(len(self._paths)):
-            path = self._paths[self._next]
-            self._next = (self._next + 1) % len(self._paths)
-            frame = cv2.imread(str(path))
-            if frame is not None:
-                return frame
-        return None
+    def _under(self, outlines: list[np.ndarray]) -> set[str]:
+        """The segments any of the hands and arms lie over."""
+        covered: set[str] = set()
+        hulls = [cv2.convexHull(outline) for outline in outlines]
+        for a, b in segments(self._mat):
+            (ax, ay), (bx, by) = self._geometry.dot_mm(a), self._geometry.dot_mm(b)
+            # The stretch of the segment its patch is cut from: the middle and both ends.
+            along = [(ax + (bx - ax) * t, ay + (by - ay) * t) for t in (0.2, 0.5, 0.8)]
+            for hull, outline in zip(hulls, outlines, strict=True):
+                if len(hull) >= 3:
+                    near = any(
+                        cv2.pointPolygonTest(hull, point, True) >= -HAND_MARGIN_MM
+                        for point in along
+                    )
+                else:  # a hand seen as one point or a line: no shape to stretch
+                    near = any(
+                        math.dist(point, tuple(joint)) <= HAND_MARGIN_MM
+                        for point in along
+                        for joint in outline
+                    )
+                if near:
+                    covered.add(Placed("wire", a, b).id)
+                    break
+        return covered

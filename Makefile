@@ -1,22 +1,39 @@
-.PHONY: setup dev bench server bench-server web check fmt test kit
+.PHONY: camera-tool setup dev bench server bench-server web check check-server check-web contract sample mock fmt test kit
 
 setup:
 	cd server && uv sync
 	cd web && pnpm install
 	@test -f .env || cp .env.example .env
-	@echo "Ready. Run: make dev"
+	-$(MAKE) camera-tool
+	@echo "Ready. Run: make dev (camera) or make mock (recorded states)"
 
-# The product: server on :8000 and web on :5173, both reloading. Ctrl-C stops both.
+# uvc-util (MIT) sets the camera's exposure, which OpenCV cannot do on macOS. Pinned to a
+# commit; built into server/vendor/, which is not committed. See server/tacto/vision/exposure.py.
+UVC_UTIL_COMMIT := 8110da7025c95eea3096a7181af9a46c0cc7ac37
+UVC_UTIL_DIR := server/vendor/uvc-util
+
+camera-tool:
+	@if [ "$$(uname)" != "Darwin" ]; then echo "camera-tool: macOS only, skipped"; \
+	elif [ -x $(UVC_UTIL_DIR)/uvc-util ]; then echo "camera-tool: already built"; \
+	else rm -rf $(UVC_UTIL_DIR) && mkdir -p server/vendor \
+	  && git clone -q https://github.com/jtfrey/uvc-util.git $(UVC_UTIL_DIR) \
+	  && git -C $(UVC_UTIL_DIR) checkout -q $(UVC_UTIL_COMMIT) \
+	  && cd $(UVC_UTIL_DIR)/src \
+	  && cc -w -o ../uvc-util -framework IOKit -framework Foundation \
+	       uvc-util.m UVCController.m UVCType.m UVCValue.m \
+	  && echo "camera-tool: built $(UVC_UTIL_DIR)/uvc-util"; fi
+
+# The lab on the camera, with the web UI. GET localhost:8000/debug/reader shows what the reader sees.
 dev:
 	$(MAKE) -j2 server web
 
-# Tooling: the real product on a virtual mat, plus the camera bench.
-# Open http://localhost:5173/devtools/
+# The camera bench with the web dev tools: localhost:5173/devtools/.
 bench:
 	$(MAKE) -j2 bench-server web
 
+# The camera unless told otherwise (make dev TACTO_SOURCE=replay), whatever .env says.
 server:
-	cd server && uv run uvicorn tacto.main:app --reload --port 8000 --timeout-graceful-shutdown 2
+	cd server && TACTO_SOURCE=$${TACTO_SOURCE:-camera} uv run uvicorn tacto.main:app --reload --port 8000 --timeout-graceful-shutdown 2
 
 bench-server:
 	cd server && uv run uvicorn tacto_bench.main:app --reload --port 8000 --timeout-graceful-shutdown 2
@@ -27,14 +44,29 @@ web:
 test:
 	cd server && uv run pytest -q
 
-check:
+check: check-server check-web
+
+check-server:
 	cd server && uv run ruff format --check . && uv run ruff check . && uv run pytest -q
+
+check-web:
 	cd web && pnpm exec prettier --check src devtools vite.config.ts && pnpm lint && pnpm build
+
+# Refresh contract/ (JSON schemas and example messages) after a contract change
+contract:
+	cd server && uv run python -m tacto.contract_export
+
+# Regenerate contract/sample-states.jsonl from the scripted run
+sample:
+	cd server && uv run python -m tacto_mock.sample
+
+# For the UI team: replay the recorded sample on ws://localhost:8000/ws. No hardware needed.
+mock:
+	cd server && uv run uvicorn tacto_mock.main:app --port 8000
 
 fmt:
 	cd server && uv run ruff check --select I --fix . && uv run ruff format .
 	cd web && pnpm exec prettier --write src devtools vite.config.ts
 
 kit:
-	@test -f kit/make_kit.py || (echo "kit/make_kit.py is not written yet (vision lane, phase 1)"; exit 1)
 	cd server && uv run python ../kit/make_kit.py --out ../kit/out

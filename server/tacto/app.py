@@ -1,23 +1,20 @@
-"""The web app: one WebSocket that streams State and takes the learner's messages."""
+"""The lab's web app: one WebSocket that streams `State` and takes `SetVoltage`."""
 
 from __future__ import annotations
 
 import asyncio
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from pydantic import TypeAdapter, ValidationError
+from pydantic import ValidationError
 
-from .contract import ClientMessage
-from .world import WorldFactory
+from tacto.contract import SetVoltage
+from tacto.lab import Lab
 
 STATE_HZ = 15
-DEFAULT_NICKNAME = "guest"
-
-_client_message = TypeAdapter(ClientMessage)
 
 
-def create_app(make_world: WorldFactory, *, source: str) -> FastAPI:
-    """Build the app around a world. `source` is reported by /health for the people running it."""
+def create_lab_app(lab: Lab, *, source: str, state_hz: float = STATE_HZ) -> FastAPI:
+    """Build the app round a lab. `source` is reported by /health for the people running it."""
     app = FastAPI(title="Tacto")
 
     @app.get("/health")
@@ -25,22 +22,22 @@ def create_app(make_world: WorldFactory, *, source: str) -> FastAPI:
         return {"ok": True, "source": source}
 
     @app.websocket("/ws")
-    async def ws(socket: WebSocket, learner: str = DEFAULT_NICKNAME) -> None:
+    async def ws(socket: WebSocket) -> None:
         await socket.accept()
-        # The page passes ?learner=<nickname>; there is no login and no text box.
-        world = make_world(learner)
 
         async def send_states() -> None:
             while True:
-                await socket.send_text(world.state().model_dump_json())
-                await asyncio.sleep(1 / STATE_HZ)
+                # The solver can take a few milliseconds; keep it off the event loop.
+                state = await asyncio.to_thread(lab.state)
+                await socket.send_text(state.model_dump_json())
+                await asyncio.sleep(1 / state_hz)
 
         sender = asyncio.create_task(send_states())
         try:
             while True:
                 raw = await socket.receive_text()
                 try:
-                    world.handle(_client_message.validate_json(raw))
+                    lab.handle(SetVoltage.model_validate_json(raw))
                 except ValidationError as err:
                     print(f"app: bad client message: {raw!r}: {err.errors()[0]['msg']}")
         except WebSocketDisconnect:

@@ -1,6 +1,6 @@
 """Make camera frames without a camera: the printed kit, changed by hand, seen from above.
 
-A scene starts as the rendered mat page. Pen lines, tiles and a covering hand are drawn
+A scene starts as the rendered mat page. A covering hand is drawn
 onto it as a learner would add them, and `photograph` then views the page as a camera
 would: at an angle, on a grey desk, a little blurred, dim or noisy.
 """
@@ -12,12 +12,12 @@ from dataclasses import dataclass, replace
 import cv2
 import numpy as np
 
-from tacto.mat.models import MatLayout, Segment, SlotContent
-from tacto.vision.kit_render import render_mat, render_tile
+from tacto.mat import Mat
+from tacto.vision.classify import load_colours
+from tacto.vision.kit_render import render_mat
 from tacto.vision.print_geometry import (
     PAGE_HEIGHT_MM,
     PAGE_WIDTH_MM,
-    TILE_MARKER_IDS,
     PrintGeometry,
     mm_to_px,
 )
@@ -25,9 +25,37 @@ from tacto.vision.print_geometry import (
 PAGE_DPI = 150
 FRAME_WIDTH_PX, FRAME_HEIGHT_PX = 1920, 1080
 DESK_GREY = (90, 90, 90)
-PEN_BLUE = (120, 40, 20)  # BGR: a dark blue ballpoint
-PEN_WIDTH_MM = 0.7
 SKIN = (140, 170, 210)
+# Card as a camera sees it (BGR): not pure colours. The proposed set in kit/pieces.yaml.
+CARD = {
+    "wire": (38, 36, 35),
+    "battery": (48, 44, 196),
+    "bulb": (52, 205, 232),
+    "resistor": (186, 96, 34),
+    "switch": (72, 152, 46),
+}
+CARD_WIDTH_MM = 12.0
+
+# The printed pieces (kit/printed/components-v3.pdf): every one 25 mm long and 9 mm wide
+# at its ends, most with a wider middle and a symbol. Colours as the sheet defines them.
+PRINTED_RGB = load_colours().colours
+PIECE_LENGTH_MM = 25.0
+PIECE_WIDTH_MM = 9.0
+PRINTED_KINDS = ("wire", "bulb", "resistor", "switch_closed", "switch_open", "battery")
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+# The same pieces as the demo camera saw them on 22 Nov 2026 at gain 0, scaled so the paper
+# is white (docs/hardware-log.md). Much closer together than the printed values: blue and
+# cyan are 22 degrees of hue apart, magenta and red 26. The hard case for the reader.
+AS_THE_CAMERA_SEES_RGB = {
+    "wire": (30, 62, 137),
+    "bulb": (255, 221, 56),
+    "resistor": (213, 32, 93),
+    "switch_closed": (27, 106, 63),
+    "switch_open": (2, 103, 170),
+    "battery_positive": (214, 45, 25),
+    "battery_negative": (44, 44, 44),
+}
 
 PointMm = tuple[float, float]
 PointPx = tuple[float, float]
@@ -42,6 +70,7 @@ class View:
     blur_sigma_px: float = 0.0
     brightness: float = 1.0
     noise_sigma: float = 0.0
+    cast: tuple[float, float, float] = (1.0, 1.0, 1.0)  # blue, green, red gains: the light's colour
 
 
 # The page filling most of a 1080p frame, slightly turned as a hand-placed sheet is.
@@ -55,6 +84,9 @@ DIM = replace(STRAIGHT, brightness=0.7)
 NOISY = replace(STRAIGHT, noise_sigma=6.0)
 # Everything at once.
 HARSH = replace(TILTED, blur_sigma_px=1.5, brightness=0.7, noise_sigma=4.0)
+# The demo desk on 21 Nov: white paper read (118, 126, 146) as red, green, blue.
+BLUE_CAST = replace(TILTED, cast=(1.0, 0.86, 0.81), brightness=0.72, noise_sigma=3.0)
+WARM_CAST = replace(STRAIGHT, cast=(0.7, 0.9, 1.0), brightness=0.85, blur_sigma_px=1.0)
 
 VIEWS = {
     "straight": STRAIGHT,
@@ -65,6 +97,8 @@ VIEWS = {
     "noisy": NOISY,
     "harsh": HARSH,
 }
+# The views the piece reader is tried under: the above plus coloured light.
+READER_VIEWS = {**VIEWS, "blue_cast": BLUE_CAST, "warm_cast": WARM_CAST}
 
 
 def page_px(point_mm: PointMm) -> tuple[int, int]:
@@ -99,7 +133,7 @@ def photograph(page: np.ndarray, view: View, *, seed: int = 0) -> np.ndarray:
     )
     if view.blur_sigma_px > 0:
         frame = cv2.GaussianBlur(frame, (0, 0), view.blur_sigma_px)
-    shaded = frame.astype(np.float32) * view.brightness
+    shaded = frame.astype(np.float32) * view.brightness * np.float32(view.cast)
     if view.noise_sigma > 0:
         shaded += np.random.default_rng(seed).normal(0.0, view.noise_sigma, frame.shape)
     return np.clip(shaded, 0, 255).astype(np.uint8)
@@ -108,54 +142,118 @@ def photograph(page: np.ndarray, view: View, *, seed: int = 0) -> np.ndarray:
 class Scene:
     """The mat page with the learner's changes on it."""
 
-    def __init__(self, layout: MatLayout) -> None:
-        self._layout = layout
-        self._geometry = PrintGeometry.for_layout(layout)
-        self.page = render_mat(layout, dpi=PAGE_DPI)
+    def __init__(self, mat: Mat, *, squares: bool = False, rgb: dict | None = None) -> None:
+        """`squares` prints the reference colour squares along the top, as the v2 mat has.
+        `rgb` gives the pieces and squares other colours than the printed ones."""
+        self._geometry = PrintGeometry.for_mat(mat)
+        self._rgb = rgb or PRINTED_RGB
+        self.page = render_mat(mat, dpi=PAGE_DPI, colours=self._rgb if squares else None)
 
-    def draw_line(
-        self,
-        drawable_id: str,
-        *,
-        fraction: float = 1.0,
-        colour: tuple[int, int, int] = PEN_BLUE,
-        width_mm: float = PEN_WIDTH_MM,
-        aside_mm: float = 0.0,
-    ) -> Scene:
-        """A pen line from the drawable's first dot, `fraction` of the way to its second,
-        `aside_mm` off the guide as an unsteady hand draws it."""
-        (ax, ay), (bx, by) = self._ends_mm(self._find(self._layout.drawables, drawable_id))
-        length_mm = float(np.hypot(bx - ax, by - ay))
-        shift_x, shift_y = -(by - ay) / length_mm * aside_mm, (bx - ax) / length_mm * aside_mm
-        start = (ax + shift_x, ay + shift_y)
-        end = (ax + (bx - ax) * fraction + shift_x, ay + (by - ay) * fraction + shift_y)
-        thickness_px = max(1, round(mm_to_px(width_mm, dpi=PAGE_DPI)))
-        cv2.line(self.page, page_px(start), page_px(end), colour, thickness_px, cv2.LINE_AA)
+    def shade(self, top_left_mm: PointMm, bottom_right_mm: PointMm, light: float) -> Scene:
+        """A shadow over part of the page: everything in the rectangle keeps `light` of its
+        brightness. Call it after laying the pieces it should fall on."""
+        (x0, y0), (x1, y1) = page_px(top_left_mm), page_px(bottom_right_mm)
+        self.page[y0:y1, x0:x1] = (self.page[y0:y1, x0:x1] * light).astype(np.uint8)
         return self
 
-    def place_tile(
+    def lay(
         self,
-        slot_id: str,
-        kind: SlotContent,
+        kind: str,
+        a: tuple[int, int],
+        b: tuple[int, int],
         *,
-        marker_id: int | None = None,
+        positive: str = "a",
         offset_mm: PointMm = (0.0, 0.0),
+        turn_deg: float = 0.0,
     ) -> Scene:
-        """Lay a cut-out tile on a slot, `offset_mm` away from sitting exactly on it."""
-        tile = render_tile(kind, marker_id or TILE_MARKER_IDS[kind][0], dpi=PAGE_DPI)
-        (ax, ay), (bx, by) = self._ends_mm(self._find(self._layout.slots, slot_id))
-        if ax == bx:
-            tile = np.rot90(tile)
-        centre_x, centre_y = page_px(((ax + bx) / 2 + offset_mm[0], (ay + by) / 2 + offset_mm[1]))
-        height_px, width_px = tile.shape[:2]
-        top, left = centre_y - height_px // 2, centre_x - width_px // 2
-        self.page[top : top + height_px, left : left + width_px] = tile
+        """Lay a printed piece in the gap between two dots. For a battery, `positive` says
+        which dot its red half is at."""
+        (ax, ay), (bx, by) = self._geometry.dot_mm(a), self._geometry.dot_mm(b)
+        centre = np.array([(ax + bx) / 2 + offset_mm[0], (ay + by) / 2 + offset_mm[1]])
+        angle = np.arctan2(by - ay, bx - ax) + np.radians(turn_deg)
+        along, across = (
+            np.array([np.cos(angle), np.sin(angle)]),
+            np.array([-np.sin(angle), np.cos(angle)]),
+        )
+
+        def at(along_mm: float, across_mm: float) -> tuple[int, int]:
+            x, y = centre + along * along_mm + across * across_mm
+            return page_px((float(x), float(y)))
+
+        def box(from_mm: float, to_mm: float, width_mm: float, colour) -> None:
+            half = width_mm / 2
+            corners = [at(from_mm, -half), at(to_mm, -half), at(to_mm, half), at(from_mm, half)]
+            cv2.fillPoly(self.page, [np.int32(corners)], colour, cv2.LINE_AA)
+
+        def stroke(points: list[tuple[float, float]], colour, width_mm: float = 0.9) -> None:
+            thickness = max(1, round(mm_to_px(width_mm, dpi=PAGE_DPI)))
+            line = np.int32([at(x, y) for x, y in points])
+            cv2.polylines(self.page, [line], False, colour, thickness, cv2.LINE_AA)
+
+        def bgr(name: str) -> tuple[int, int, int]:
+            red, green, blue = self._rgb[name]
+            return (blue, green, red)
+
+        end = PIECE_LENGTH_MM / 2
+        if kind == "battery":
+            red_side = -1 if positive == "a" else 1
+            for side, name in ((red_side, "battery_positive"), (-red_side, "battery_negative")):
+                box(0.0, side * end, PIECE_WIDTH_MM, bgr(name))
+                box(0.0, side * 8.5, 13.0, bgr(name))
+            stroke([(red_side * 7.0, -1.5), (red_side * 7.0, 1.5)], BLACK)  # the + sign
+            stroke([(red_side * 5.5, 0.0), (red_side * 8.5, 0.0)], BLACK)
+            stroke([(-red_side * 5.5, 0.0), (-red_side * 8.5, 0.0)], WHITE)  # the - sign
+            return self
+        colour = bgr(kind)
+        box(-end, end, PIECE_WIDTH_MM, colour)
+        if kind == "bulb":
+            radius = round(mm_to_px(7.0, dpi=PAGE_DPI))
+            cv2.circle(self.page, at(0.0, 0.0), radius, colour, cv2.FILLED, cv2.LINE_AA)
+            ring = round(mm_to_px(4.3, dpi=PAGE_DPI))
+            cv2.circle(self.page, at(0.0, 0.0), ring, BLACK, 2, cv2.LINE_AA)
+            stroke([(-3.0, -3.0), (3.0, 3.0)], BLACK)
+            stroke([(-3.0, 3.0), (3.0, -3.0)], BLACK)
+        elif kind == "resistor":
+            box(-7.5, 7.5, 13.0, colour)
+            zigzag = [(-6.0, 0.0), (-4.0, 0.0), (-3.0, -3.0), (-1.0, 3.0), (1.0, -3.0), (3.0, 3.0)]
+            stroke([*zigzag, (4.0, 0.0), (6.0, 0.0)], WHITE)
+        elif kind in ("switch_closed", "switch_open"):
+            box(-8.0, 8.0, 13.0, colour)
+            lifted = -3.5 if kind == "switch_open" else 0.0
+            stroke([(-4.0, 0.0), (4.0, lifted)], BLACK)
+            for x in (-4.0, 4.0):
+                cv2.circle(self.page, at(x, 0.0), 3, BLACK, cv2.FILLED, cv2.LINE_AA)
         return self
 
-    def place_starting_tiles(self) -> Scene:
-        for slot in self._layout.slots:
-            if slot.starts != "empty":
-                self.place_tile(slot.id, slot.starts)
+    def place(
+        self,
+        piece: str,
+        a: tuple[int, int],
+        b: tuple[int, int],
+        *,
+        width_mm: float = CARD_WIDTH_MM,
+        offset_mm: PointMm = (0.0, 0.0),
+        turn_deg: float = 0.0,
+        colour: tuple[int, int, int] | None = None,
+    ) -> Scene:
+        """Lay a card strip in the gap between two dots, as carelessly as asked."""
+        (ax, ay), (bx, by) = self._geometry.dot_mm(a), self._geometry.dot_mm(b)
+        centre = np.array([(ax + bx) / 2 + offset_mm[0], (ay + by) / 2 + offset_mm[1]])
+        angle = np.arctan2(by - ay, bx - ax) + np.radians(turn_deg)
+        along = np.array([np.cos(angle), np.sin(angle)]) * (self._geometry.dot_pitch_mm / 2)
+        across = np.array([-np.sin(angle), np.cos(angle)]) * (width_mm / 2)
+        corners = [
+            centre - along - across,
+            centre + along - across,
+            centre + along + across,
+            centre - along + across,
+        ]
+        cv2.fillPoly(
+            self.page,
+            [np.int32([page_px((float(x), float(y))) for x, y in corners])],
+            colour or CARD[piece],
+            cv2.LINE_AA,
+        )
         return self
 
     def cover(self, centre_mm: PointMm, radius_mm: float) -> Scene:
@@ -164,19 +262,8 @@ class Scene:
         cv2.circle(self.page, page_px(centre_mm), radius_px, SKIN, cv2.FILLED)
         return self
 
-    def cover_slot(self, slot_id: str) -> Scene:
-        (ax, ay), (bx, by) = self._ends_mm(self._find(self._layout.slots, slot_id))
-        return self.cover(((ax + bx) / 2, (ay + by) / 2), 20.0)
-
     def cover_corner(self, corner: int) -> Scene:
         return self.cover(self._geometry.corner_marker_centres_mm()[corner], 18.0)
 
     def photograph(self, view: View = STRAIGHT, *, seed: int = 0) -> np.ndarray:
         return photograph(self.page, view, seed=seed)
-
-    def _ends_mm(self, segment: Segment) -> tuple[PointMm, PointMm]:
-        return self._geometry.dot_mm(segment.a), self._geometry.dot_mm(segment.b)
-
-    @staticmethod
-    def _find(items: list, wanted_id: str):
-        return next(item for item in items if item.id == wanted_id)

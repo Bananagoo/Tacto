@@ -66,3 +66,26 @@ export function readingAt(
   })
   return nearest ? (nearest as { distance: number; reading: Reading }).reading : null
 }
+
+/**
+ * The reading of one piece by its id, for the fingertip on the paper: the server says which
+ * piece the finger is on. Null when it is on nothing the circuit lists.
+ */
+export function readingOf(
+  id: string | null,
+  circuit: Circuit | undefined,
+  wireKeys: readonly string[],
+): Reading | null {
+  if (!circuit || id === null) return null
+  const part = circuit.parts.find((candidate) => candidate.id === id)
+  if (part) return { current: part.current, volts: part.voltage, wireKey: null, short: false }
+  const index = circuit.wires.findIndex((candidate) => candidate.id === id)
+  if (index < 0) return null
+  const wire = circuit.wires[index]
+  return {
+    current: wire.current,
+    volts: 0,
+    wireKey: wireKeys[index] ?? null,
+    short: wire.overloaded,
+  }
+}

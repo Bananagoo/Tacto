@@ -12,25 +12,24 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from ..mat.models import MatLayout
-from .markers import FoundMarker, find_markers
+from ..mat import Mat
+from .markers import find_markers
 from .print_geometry import (
     CORNER_MARKER_IDS,
-    DOT_PITCH_MM,
     PAGE_HEIGHT_MM,
     PAGE_WIDTH_MM,
     PrintGeometry,
     mm_to_px,
 )
 
-# Enough to keep a 0.7 mm pen line about three pixels wide, and no more than a 1080p
-# camera sees of an A4 page.
+# About what a 1080p camera sees of an A4 page that fills its frame: more would only
+# invent pixels. A 28 mm dot gap is 110 pixels long at this scale.
 FLAT_DPI = 100
 
 
 @dataclass(frozen=True)
 class Flattened:
-    image: np.ndarray  # the page, square-on, at FLAT_DPI; greyscale, the reader needs no colour
+    image: np.ndarray  # the page, square-on, at FLAT_DPI, in colour (BGR)
     frame_to_page: np.ndarray  # 3x3 homography, frame pixels -> page millimetres
 
 
@@ -40,30 +39,70 @@ def flatten(frame: np.ndarray, geometry: PrintGeometry) -> Flattened | None:
     Accepts whatever a camera or an image file hands over (colour, greyscale, with or
     without alpha) and answers None, never raises, for a frame it cannot use.
     """
+    corners = seen_corners(frame)
+    if corners is None or len(corners) != len(CORNER_MARKER_IDS):
+        return None
+    frame_to_page = fit_frame_to_page(corners, geometry)
+    if frame_to_page is None:
+        return None
+    return warp(frame, frame_to_page)
+
+
+def seen_corners(frame: np.ndarray) -> dict[int, tuple[float, float]] | None:
+    """Corner marker id -> its centre in the frame, for each corner seen exactly once.
+
+    None for a frame that is not a picture. A corner seen twice is left out: a second
+    mat or a stray print is in view, and there is no telling which one is ours.
+    """
     grey = _as_grey(frame)
     if grey is None:
         return None
-    centres_px = _corner_centres_px(find_markers(grey))
-    if centres_px is None:
+    centres: dict[int, tuple[float, float]] = {}
+    twice: set[int] = set()
+    for marker in find_markers(grey):
+        if marker.id not in CORNER_MARKER_IDS:
+            continue
+        if marker.id in centres:
+            twice.add(marker.id)
+        centres[marker.id] = (marker.x_px, marker.y_px)
+    return {marker_id: centre for marker_id, centre in centres.items() if marker_id not in twice}
+
+
+def fit_frame_to_page(
+    corners: dict[int, tuple[float, float]], geometry: PrintGeometry
+) -> np.ndarray | None:
+    """The homography from frame pixels to page millimetres, from all four corners."""
+    if any(marker_id not in corners for marker_id in CORNER_MARKER_IDS):
         return None
     frame_to_page = cv2.getPerspectiveTransform(
-        np.float32(centres_px), np.float32(geometry.corner_marker_centres_mm())
+        np.float32([corners[marker_id] for marker_id in CORNER_MARKER_IDS]),
+        np.float32(geometry.corner_marker_centres_mm()),
     )
     # Four centres nearly in a line (a false detection) give a transform that cannot be
     # undone; nothing read through it would mean anything.
     if not np.all(np.isfinite(frame_to_page)) or abs(np.linalg.det(frame_to_page)) < 1e-12:
         return None
+    return frame_to_page
+
+
+def warp(frame: np.ndarray, frame_to_page: np.ndarray) -> Flattened | None:
+    """The frame squared up through a known homography. None for a frame that is not a picture."""
+    grey = _as_grey(frame)
+    if grey is None:
+        return None
     flat_px_per_mm = mm_to_px(1.0, dpi=FLAT_DPI)
     page_to_flat = np.diag([flat_px_per_mm, flat_px_per_mm, 1.0])
     size_px = (round(PAGE_WIDTH_MM * flat_px_per_mm), round(PAGE_HEIGHT_MM * flat_px_per_mm))
-    image = cv2.warpPerspective(grey, page_to_flat @ frame_to_page, size_px, flags=cv2.INTER_LINEAR)
+    image = cv2.warpPerspective(
+        _as_colour(frame, grey), page_to_flat @ frame_to_page, size_px, flags=cv2.INTER_LINEAR
+    )
     return Flattened(image=image, frame_to_page=frame_to_page)
 
 
 def frame_point_to_mat(
     frame_to_page: np.ndarray,
     geometry: PrintGeometry,
-    layout: MatLayout,
+    mat: Mat,
     x_px: float,
     y_px: float,
 ) -> tuple[float, float]:
@@ -78,9 +117,18 @@ def frame_point_to_mat(
         return math.inf, math.inf
     first_x_mm, first_y_mm = geometry.dot_mm((0, 0))
     return (
-        (x / w - first_x_mm) / ((layout.cols - 1) * DOT_PITCH_MM),
-        (y / w - first_y_mm) / ((layout.rows - 1) * DOT_PITCH_MM),
+        (x / w - first_x_mm) / ((mat.cols - 1) * geometry.dot_pitch_mm),
+        (y / w - first_y_mm) / ((mat.rows - 1) * geometry.dot_pitch_mm),
     )
+
+
+def _as_colour(frame: np.ndarray, grey: np.ndarray) -> np.ndarray:
+    """The frame as BGR. `grey` is the same frame as `_as_grey` made it."""
+    if frame.ndim == 3 and frame.shape[2] == 3:
+        return frame
+    if frame.ndim == 3 and frame.shape[2] == 4:
+        return cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+    return cv2.cvtColor(grey, cv2.COLOR_GRAY2BGR)
 
 
 def _as_grey(frame: np.ndarray) -> np.ndarray | None:
@@ -98,19 +146,3 @@ def _as_grey(frame: np.ndarray) -> np.ndarray | None:
     if channels == 4:
         return cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
     return None
-
-
-def _corner_centres_px(markers: list[FoundMarker]) -> list[tuple[float, float]] | None:
-    """The four corner markers' centres in CORNER_MARKER_IDS order, if each is seen once."""
-    centres: dict[int, tuple[float, float]] = {}
-    for marker in markers:
-        if marker.id not in CORNER_MARKER_IDS:
-            continue
-        if marker.id in centres:
-            # Two of the same corner: a second mat or a stray print is in view, and
-            # there is no telling which one is ours.
-            return None
-        centres[marker.id] = (marker.x_px, marker.y_px)
-    if len(centres) != len(CORNER_MARKER_IDS):
-        return None
-    return [centres[marker_id] for marker_id in CORNER_MARKER_IDS]

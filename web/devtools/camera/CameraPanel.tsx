@@ -1,15 +1,28 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   cameraStatus,
+  getExposure,
+  setExposure,
   listCameras,
   streamUrl,
   type CameraInfo,
   type CameraStatus,
+  type Exposure,
   type Overlay,
 } from './api'
 
 const STATUS_EVERY_MS = 500
 const PREFERRED_CAMERA = 'LVNext'
+
+// How the picture is shown, never how it is read: the server always works on the frame
+// as the camera sent it, because a mirrored marker cannot be read. Marker labels drawn
+// on the picture turn with it; the readout beside it stays in camera coordinates.
+const VIEWS = {
+  camera: { label: 'As the camera sees it', className: '' },
+  mirror: { label: 'Mirrored', className: '-scale-x-100' },
+  turned: { label: 'Rotated 180°', className: 'rotate-180' },
+} as const
+type View = keyof typeof VIEWS
 
 export default function CameraPanel() {
   const [cameras, setCameras] = useState<CameraInfo[]>([])
@@ -19,10 +32,26 @@ export default function CameraPanel() {
   const [nonce, setNonce] = useState(0)
   const [aruco, setAruco] = useState(true)
   const [hand, setHand] = useState(false)
-  const [mat, setMat] = useState(false)
+  const [view, setView] = useState<View>('mirror')
+  const [flat, setFlat] = useState(false)
+  const [read, setRead] = useState(false)
   const [status, setStatus] = useState<CameraStatus | null>(null)
   const [streamError, setStreamError] = useState('')
+  const [exposure, setExposureState] = useState<Exposure | null>(null)
   const image = useRef<HTMLImageElement>(null)
+
+  // Opening the camera applies the exposure, so read it again whenever a stream starts.
+  useEffect(() => {
+    getExposure()
+      .then(setExposureState)
+      .catch(() => setExposureState(null))
+  }, [running, nonce])
+
+  const changeExposure = (manual: boolean, gain: number) => {
+    setExposure(manual, gain)
+      .then(setExposureState)
+      .catch(() => setExposureState(null))
+  }
 
   const loadCameras = () => {
     listCameras()
@@ -41,9 +70,8 @@ export default function CameraPanel() {
   const overlays: Overlay[] = [
     ...(aruco ? (['aruco'] as const) : []),
     ...(hand ? (['hand'] as const) : []),
-    ...(mat ? (['mat'] as const) : []),
   ]
-  const source = running ? streamUrl(index, overlays, nonce) : ''
+  const source = running ? streamUrl(index, overlays, nonce, flat || read, read) : ''
 
   // The server keeps the camera open for as long as this <img> holds the stream,
   // so drop the connection explicitly when stopping or leaving the page.
@@ -116,9 +144,61 @@ export default function CameraPanel() {
           Hand points
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" checked={mat} onChange={(e) => setMat(e.target.checked)} />
-          Mat reading
+          <input type="checkbox" checked={flat} onChange={(e) => setFlat(e.target.checked)} />
+          Flattened mat
         </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={read} onChange={(e) => setRead(e.target.checked)} />
+          Read pieces
+        </label>
+        <label className="flex items-center gap-2">
+          View
+          <select
+            className="rounded bg-white/10 px-2 py-1"
+            value={view}
+            onChange={(event) => setView(event.target.value as View)}
+          >
+            {Object.entries(VIEWS).map(([key, { label }]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="opacity-60">Exposure</span>
+        {exposure?.available && exposure.camera_found ? (
+          <>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={exposure.manual}
+                onChange={(e) => changeExposure(e.target.checked, exposure.gain)}
+              />
+              Manual (ignores the background)
+            </label>
+            <label className="flex items-center gap-2">
+              Gain
+              <input
+                type="range"
+                min={0}
+                max={255}
+                value={exposure.gain}
+                disabled={!exposure.manual}
+                onChange={(e) => changeExposure(true, Number(e.target.value))}
+              />
+              <span className="w-8 tabular-nums">{exposure.gain}</span>
+            </label>
+          </>
+        ) : (
+          <span className="text-amber-300">
+            {exposure?.available
+              ? 'The LogiInsight camera is not plugged in.'
+              : 'Not available: run make camera-tool, then restart make bench.'}
+          </span>
+        )}
       </div>
 
       {listError && <p className="text-rose-400">{listError}</p>}
@@ -134,7 +214,7 @@ export default function CameraPanel() {
               ref={image}
               src={source}
               alt="Live camera"
-              className="h-full w-full object-contain"
+              className={`h-full w-full object-contain ${(flat || read) && shown?.mat_found ? '' : VIEWS[view].className}`}
               onError={() => {
                 setStreamError(
                   'The camera stream stopped. Check it is plugged in and that the terminal running the server has Camera permission.',
@@ -154,6 +234,48 @@ export default function CameraPanel() {
           <dd>{shown?.width ? `${shown.width}×${shown.height}` : '–'}</dd>
           <dt className="opacity-60">Brightness</dt>
           <dd>{shown?.brightness != null ? `${shown.brightness.toFixed(0)} / 255` : '–'}</dd>
+          <dt className="opacity-60">Sharpness</dt>
+          <dd>{shown?.sharpness != null ? shown.sharpness.toFixed(0) : '–'}</dd>
+          {(flat || read) && (
+            <>
+              <dt className="opacity-60">Mat</dt>
+              <dd
+                className={
+                  shown?.mat_found == null
+                    ? ''
+                    : shown.mat_found
+                      ? 'text-emerald-400'
+                      : 'text-amber-300'
+                }
+              >
+                {shown?.mat_found == null
+                  ? '–'
+                  : !shown.mat_found
+                    ? `not found (corners ${shown.corners_seen?.join(', ') || 'none'})`
+                    : shown.mat_held
+                      ? shown.mat_confirmed
+                        ? `held (corners ${shown.corners_seen?.join(', ')})`
+                        : 'held blind: no corner readable, not reading pieces'
+                      : 'all four corners'}
+              </dd>
+            </>
+          )}
+          {read && (
+            <>
+              <dt className="opacity-60">Pieces</dt>
+              <dd>
+                {shown?.pieces
+                  ? `${Object.keys(shown.pieces).length} (squares ${shown.squares_seen ?? 0}/7)`
+                  : '–'}
+              </dd>
+              <dt className="opacity-60">Time</dt>
+              <dd>
+                {shown?.read_ms != null
+                  ? `flatten ${shown.flatten_ms} ms, read ${shown.read_ms} ms`
+                  : '–'}
+              </dd>
+            </>
+          )}
           {aruco && (
             <>
               <dt className="opacity-60">Markers</dt>
@@ -187,26 +309,6 @@ export default function CameraPanel() {
                         .join('; ') || 'no hand'
                     : '–')}
               </dd>
-            </>
-          )}
-          {mat && (
-            <>
-              <dt className="opacity-60">Mat</dt>
-              <dd className={shown?.mat?.found ? 'text-emerald-400' : 'text-amber-300'}>
-                {shown?.mat == null ? '–' : shown.mat.found ? 'found' : 'four corners not visible'}
-              </dd>
-              {shown?.mat?.found && (
-                <>
-                  <dt className="opacity-60">Drawn</dt>
-                  <dd>{shown.mat.drawn?.join(', ') || 'nothing'}</dd>
-                  {Object.entries(shown.mat.slots ?? {}).map(([slot, content]) => (
-                    <Fragment key={slot}>
-                      <dt className="opacity-60">Slot {slot}</dt>
-                      <dd>{content}</dd>
-                    </Fragment>
-                  ))}
-                </>
-              )}
             </>
           )}
           {shown?.error && (

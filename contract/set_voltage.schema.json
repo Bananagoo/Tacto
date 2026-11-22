@@ -1,0 +1,22 @@
+{
+  "description": "The scroll wheel's result: the battery voltage the learner wants.",
+  "properties": {
+    "type": {
+      "const": "set_voltage",
+      "default": "set_voltage",
+      "title": "Type",
+      "type": "string"
+    },
+    "volts": {
+      "maximum": 9.0,
+      "minimum": 0.0,
+      "title": "Volts",
+      "type": "number"
+    }
+  },
+  "required": [
+    "volts"
+  ],
+  "title": "SetVoltage",
+  "type": "object"
+}

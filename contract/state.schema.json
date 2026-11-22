@@ -1,0 +1,333 @@
+{
+  "$defs": {
+    "Circuit": {
+      "properties": {
+        "status": {
+          "default": "open",
+          "enum": [
+            "working",
+            "open",
+            "shorted"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "voltage": {
+          "default": 0.0,
+          "title": "Voltage",
+          "type": "number"
+        },
+        "total_current": {
+          "default": 0.0,
+          "title": "Total Current",
+          "type": "number"
+        },
+        "shorted_path": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Shorted Path",
+          "type": "array"
+        }
+      },
+      "title": "Circuit",
+      "type": "object"
+    },
+    "Grid": {
+      "properties": {
+        "cols": {
+          "minimum": 2,
+          "title": "Cols",
+          "type": "integer"
+        },
+        "rows": {
+          "minimum": 2,
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cols",
+        "rows"
+      ],
+      "title": "Grid",
+      "type": "object"
+    },
+    "LessonStep": {
+      "properties": {
+        "lesson_id": {
+          "default": "",
+          "title": "Lesson Id",
+          "type": "string"
+        },
+        "step_id": {
+          "default": "",
+          "title": "Step Id",
+          "type": "string"
+        },
+        "step_index": {
+          "default": 0,
+          "title": "Step Index",
+          "type": "integer"
+        },
+        "step_count": {
+          "default": 0,
+          "title": "Step Count",
+          "type": "integer"
+        },
+        "prompt": {
+          "default": "",
+          "title": "Prompt",
+          "type": "string"
+        },
+        "step_done": {
+          "default": false,
+          "title": "Step Done",
+          "type": "boolean"
+        },
+        "lesson_done": {
+          "default": false,
+          "title": "Lesson Done",
+          "type": "boolean"
+        }
+      },
+      "title": "LessonStep",
+      "type": "object"
+    },
+    "Piece": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "wire",
+            "battery",
+            "bulb",
+            "resistor",
+            "switch"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "a": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "A",
+          "type": "array"
+        },
+        "b": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "B",
+          "type": "array"
+        },
+        "closed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Closed"
+        },
+        "current": {
+          "default": 0.0,
+          "title": "Current",
+          "type": "number"
+        },
+        "voltage": {
+          "default": 0.0,
+          "title": "Voltage",
+          "type": "number"
+        },
+        "brightness": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Brightness"
+        },
+        "shorted": {
+          "default": false,
+          "title": "Shorted",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "a",
+        "b"
+      ],
+      "title": "Piece",
+      "type": "object"
+    },
+    "Touch": {
+      "description": "The learner's index fingertip, and what the mouse should do about it.",
+      "properties": {
+        "present": {
+          "default": false,
+          "title": "Present",
+          "type": "boolean"
+        },
+        "x": {
+          "default": 0.0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 0.0,
+          "title": "Y",
+          "type": "number"
+        },
+        "piece_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Piece Id"
+        },
+        "pulse_hz": {
+          "default": 0.0,
+          "title": "Pulse Hz",
+          "type": "number"
+        },
+        "strength": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Strength",
+          "type": "number"
+        },
+        "buzz": {
+          "default": false,
+          "title": "Buzz",
+          "type": "boolean"
+        }
+      },
+      "title": "Touch",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "type": {
+      "const": "state",
+      "default": "state",
+      "title": "Type",
+      "type": "string"
+    },
+    "version": {
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "seq": {
+      "default": 0,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "t": {
+      "title": "T",
+      "type": "number"
+    },
+    "source": {
+      "default": "camera",
+      "enum": [
+        "camera",
+        "replay",
+        "manual"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "mat_visible": {
+      "default": true,
+      "title": "Mat Visible",
+      "type": "boolean"
+    },
+    "grid": {
+      "$ref": "#/$defs/Grid"
+    },
+    "pieces": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Piece"
+      },
+      "title": "Pieces",
+      "type": "array"
+    },
+    "circuit": {
+      "$ref": "#/$defs/Circuit",
+      "default": {
+        "status": "open",
+        "voltage": 0.0,
+        "total_current": 0.0,
+        "shorted_path": []
+      }
+    },
+    "touch": {
+      "$ref": "#/$defs/Touch",
+      "default": {
+        "present": false,
+        "x": 0.0,
+        "y": 0.0,
+        "piece_id": null,
+        "pulse_hz": 0.0,
+        "strength": 0.0,
+        "buzz": false
+      }
+    },
+    "lesson": {
+      "$ref": "#/$defs/LessonStep",
+      "default": {
+        "lesson_id": "",
+        "step_id": "",
+        "step_index": 0,
+        "step_count": 0,
+        "prompt": "",
+        "step_done": false,
+        "lesson_done": false
+      }
+    }
+  },
+  "required": [
+    "t",
+    "grid"
+  ],
+  "title": "State",
+  "type": "object"
+}

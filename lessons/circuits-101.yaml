@@ -1,143 +1,40 @@
-# Circuits 101: the lesson a learner walks through on the paper mat.
+# Circuits 101 for the core lab: a fixed sequence of steps. Each step shows one prompt
+# and completes by itself when the circuit on the mat meets `done_when`.
 #
-# DRAFT WORDING. The structure (steps, concepts, done_when) follows the platform design;
-# every spoken line is a first draft for the lesson author to read aloud and edit.
-# Editing wording needs no code change. Run `make check` afterwards: it checks each line
-# against the rules in `.claude/rules/lessons.md`. See `lessons/README.md` for the shape.
+# PLACEHOLDER WORDING for the lesson author to edit. Editing a prompt needs no code
+# change; run `make check-server` afterwards.
 #
-# The mat: a battery, bulb A, a gap the learner draws across, a slot where a wire tile
-# can be swapped for bulb B (series), and a side branch with an empty slot for bulb B
-# (parallel).
+# done_when conditions (every one given must hold):
+#   status:      working | open | shorted
+#   batteries:   how many batteries are on the mat
+#   bulbs:       how many bulbs are on the mat
+#   lit_bulbs:   how many bulbs carry current
+#   arrangement: single | series | parallel   (how the lit bulbs are connected)
 #
 # Physics words are exact: the vibration in the mouse is current, the wheel is voltage.
 
 id: circuits-101
 title: Circuits 101
-language: en
-
-concepts:
-  - id: closed_loop
-    title: Closed loop
-  - id: current
-    title: Current
-    requires: [closed_loop]
-  - id: voltage
-    title: Voltage
-    requires: [closed_loop]
-  - id: resistance
-    title: Resistance
-    requires: [current]
-  - id: series
-    title: Series
-    requires: [current, resistance]
-  - id: parallel
-    title: Parallel
-    requires: [current, voltage]
+# How long a finished step stays on screen before the next prompt appears.
+linger_seconds: 6
 
 steps:
-  # Setup. An open circuit: bulb A is off and the mouse is still.
   - id: setup
-    teaches: [closed_loop]
-    build:
-      say: "Find the battery, the bulb and the gap in the wire on your mat."
-      done_when: { status: open, bulbs: 1 }
-    observe:
-      say: "Trace the wires with one finger and keep your other hand on the mouse."
-    explain:
-      say: "The loop has a gap, so no current flows and the mouse stays still."
-    hints:
-      - "Where does the wire stop?"
-      - "Follow the wire away from the battery until your finger runs out of line."
-      - "Start at the battery, trace past the bulb, and see whether you can get back to the battery."
+    prompt: "Lay out a battery, one bulb and wires in a loop, but leave one gap. What do you expect the bulb to do?"
+    done_when: { status: open, batteries: 1, bulbs: 1 }
 
-  # Stage 1. Closing the gap lights bulb A and gives a steady pulse.
   - id: close_the_loop
-    teaches: [closed_loop, current]
-    predict:
-      say: "When you close the gap, will you feel anything in the mouse?"
-      choices:
-        # Quoted, because YAML reads a bare yes or no as true or false.
-        "yes": ["yes", yeah, pulse, vibrate, buzz, something]
-        "no": ["no", nothing, nope]
-      answer: "yes"
-      misconceptions:
-        "no": "The loop is closed now, so current flows, and current is what you feel in the mouse."
-    build:
-      say: "Draw a line across the gap to join the two wire ends."
-      done_when: { status: closed, lit_bulbs: 1 }
-    observe:
-      say: "Rest a finger on any wire and keep your other hand on the mouse."
-    explain:
-      say: "Current flows only when the loop is closed, and the pulse in the mouse is that current."
-    hints:
-      - "What has to be true of the path before anything can move around it?"
-      - "Look at the gap between the two wire ends."
-      - "Trace from the battery through the bulb, and see whether your finger can get back to the battery."
+    prompt: "Close the gap with a wire. Rest a finger on any piece: the pulse in the mouse is the current."
+    done_when: { status: working, lit_bulbs: 1 }
 
-  # Stage 2. Bulb B in the same loop: both bulbs equally dim, the pulse slows and is
-  # the same everywhere.
   - id: series
-    teaches: [current, resistance, series]
-    predict:
-      say: "When a second bulb joins the same loop, how bright will the two bulbs be?"
-      choices:
-        both dimmer: [dimmer, darker, less bright]
-        no change: [same, no change, as bright]
-        first brighter: [first, brighter]
-      answer: both dimmer
-      misconceptions:
-        first brighter: "A bulb does not use up current, so the same current reaches both and they glow alike."
-        no change: "The pulse slowed, so less current flows, because two bulbs resist more than one."
-    build:
-      say: "Lift the wire tile out of the loop and put the second bulb in its place."
-      done_when: { topology: series, lit_bulbs: 2 }
-    observe:
-      say: "Slide a finger along the loop, before, between and after the bulbs, and feel the pulse."
-    explain:
-      say: "The current is the same everywhere in one loop, and two bulbs in a row let less through."
-    hints:
-      - "How many bulbs does the current have to pass through now?"
-      - "Look around the loop and count what the current must push through on one trip."
-      - "With one bulb you felt a steady pulse, so think what a second obstacle in that path does."
+    prompt: "Swap one wire in the loop for a second bulb. What do you expect? Then feel the pulse before, between and after the bulbs."
+    done_when: { arrangement: series, lit_bulbs: 2 }
 
-  # Stage 3. Bulb B on its own branch: each bulb at full brightness, each branch pulsing
-  # at half the rate of the battery wire.
   - id: parallel
-    teaches: [current, voltage, parallel]
-    predict:
-      say: "When the second bulb moves to its own branch, will the bulbs get brighter, dimmer or stay the same?"
-      choices:
-        both brighter: [brighter, full, fully]
-        both dimmer: [dimmer, darker, split]
-        no change: [same, no change]
-      answer: both brighter
-      misconceptions:
-        both dimmer: "The current does split, but each branch gets the full push of the battery, so both bulbs glow fully."
-        no change: "Each bulb now has its own path to the battery, so neither has to share the push."
-    build:
-      say: "Put the wire tile back, then place the second bulb in the empty slot on the side branch."
-      done_when: { topology: parallel, lit_bulbs: 2 }
-    observe:
-      say: "Touch each branch in turn, then the wire next to the battery, and compare the pulses."
-    explain:
-      say: "Each branch gets the full push of the battery, which is the voltage, so each bulb shines fully."
-    hints:
-      - "How many separate paths lead away from the battery now?"
-      - "Trace each branch from the battery and back with your finger."
-      - "Cover the side branch with your hand, and picture the loop the first bulb has to itself."
+    prompt: "Move the second bulb onto its own branch beside the first. Compare the pulse on each branch with the wire next to the battery."
+    done_when: { arrangement: parallel, lit_bulbs: 2 }
 
-  # Stage 4. A line across the circuit: both bulbs go out and the mouse buzzes hard on
-  # the shorted path only.
   - id: short
-    teaches: [current, resistance]
-    build:
-      say: "Draw a line straight across the circuit, from one battery wire to the other."
-      done_when: { status: short }
-    observe:
-      say: "Touch the line you drew, then touch a wire next to a bulb."
-    explain:
-      say: "Current takes the easiest path, so it rushes through your line and skips the bulbs."
-    hints:
-      - "Which is easier for the current to get through, a bulb or a bare line?"
-      - "Find the two wires that leave the battery."
-      - "Start on one battery wire and draw across to the other without passing through a bulb."
+    prompt: "Lay a wire straight across a bulb. Touch that wire, then touch the bulb."
+    done_when: { status: shorted }

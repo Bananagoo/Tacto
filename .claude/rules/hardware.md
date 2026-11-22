@@ -1,42 +1,40 @@
 ---
 paths:
   - "server/tacto/vision/**"
-  - "web/src/haptics/**"
+  - "server/tacto_bench/**"
+  - "scripts/**"
   - "kit/**"
 ---
 
-# Hardware facts (from the vendor docs, 21 Nov 2026, unless marked "our caution")
+# Hardware facts
 
-Links and the full list are in `docs/tech-stack.md`. These are the ones that break builds.
+Measured on the demo laptop on 21 Nov 2026 unless marked. The full list is in `docs/tech-stack.md`; results go in `docs/hardware-log.md`.
 
 ## LogiInsight camera
 
-- Devices are named `LVNext Camera` (RGB, ~30 fps at 1920×1080) and `LVNext CPD Camera` (near-infrared, portrait, monochrome). Find them with the SDK's `camera_utils.py`; do not hard-code an index.
-- **Open RGB as NV12 or YUY2, never MJPG, and open RGB before anything opens NIR.** With RGB as MJPG the NIR stream drops to about 1 fps, and the Hands Tracker lives on NIR. Raw 1080p needs a USB 3 port and cable.
-- Set resolution before pixel format.
-- The on-camera face AI overheats the camera after about 10 minutes and freezes video. We do not use it. Turn it off once with `set_ai_config(enable_face_detection=False, enable_face_mesh=False)`.
+- This unit is the "Mac RGB stream edition": one video device, `LVNext Camera`, colour only, about 30 fps at 1920×1080, up to 3840×2160 with the same field of view. No near-infrared device.
+- Find the camera by name (`vision/camera.py: list_cameras`). OpenCV's index order on macOS follows device ids and shifts when an iPhone is near; never hard-code an index.
+- Auto-exposure washes out white paper against a dark desk. Mount the camera above the mat so paper fills most of the frame.
+- Do not leave the camera streaming between tests; it can overheat. We do not use the on-camera face AI or the SSH link. Never ask for or read the credentials on the kit card.
 - macOS: the terminal running the server needs Camera permission.
-- The SDK zip is not in this repo. Download it from the Logitech hackathon page into `server/vendor/` (gitignored).
 
-## Logi Hands Tracker
+## Hand tracking
 
-- Separate app; publishes on `ws://127.0.0.1:8765`, one `hand_telemetry` message per frame (~30/s), one-way, localhost only.
-- Only `thumb_tip` and `index_tip` per hand, 2D, normalised 0..1, **x mirrored, y bottom-up**, relative to a 1024×768 crop unless `camera_resolution` is set in its `config.json`.
-- Map to the mat with the 4-touch calibration (learner touches each corner marker; fit a homography from tracker coordinates to mat coordinates). Do not derive the mapping from first principles.
-- `handedness` labels can swap. Use the hand closest to the mat centre, or the one that is moving, not a fixed label.
-- Smoothing is on by default (`alpha` 0.35). That adds lag; turn it down if the probe feels late.
+- MediaPipe Hand Landmarker on our own colour frames (`vision/hands.py`), about 26 ms a frame. The model file lives in `server/vendor/` (gitignored).
+- It gives 21 landmark positions, not touch. A fingertip over a segment counts as touching it.
+- Handedness labels can swap. Use the hand pointing nearest the middle of the frame, not a fixed label.
+- Per Logitech's docs, not confirmed on this laptop: the Logi Hands Tracker app needs the near-infrared stream and a raw NV12/YUY2 colour stream, publishes on `ws://127.0.0.1:8765`, and needs a four-touch calibration. We do not use it.
 
 ## Reading the mat
 
-- Markers: `cv2.aruco`, dictionary `DICT_4X4_50`, from stock `opencv-python` (`cv2.aruco.ArucoDetector`).
-- Our caution: pen and inkjet inks are often faint or invisible in near-infrared. Read the mat from RGB only.
-- A hand over the mat hides markers and wires. Keep the last known reading for anything occluded and smooth each segment's ink decision over several frames.
-- Corner markers move only if someone bumps the camera or the mat. Cache the homography and refresh it when all four corners are visible.
+- Corner markers: `cv2.aruco`, dictionary `DICT_4X4_50`, ids 0–3 clockwise from the top-left, 20 mm. The pieces carry no markers.
+- The printed mat must come from `make kit`, so the print geometry matches the reader's exactly. Print at 100% and check the 50 mm bar.
+- A hand over the mat hides corners and pieces. Keep the last homography when a corner is hidden, and keep the last stable class of any segment under the hand (padded MediaPipe landmarks are the mask).
+- A segment changes class only after N consecutive frames agree.
 
-## MX Master 4 haptics
+## MX Master 4 haptics (UI team's lane; facts only)
 
-- Preset waveforms only, indices 0–14 (names in `web/src/haptics/driver.ts`); the mouse itself reports 15 presets. There is no continuous vibration: loop a preset instead. Strength (0–100) can be set from code with the `webhid` driver's `setStrength`; it is a setting stored on the mouse, so do not change it on every tick. The plugin driver cannot set it.
-- Plugin driver: `wss://local.jmw.nz:41443/ws`, send one byte (the waveform index). Needs Logi Options+ and the Haptic Web plugin installed. `local.jmw.nz` must resolve to 127.0.0.1; the docs do not say how it does, so add it to `/etc/hosts` for the demo.
-- WebHID driver: Chrome or Edge, needs a click to call `connect()`. Effect ids 0–14; not confirmed to be in the same order as the plugin's indices.
-- "Current" is a short tick repeated at `pulse_hz`. The fastest usable rate is a measured constant (`MAX_PULSE_HZ`), not a guess.
-- All haptic calls go through `HapticsDriver`. Never call the plugin or WebHID from anywhere else.
+- 15 preset waveforms (0–14) and nothing else; no continuous vibration and no custom waveform. A steady pulse is a preset looped at a rate.
+- Strength (0–100) can be set over WebHID. It is stored on the mouse: set it once, not per tick.
+- Driven through the Logi Bolt USB receiver; WebHID needs Chrome or Edge and one click to connect.
+- The server sends `touch.pulse_hz` (current) and `touch.buzz` (short). The browser only plays them.

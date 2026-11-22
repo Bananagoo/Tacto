@@ -1,70 +1,49 @@
 # Lessons
 
-One YAML file per lesson. A lesson is data: a second lesson is a new file here, not new code, and changing wording never needs a code change.
+One YAML file per lesson. A lesson is a fixed list of steps; changing wording never needs a code change. The wording belongs to the lesson author.
 
-At startup the server reads every `*.yaml` file in this directory (`server/tacto/lessons/loader.py`), validates it against the `Lesson` model (`server/tacto/lessons/models.py`) and stores it in the local database (`server/tacto/store/seed.py`). A file with a mistake stops the load with a message that names the file and the field.
-
-`circuits-101.yaml` is the lesson for the demo. Its wording is a draft for the lesson author to edit.
+`circuits-101.yaml` is the lesson for the demo. Its prompts are placeholders.
 
 ## Shape of a file
 
 ```yaml
-id: circuits-101            # unique across files
+id: circuits-101
 title: Circuits 101
-language: en                # optional, defaults to en
+linger_seconds: 6          # how long a finished step stays on screen before the next prompt
 
-concepts:                   # the learning graph: what this lesson teaches
-  - id: closed_loop
-    title: Closed loop
-  - id: current
-    title: Current
-    requires: [closed_loop] # concepts that should come first
-
-steps:                      # walked in order
-  - id: series              # unique within the lesson
-    teaches: [current]      # concept ids from the list above
-    predict:                # optional
-      say: "..."
-      choices:              # two to four; shown on screen -> words that count when spoken
-        both dimmer: [dimmer, darker]
-        no change: [same, no change]
-      answer: both dimmer   # one of the choices
-      misconceptions:       # wrong choice -> what the tutor says about that idea, after the test
-        no change: "..."
-    build:
-      say: "..."
-      done_when: { topology: series, lit_bulbs: 2 }
-    observe:
-      say: "..."
-    explain:
-      say: "..."
-    hints: ["...", "...", "..."]
+steps:
+  - id: close_the_loop     # unique within the file
+    prompt: "Close the gap with a wire. Rest a finger on any piece: the pulse in the mouse is the current."
+    done_when: { status: working, lit_bulbs: 1 }
+    linger_seconds: 10     # optional, overrides the lesson's for this step
 ```
 
-A step always runs in the order predict → build → test → explain, whatever order the keys are written in. The learner predicts, makes the change on the mat, feels and sees the result (`observe`), and only then hears the explanation.
+## `done_when`
 
-`done_when` lists conditions on the circuit on the mat; all of them must hold for the step to count as built.
+Every condition given must hold; leave out the ones that do not matter.
 
-| Key | Values |
-|---|---|
-| `status` | `empty`, `open`, `closed`, `short` |
-| `bulbs` | number of bulbs on the mat |
-| `lit_bulbs` | number of bulbs carrying current |
-| `topology` | `none`, `single`, `series`, `parallel`, `mixed` |
+| Condition | Values | Meaning |
+|---|---|---|
+| `status` | `working`, `open`, `shorted` | The circuit as a whole |
+| `batteries` | a number | Batteries on the mat |
+| `bulbs` | a number | Bulbs on the mat |
+| `lit_bulbs` | a number | Bulbs carrying current |
+| `arrangement` | `single`, `series`, `parallel` | How the lit bulbs are connected |
 
-An unknown key anywhere in the file is an error, so a typo cannot be silently ignored.
+## How a step runs
 
-## Rules for the wording
+The prompt is shown. When the circuit has met `done_when` for half a second, the step is done and stays done. After the linger time the next step's prompt appears. The last step, once done, ends the lesson. Nothing is asked of the learner except the circuit: a prompt may still say "what do you expect?".
 
-The full rules are in `.claude/rules/lessons.md`. The ones the tests check on `circuits-101.yaml` (`server/tests/lessons/test_circuits_101_content.py`):
+## Writing prompts
 
-- Every line is spoken: one sentence, under 20 words, addressed to "you".
-- No symbols or units that read badly aloud: no number with a unit, no `Ω`, `=` or `/`.
-- A prediction has two to four choices and answers at least one wrong idea. A spoken keyword belongs to one choice only.
-- Each step has a ladder of three hints: a smaller question, a pointer to where to look or touch, then a worked example on the learner's own circuit. No hint contains the answer.
-- Vibration is current. The wheel is voltage. Never mix them.
+- One or two short sentences, readable from two metres away.
+- The pulse in the mouse is **current**. The wheel is **voltage**. Never swap them.
+- A step's goal must not already be true on an empty mat, or on the circuit that finished the step before it.
 
-## Things that bite
+## Check your edit
 
-- Quote `"yes"` and `"no"` wherever they appear. YAML reads the bare words as true and false.
-- Run `make check` after editing. It loads every file here and checks the rules above.
+```
+make check-server
+```
+
+A file with a mistake fails with a message that names the file and the field. To try the lesson: `make dev`, build on the mat, and watch `localhost:5173/devtools/#state`.

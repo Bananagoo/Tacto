@@ -1,101 +1,65 @@
 # Tacto tech stack
 
-Decided 21 Nov 2026. Rule: **reuse before build**. We write code only where a library would cost more than it saves, and each such case is listed under "Built ourselves".
+Rewritten 21 Nov 2026 for the core lab. Rule: **reuse before build**. We write code only where a library would cost more than it saves.
 
-Status key: **verified** = confirmed in the vendor's docs or by running it; **test** = must pass its check on our hardware before anyone builds on it.
-
-Not yet installed or tried: `@ricky0123/vad-web`, `pupil-apriltags`, `@xyflow/react`, the three.js packages, and the OpenAI-compatible endpoints for Together and OpenRouter. They are named from general knowledge, so confirm each one when you first reach for it (the `reuse-first` skill does this).
+Status key: **verified** = confirmed by running it on the demo laptop or by tests; **test** = must pass its check on our hardware before anyone builds on it.
 
 ## Shape
 
-Two processes on one laptop, one WebSocket between them.
+One Python server and one browser page on one macOS laptop, one WebSocket between them, Wi-Fi off.
 
 ```
-LogiInsight cam ──RGB──> server (Python)  ──state @ ~15 Hz──>  web (browser, Chrome)
-Logi Hands Tracker ─ws─>   vision → circuit → solver → tutor     bench view, concept map
-                                                  <──events──   wheel, answers, mic audio
-                           Together / OpenRouter (keys stay here)   └─> MX Master 4 haptics
+LogiInsight camera ──colour frames──> server (Python) ──state, 15 a second──> lab UI (Chrome)
+                                      flatten → classify → solve             draws the lab,
+                                                         <──set_voltage──    wheel, mouse haptics
 ```
-
-- `server/` owns the world state: what is on the mat, the solved circuit, where the finger is, the lesson and learner model. It is the only place API keys live.
-- `web/` renders the state and owns everything the browser is best at: drawing, wheel events, microphone, haptics.
-- Nothing in the real-time loop (camera → solver → screen → haptics) touches the network.
 
 ## Decisions
 
-| Job | Decision | Reused from | Fallback | Status and check |
-|---|---|---|---|---|
-| Camera frames | OpenCV `VideoCapture` on the `LVNext Camera` RGB device, 1080p | LogiInsight Python SDK helpers (`camera_utils.py`) for device discovery | Any UVC webcam | **test**: frames arrive with the camera mounted over the desk |
-| Mat and part detection | ArUco markers (`DICT_4X4_50`): 4 corners → homography, 1 marker per part | `cv2.aruco` in stock `opencv-python` | AprilTag via `pupil-apriltags` | **verified**: generate + detect ran on OpenCV 5.1 (Linux); **test** under venue lighting |
-| Wire detection | Sample each dot-to-dot segment in the flattened image and threshold ink against paper | OpenCV (warp, adaptive threshold) | Printed wire strips with markers | **test**: 10 layouts read correctly |
-| Finger position | MediaPipe Hand Landmarker on our own RGB frames; the index tip is mapped onto the mat through the corner-marker homography, so no touch calibration is needed | `mediapipe` (Apache-2.0) | — | **verified** 21 Nov: about 26 ms a frame at 1080p on the demo laptop. This unit has no near-infrared stream, so the Logi Hands Tracker app is not used. **test**: fingertip within one grid cell on the printed mat |
-| Circuit graph | `networkx` for connectivity, open-loop and short detection | networkx | — | verified by unit tests |
-| Circuit physics | ngspice through `InSpice` (operating-point analysis), behind one `solve()` function in `sim/solver.py`; open loops and shorts are caught by networkx before the engine is called | [InSpice](https://pypi.org/project/InSpice/) (GPL-3.0, maintained fork of PySpice) + `brew install libngspice`, with `NGSPICE_LIBRARY_PATH` set in `.env` | Own modified nodal analysis in NumPy (about 80 lines) behind the same function | **verified**: one bulb and two in series solved correctly on macOS arm64 with ngspice 47, 0.22 ms per solve; unit tests against hand-worked answers still to write |
-| Server and transport | FastAPI + uvicorn, one WebSocket, pydantic v2 models as the contract | FastAPI, pydantic | — | verified in the skeleton |
-| Web app | Vite + React + TypeScript, Tailwind, zustand store; Space Grotesk font from `@fontsource-variable/space-grotesk` (bundled, no network) | Vite `react-ts` template; system font | — | verified build in the skeleton; font checked by eye |
-| Bench view | SVG parts in React, glow and motion with `motion` | `motion`; `@wokwi/elements` (MIT) as reference art for resistor and switch | Static images | **test**: glow follows the solver within 250 ms |
-| 3D parts (stretch) | `@react-three/fiber` + `@react-three/drei` | three.js ecosystem | Stay 2D | not started |
-| Concept map | Six fixed nodes in plain SVG | — | `@xyflow/react` if we want drag and zoom | — |
-| Haptics | One `HapticsDriver` interface; default is the Haptic Web plugin over `wss://local.jmw.nz:41443/ws` (send one byte = waveform index) | [HapticWebPlugin](https://github.com/fallstop/HapticWebPlugin) (MIT) | [mx-master-4-webhid](https://github.com/mario-gutierrez/mx-master-4-webhid) (MIT, `triggerHaptic(0..14)`), then the C# Actions SDK | **test**: pulse fires from our page; measure max repeat rate and latency. 2026-11-21: `webhid` pulse confirmed on the real mouse; plugin untested (Logi Options+ not installed on that laptop). Dev test page: `web/src/haptics/test.html` (`make web`, open `/src/haptics/test.html`); it uses the same `HapticsDriver` classes as the app. `HapticsDriver` gained `isConnected` and `close()`, and `playRaw` now rejects indices outside 0 to 15 |
-| Scroll wheel | Browser `wheel` events, accumulated into voltage steps | Browser | Up/down keys | **test**: ticks arrive with smooth-scroll on and off |
-| Speech in | Silero VAD in the browser cuts one utterance → server → Together `openai/whisper-large-v3` | `@ricky0123/vad-web`, Together SDK | Two on-screen buttons (always present) | **test**: prediction transcribed in ~1 s in a noisy hall |
-| Answer matching | Keyword match on the closed answer set first; LLM only when no keyword hits | — | Buttons | unit tests |
-| Tutor voice | Scripted lines pre-generated once with Together `hexgrad/Kokoro-82M` and committed as audio files; live hints generated on demand and cached | Together TTS | Browser `speechSynthesis` | **test**: playback starts within 1 s |
-| Tutor wording | `Qwen/Qwen3.5-9B` on Together, JSON output validated by pydantic; given the circuit and learner state as text | `openai` SDK pointed at Together's and OpenRouter's OpenAI-compatible endpoints | Pre-written hint ladder in the lesson file | **test**: one sentence, never states the answer |
-| Freehand sketches (stretch) | Same 9B model with an image, or a vision model through OpenRouter, fixed output schema | OpenRouter | Stay on the grid | 8 of 10 sketches parsed |
-| Learner model | Per-concept mastery (shaky/solid) + the zone score rule from the concept brief | — | — | unit tests |
-| Lesson content | YAML files in `lessons/`, validated by pydantic | PyYAML | — | loads at startup |
-| Data | SQLite file (`server/data/tacto.db`) through SQLModel: lessons, the concept graph, learners (a nickname), mastery and prediction attempts. Written on lesson events only, never per frame | `sqlmodel` | — | verified by unit tests on an in-memory database |
-| Mat reading | The mat is a fixed printed circuit with drawable lines and tile slots (`kit/mats/`). Four corner ArUco markers flatten the page; each tile carries a marker; a drawn line is an ink test along its segment | `cv2.aruco`, OpenCV | — | verified on rendered and degraded images; **test** on the printed kit under venue lighting |
-| Paper kit | Script renders the A4 mat and parts sheet to PDF | `cv2.aruco.generateImageMarker`, Pillow | — | **test**: printed kit detected by the camera |
-| Tooling | `uv`, `ruff`, `pytest`; `pnpm`, `tsc`, `oxlint`, `prettier`; `make` | — | — | verified in the skeleton |
+| Job | Decision | Reused from | Status and check |
+|---|---|---|---|
+| Camera frames | OpenCV `VideoCapture` on the device named `LVNext Camera`, 1080p, found by name | `opencv-python` | **verified** 21 Nov: about 30 fps on the demo laptop. **test**: mounted above the mat |
+| Camera exposure | Manual exposure, set each time the camera is opened (`vision/exposure.py`); gain is the brightness knob. OpenCV cannot set it on macOS | [uvc-util](https://github.com/jtfrey/uvc-util) (MIT), pinned to a commit and built by `make camera-tool` into `server/vendor/` | **verified** 21 Nov by script on the demo laptop: auto clipped the paper and read 0 to 2 corner markers; manual at gain 0 read 4 with nothing clipped. **test**: after a replug, and with the camera above the mat |
+| Mat position | Four ArUco corner markers (`DICT_4X4_50`, ids 0–3, 20 mm) → homography → flattened page | `cv2.aruco` | **verified** on rendered images with blur, dim light, tilt and a half turn. **test** on printed paper under venue lighting |
+| Piece detection | One fixed patch per dot-to-dot segment of the flattened page; every pixel matched to the nearest of the mat's seven printed colour squares, in CIELAB after dividing by the paper's colour. No trained model | OpenCV, numpy | **verified** on rendered images (20 careless layouts in each of 9 views) and on the printed mat for one layout (8 of 8 pieces, 22 Nov). **test**: 20 layouts on the real mat, with hands, under venue lighting |
+| Finger position | MediaPipe Hand Landmarker on our own colour frames; index tip mapped onto the mat through the corner-marker homography | `mediapipe` (Apache-2.0) | **verified** 21 Nov: about 26 ms a frame at 1080p. Gives position, not touch. **test**: fingertip within one segment on the printed mat |
+| Circuit graph | `networkx`: connectivity, open loop, short and the shorted path | networkx | **verified** by unit tests |
+| Circuit physics | ngspice through `InSpice` (DC operating point), behind `sim/solver.py`. Open loops and shorts are caught in the graph first | [InSpice](https://pypi.org/project/InSpice/) (GPL-3.0) + `brew install libngspice`; `NGSPICE_LIBRARY_PATH` in `.env` | **verified**: hand-worked tests for one bulb, series, parallel, short, bypassed bulb; about 1 ms a solve after a 0.4 s first load |
+| Server and transport | FastAPI + uvicorn, one WebSocket, pydantic v2 models as the contract; JSON schema exported to `contract/` | FastAPI, pydantic | **verified** by tests and a live run |
+| Lesson and mat content | YAML files in `lessons/` and `kit/mats/`, validated by pydantic | PyYAML | **verified** by tests |
+| Printable mat | Script renders the A4 page (dots, corner markers, 50 mm check bar) to PDF from the mat file, so the print matches the reader's geometry | `cv2.aruco.generateImageMarker`, Pillow | **verified** by tests. **test**: printed and measured |
+| Lab UI | Vite + React + TypeScript, Tailwind, zustand, `motion`; Space Grotesk font from `@fontsource-variable/space-grotesk` (bundled, no network) | — | Owned by the UI team; font checked by eye |
+| Haptics | WebHID to the MX Master 4 through the Logi Bolt receiver: a preset tick looped at `pulse_hz`, a hard preset looped fast for the short buzz | [mx-master-4-webhid](https://github.com/mario-gutierrez/mx-master-4-webhid) (MIT); function numbers from the Solaar project | **verified** 21 Nov: speed and strength sliders both felt on the real mouse. Owned by the UI team |
+| Tooling | `uv`, `ruff`, `pytest`; `pnpm`, `tsc`, `oxlint`, `prettier`; `make` | — | **verified** |
 
 ## Built ourselves, and why
 
-- **Wire reading.** No library reads pen lines on a dot grid. The grid makes it a per-segment darkness test.
-- **Tutor state machine and learner model.** Two small rules the team can state in one sentence. Knowledge-tracing libraries such as pyBKT fit parameters from large logs, which we do not have.
-- **Concept map.** Six fixed nodes do not justify a graph library.
+- **Segment reading.** No library reads card pieces on a dot grid. The grid makes it one small classification per segment.
+- **Lesson steps.** A few lines of rules.
 
-## Facts that change the build
+## Hardware facts
 
-From the vendor docs unless marked as our own caution.
+Measured on the demo laptop on 21 Nov 2026 (`docs/hardware-log.md`) unless marked otherwise.
 
-1. **RGB and NIR together need raw RGB.** The Hands Tracker uses the NIR stream (`LVNext CPD Camera`). If we open RGB as MJPG at the same time, NIR drops to about 1 fps. Open RGB as NV12 or YUY2 (needs a USB 3 port and cable), and open RGB first.
-2. **The camera's face AI overheats it.** Continuous on-camera AI for 10+ minutes can freeze the video. We do not use face data, so turn it off with `set_ai_config(enable_face_detection=False, enable_face_mesh=False)`.
-3. **Hands Tracker publishes only thumb tip and index tip, in 2D**, normalised, x mirrored, y bottom-up, inside a 1024×768 crop by default. Do not hand-derive the mapping. Calibrate by touching the four corner markers and fitting a homography from tracker coordinates straight to mat coordinates.
-4. **Our caution, not from the docs: pen and inkjet inks are often faint or invisible in near-infrared.** So the mat is always read from RGB, and the 4-touch calibration avoids depending on printed markers showing up in the NIR frame. Worth a two-minute look at the NIR preview with our pen and printout.
-5. **One camera cannot watch the desk and the face.** The brief's "is the student facing the page" signal is dropped from the MVP. The zone uses desk signals only: hand activity, circuit edits, prediction results, idle time. Stretch: the laptop's own webcam with MediaPipe Face Landmarker in the browser.
-6. **Haptics are preset waveforms, not a continuous motor.** 15 presets (0–14, read from the mouse on 21 Nov), named in the plugin docs (`sharp_collision`, `subtle_collision`, `knock`, `square`, …). Strength (0–100) is not in Logitech's docs but can be set over WebHID (`setStrength` in `web/src/haptics/driver.ts`, function numbers from the Solaar project). "Current" is a short tick repeated at a rate set by the solver; the usable maximum rate has to be measured.
-7. **The Haptic Web plugin is a Logi Actions SDK plugin (so it runs inside Logi Options+) served at `https://local.jmw.nz:41443`, bound to 127.0.0.1.** The docs do not say how that hostname resolves; we assume public DNS. To be safe on venue Wi-Fi, add `127.0.0.1 local.jmw.nz` to `/etc/hosts`. WebHID needs Chrome or Edge and a user click to connect.
-8. **Hands Tracker and Haptic plugin are localhost-only.** The whole demo runs on the laptop that has the camera and the mouse.
-
-## Models and cost
-
-| Use | Model | Price | When it runs |
-|---|---|---|---|
-| Hints, answer fallback | `Qwen/Qwen3.5-9B` (Together) | $0.17 in / $0.25 out per 1M tokens | Only when the learner is stuck or an answer matches no keyword |
-| Speech to text | `openai/whisper-large-v3` (Together) | $0.0015 per audio minute | One short clip per prediction |
-| Tutor voice | `hexgrad/Kokoro-82M` (Together) | $4 per 1M characters | Once at build time for scripted lines |
-| Sketch reading (stretch) | 9B model with image, or OpenRouter vision model | — | Never in the main loop |
-
-Prices read from Together's serverless catalog on 21 Nov 2026. The frugality line for AXA: the camera image becomes a ten-line text netlist with classic image processing, a 9B model writes one sentence from it, and a full lesson costs a fraction of a cent. Log tokens per lesson so we can show the number.
+1. **The camera is the "Mac RGB stream edition".** It exposes one video device, `LVNext Camera`, in colour, at 640×480 up to 3840×2160, same field of view at every size. There is no near-infrared device on this unit.
+2. **OpenCV's camera index order is not fixed** on macOS (it follows the devices' unique ids; an iPhone nearby shifts it). Find the camera by name; never hard-code an index.
+3. **Auto-exposure washes out white paper on a dark desk.** The server switches the camera to manual exposure when it opens it (`make camera-tool` must have run). Mounting the camera above the mat so paper fills the frame is still wanted, for resolution.
+4. **Do not leave the camera streaming between tests.** Logitech's docs warn it can overheat; the on-camera face AI makes this worse and we do not use it.
+5. **Hand tracking is MediaPipe, not the Logi Hands Tracker app.** Per Logitech's docs, not confirmed on this laptop: the Hands Tracker app needs the near-infrared stream, publishes thumb and index tips on `ws://127.0.0.1:8765`, needs a four-touch calibration, and requires the colour stream opened as raw NV12 or YUY2 (not MJPG) so the infrared stream keeps its frame rate. None of that applies while we use MediaPipe on the colour stream.
+6. **Haptics are preset waveforms, not a continuous motor.** The mouse reports 15 presets (0–14). There is no custom waveform. Strength (0–100) can be set over WebHID; it is stored on the mouse, so set it once, not per tick. "Current" is a short tick repeated at a rate the server sends.
+7. **The mouse is driven through the Logi Bolt USB receiver** (046d:c548). WebHID needs Chrome or Edge and one click to connect.
+8. **Everything is localhost-only.** The whole demo runs on the laptop that has the camera and the mouse.
 
 ## Not using
 
-- **LangChain or an agent framework.** One prompt, one JSON reply.
-- **A database server.** Data lives in a local SQLite file (decided 21 Nov; the row is added to the table above when the dependency lands).
-- **The LogiInsight SSH/AI link**, except once to switch the face AI off.
-- **Logi Gaze Tracker.** The camera is pointed at the desk.
-- **CircuitJS1 as the main simulator.** Driving an iframe from camera input is harder than solving the circuit.
+- Any LLM, speech or text-to-speech service (parked).
+- A database (parked with the learner model).
+- The LogiInsight SSH/AI link and the camera's face AI.
+- Logi Hands Tracker and Logi Gaze Tracker.
+- Markers on the pieces.
 
 ## Sources
 
 - Logitech hackathon tools: https://logitech.github.io/hackathons/
-- LogiInsight SDK quick start: https://logitech.github.io/hackathons/logiinsight/
-- Logi Hands Tracker: https://logitech.github.io/hackathons/logi-hands-tracker/
-- Haptic Web plugin API: https://haptics.jmw.nz/api
-- Together models and prices: https://docs.together.ai/docs/serverless/models
-- Together speech: https://docs.together.ai/docs/speech-to-text, https://docs.together.ai/docs/text-to-speech
 - MediaPipe Hand Landmarker: https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker
-- Wokwi elements: https://github.com/wokwi/wokwi-elements
-- CircuitJS1: https://github.com/pfalstad/circuitjs1
+- InSpice: https://pypi.org/project/InSpice/

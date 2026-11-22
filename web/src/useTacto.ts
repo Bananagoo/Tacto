@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { create } from 'zustand'
-import type { ClientMessage, HapticPattern, ServerMessage, State } from './contract'
+import type { ClientMessage, HapticPattern, ServerState, State } from './contract'
+import { fromServer } from './fromServer'
 
 interface Store {
   connected: boolean
@@ -40,8 +41,11 @@ export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
           send: (msg) => socket?.readyState === WebSocket.OPEN && socket.send(JSON.stringify(msg)),
         })
       socket.onmessage = (event) => {
-        const msg = JSON.parse(event.data) as ServerMessage
-        if (msg.type === 'state') useTacto.setState({ state: msg })
+        // The server sends one kind of message, the state. One-off haptic patterns are no
+        // longer sent; `onHaptic` stays for the day they are.
+        const msg = JSON.parse(event.data) as
+          ServerState | { type: 'haptic'; pattern: HapticPattern }
+        if (msg.type === 'state') useTacto.setState({ state: fromServer(msg) })
         else if (msg.type === 'haptic') onHapticRef.current(msg.pattern)
       }
       socket.onclose = () => {

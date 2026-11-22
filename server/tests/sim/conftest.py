@@ -11,7 +11,7 @@ Dots are (col, row). The base loop is:
 The battery's `a` (positive terminal) is (0,1). Bulbs are 10 ohms.
 """
 
-from tacto.contract import Dot, Part, PartKind, Wire
+from tacto.sim.types import Dot, Part, PartKind, Wire
 
 SOURCE_VOLTS = 6.0
 

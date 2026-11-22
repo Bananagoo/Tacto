@@ -1,14 +1,14 @@
 // Tooling for the people building Tacto, at /devtools/. Not part of the product:
 // nothing under src/ may import from this folder (server/tests/test_boundaries.py).
-// Run it with `make bench`, which serves the product on a virtual mat and the camera routes.
+// The camera and haptics pages need `make bench`; the live state page needs `make dev` or
+// `make mock`.
 
 import { useEffect, useState } from 'react'
 import CameraPanel from './camera/CameraPanel'
 import HapticTestPage from './haptics/HapticTestPage'
-import MatPanel from './mat/MatPanel'
+import StatePanel from './state/StatePanel'
 
 const TOOLS = [
-  { hash: '#mat', label: 'Virtual mat', render: () => <MatPanel /> },
   {
     hash: '#camera',
     label: 'Camera',
@@ -19,6 +19,8 @@ const TOOLS = [
     ),
   },
   { hash: '#haptics', label: 'Haptics', render: () => <HapticTestPage /> },
+  // The live state message drawn plainly. Works with make dev and make mock.
+  { hash: '#state', label: 'Live state', render: () => <StatePanel /> },
 ]
 
 export default function DevTools() {

@@ -13,13 +13,13 @@ You review the working tree of Tacto before a commit. You report; you do not edi
 Run `git status --short` and `git diff` (and `git diff --staged`), read the changed files in full where the diff is not enough, then check, in this order:
 
 1. **Secrets.** Any API key, token or `.env` content in the diff, in logs or in test data. The repository is public. This is a blocker.
-2. **Contract drift.** If `server/tacto/contract.py` or `web/src/contract.ts` changed, do they still match field for field? Was a field renamed or removed? Does `mock.py` exercise new fields?
-3. **Network in the real-time loop.** Any HTTP, LLM, speech or TTS call reachable from the per-frame path (camera → mat reading → solver → state broadcast → haptics). Blocker.
-4. **Runs without hardware.** New vision or haptics code that only works with the device attached, with no replay or console path.
-5. **Physics wording.** Current and voltage mixed up in names, UI strings or tutor lines. Vibration is current; the wheel is voltage.
-6. **Teaching rules.** A chat-like UI or free-text input for the learner; a hint that states the answer; a test step with no prediction before it; anything inferring emotion.
-7. **Scope.** Work on the "not now" list in `docs/roadmap.md`.
-8. **Lanes.** Files changed outside the lane that the rest of the diff belongs to (table in `CLAUDE.md`).
+2. **Contract drift.** If `server/tacto/contract.py` changed: was it signed off, were `make contract` and `make sample` run, and does the recorded sample exercise any new field?
+3. **Network.** Any network call anywhere in `server/tacto/`. The lab runs with Wi-Fi off. Blocker.
+4. **Runs without hardware.** New vision code that only works with the camera attached, with no recorded-frames path.
+5. **Physics wording.** Current and voltage mixed up in names, UI strings or lesson prompts. Vibration is current; the wheel is voltage.
+6. **Parked features.** Anything from the parked list in `CLAUDE.md` (voice, LLM calls, learner model, concept map and the rest) being built or wired in.
+7. **Lanes.** The vision lane editing `web/src/`.
+8. **Numbers.** A vision change claimed to work without accuracy or latency figures.
 9. **Reuse.** A new dependency with no row in `docs/tech-stack.md`, or 40+ lines of generic code that a library we already have would do.
 10. **Correctness.** Bugs you can demonstrate from the code: wrong units, unhandled empty or open circuit, singular matrix, blocking call in an async function, a React effect without cleanup.
 

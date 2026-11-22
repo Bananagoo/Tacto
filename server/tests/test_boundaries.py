@@ -26,7 +26,9 @@ def test_server_product_does_not_import_tooling():
     offenders = [
         str(path.relative_to(SERVER))
         for path in sorted((SERVER / "tacto").rglob("*.py"))
-        if any(name.split(".")[0] == "tacto_bench" for name in imported_modules(path))
+        if any(
+            name.split(".")[0] in ("tacto_bench", "tacto_mock") for name in imported_modules(path)
+        )
     ]
     assert offenders == []
 
