@@ -129,12 +129,12 @@ export function Launch({
       <a
         href="/devtools/#setup"
         title="Dev tools: the setup check, the camera bench, the haptics test"
-        className="absolute right-4 bottom-4 z-10 flex items-center gap-2 rounded-full bg-[#1f2a14]/75 px-4 py-2 font-['Patrick_Hand'] text-lg text-[#f4f1e6] shadow-md backdrop-blur-sm transition hover:bg-[#1f2a14] focus-visible:outline-4 focus-visible:outline-yellow-300"
+        className="absolute right-3 bottom-3 z-10 flex items-center gap-1.5 rounded-full bg-[#1f2a14]/70 px-3 py-1 font-['Patrick_Hand'] text-sm text-[#f4f1e6] shadow-md backdrop-blur-sm transition hover:bg-[#1f2a14] focus-visible:outline-4 focus-visible:outline-yellow-300"
       >
         <svg
           viewBox="0 0 24 24"
           aria-hidden="true"
-          className="h-5 w-5 fill-none stroke-current"
+          className="h-3.5 w-3.5 fill-none stroke-current"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
