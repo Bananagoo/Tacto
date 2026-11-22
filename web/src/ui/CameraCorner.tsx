@@ -23,7 +23,9 @@ export function CameraCorner() {
         src="/api/camera/preview"
         alt="Live view of the desk"
         onError={() => setFailed(true)}
-        className="aspect-video w-full object-cover"
+        // Mirrored, like a selfie camera, so the learner's right hand is on the right of the
+        // picture. Only this picture: the server reads the frame as the camera sent it.
+        className="aspect-video w-full -scale-x-100 object-cover"
       />
     </figure>
   )

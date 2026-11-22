@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import notebookUrl from '../assets/Notebook.png'
 import { useTacto } from '../useTacto'
 import { Reflection } from './Reflection'
@@ -161,20 +161,32 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
             draggable={false}
             className="pointer-events-none absolute inset-0 h-full w-full select-none"
           />
-          {/* The writable part of the page: right of the red margin, below the rings. */}
+          {/* The writable part of the page: right of the red margin, below the rings, and
+              written on the ruled lines. The lines on the drawing (measured on Notebook.png)
+              start 21.8% of the way down and are 6.3% of its height apart on average, which
+              at its 7:10 shape is 9cqw. Every line of writing is one --line tall, and every
+              gap is a whole line, so text sits on the rules all the way down. */}
           <div
             className="absolute overflow-y-auto font-['Patrick_Hand'] text-stone-800 [&_button]:font-['Space_Grotesk_Variable'] [&_input]:font-['Space_Grotesk_Variable']"
-            style={{
-              left: '21%',
-              right: '9%',
-              top: '10%',
-              bottom: '14%', // room for the Restart lab button below
-              fontSize: 'clamp(13px, 5.4cqw, 32px)',
-            }}
+            style={
+              {
+                '--line': '9cqw',
+                left: '21%',
+                right: '9%',
+                // One line above the first rule, so the first line of writing sits on it.
+                top: '15.5%',
+                // The rule above the Restart lab button.
+                bottom: '15.2%',
+                fontSize: '5.2cqw',
+                lineHeight: 'var(--line)',
+                // Lowers each line of writing from the middle of its band onto the rule below.
+                paddingTop: 'calc(var(--line) * 0.2)',
+              } as CSSProperties
+            }
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div role="status" aria-atomic="true" className="min-w-0 flex-1 basis-full">
-                <p className="m-0 mb-2 text-[0.85em] font-semibold text-stone-600">
+            <div>
+              <div role="status" aria-atomic="true">
+                <p className="m-0 text-[0.85em] font-semibold text-stone-600">
                   {ready
                     ? `Step ${lesson.step_index + 1} of ${lesson.step_count}`
                     : 'Feel the current'}
@@ -184,7 +196,7 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
                     </span>
                   )}
                 </p>
-                <p className="m-0 text-[1.3em] leading-snug font-semibold">
+                <p className="m-0 text-[1.25em] font-semibold">
                   {ready
                     ? lesson.lesson_done
                       ? 'Same two bulbs, different connections—and a difference you can feel.'
@@ -199,27 +211,29 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               <Reflection lesson={lesson} onSkip={continueLesson} />
             )}
             {ready && lesson.reflection && !lesson.reflectionStatus && (
-              <div className="mt-[0.8em] flex flex-wrap items-center justify-between gap-[0.6em] border-t border-stone-500/40 pt-[0.8em]">
-                <div role="status" className="min-w-0 flex-1 basis-full">
+              <div className="mt-[var(--line)]">
+                <div role="status">
                   <p className="m-0 text-[0.75em] font-semibold tracking-wide text-emerald-700 uppercase">
                     Explain out loud
                   </p>
-                  <p className="m-0 mt-1 text-[1.1em] font-semibold">{lesson.reflection}</p>
-                  <p className="m-0 mt-1 text-[0.75em] text-stone-600">
+                  <p className="m-0 text-[1.1em] font-semibold">{lesson.reflection}</p>
+                  <p className="m-0 text-[0.75em] text-stone-600">
                     Take your time, then continue. Your voice is not being recorded.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={continueLesson}
-                  aria-keyshortcuts="Enter"
-                  className="cursor-pointer rounded-lg bg-emerald-700 px-[0.8em] py-[0.4em] text-[0.9em] font-semibold text-white hover:bg-emerald-800 focus-visible:outline-4 focus-visible:outline-white"
-                >
-                  {lesson.step_index === lesson.step_count - 1 ? 'Finish lab' : 'Continue'}
-                  <kbd className="ml-2 rounded bg-stone-900/10 px-[0.4em] py-[0.1em] text-[0.8em]">
-                    Enter
-                  </kbd>
-                </button>
+                <div className="flex h-[var(--line)] items-center gap-[0.5em] whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={continueLesson}
+                    aria-keyshortcuts="Enter"
+                    className="flex h-[calc(var(--line)*0.8)] py-0 cursor-pointer items-center rounded-lg bg-emerald-700 px-[0.8em] text-[0.75em] font-semibold text-white hover:bg-emerald-800 focus-visible:outline-4 focus-visible:outline-white"
+                  >
+                    {lesson.step_index === lesson.step_count - 1 ? 'Finish lab' : 'Continue'}
+                    <kbd className="ml-2 rounded bg-stone-900/10 px-[0.4em] py-[0.1em] text-[0.8em]">
+                      Enter
+                    </kbd>
+                  </button>
+                </div>
               </div>
             )}
           </div>

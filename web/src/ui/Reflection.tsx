@@ -164,10 +164,12 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
         : serverStatus
 
   return (
-    <div className="mt-[0.8em] border-t border-stone-500/40 pt-[0.8em]">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    // One blank line above, then everything on the notebook's ruled lines: each row of text or
+    // of buttons is a whole number of lines tall (the --line set by the notebook).
+    <div className="mt-[var(--line)]">
+      <div>
         {/* aria-live: a new line from the lab is read out, the same question again included. */}
-        <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-full">
+        <div role="status" aria-live="polite">
           <p
             className={`m-0 text-[0.75em] font-semibold tracking-wide uppercase ${
               status === 'resolved'
@@ -180,16 +182,16 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
             {status === 'listening' && <span aria-hidden="true">● </span>}
             {HEADING[status]}
           </p>
-          <p className="m-0 mt-1 text-[1.1em] leading-snug font-semibold">
+          <p className="m-0 text-[1.1em] font-semibold">
             {lesson.reflectionLine ?? lesson.reflection}
           </p>
           {lesson.reflectionTranscript !== null && (
-            <p className="m-0 mt-[0.4em] text-[0.85em] text-stone-600">
+            <p className="m-0 text-[0.85em] text-stone-600">
               You said: “{lesson.reflectionTranscript || '(nothing heard)'}”
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-[0.5em]">
+        <div className="flex h-[var(--line)] items-center gap-[0.5em] whitespace-nowrap">
           <button
             type="button"
             aria-pressed={voice}
@@ -199,7 +201,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
                 ? 'Stop using the microphone'
                 : 'Answer out loud. What you say is sent to be transcribed and graded.'
             }
-            className={`cursor-pointer rounded-lg px-[0.7em] py-[0.35em] text-[0.85em] font-semibold focus-visible:outline-4 focus-visible:outline-sky-600 ${
+            className={`flex h-[calc(var(--line)*0.8)] py-0 cursor-pointer items-center rounded-lg px-[0.7em] text-[0.7em] font-semibold focus-visible:outline-4 focus-visible:outline-sky-600 ${
               voice
                 ? 'bg-rose-700 text-white hover:bg-rose-800'
                 : 'bg-stone-900/10 hover:bg-stone-900/20'
@@ -211,7 +213,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
             type="button"
             onClick={onSkip}
             title="Move on without finishing this question"
-            className="cursor-pointer rounded-lg bg-stone-900/10 px-[0.7em] py-[0.35em] text-[0.85em] font-semibold hover:bg-stone-900/20 focus-visible:outline-4 focus-visible:outline-sky-600"
+            className="flex h-[calc(var(--line)*0.8)] py-0 cursor-pointer items-center rounded-lg bg-stone-900/10 px-[0.7em] text-[0.7em] font-semibold hover:bg-stone-900/20 focus-visible:outline-4 focus-visible:outline-sky-600"
           >
             Skip
           </button>
@@ -219,7 +221,11 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
       </div>
       {(asking || serverStatus === 'thinking') && (
         // key: a new line from the lab starts with an empty box.
-        <form key={lineKey} onSubmit={submit} className="mt-[0.6em] flex flex-wrap gap-[0.5em]">
+        <form
+          key={lineKey}
+          onSubmit={submit}
+          className="flex h-[var(--line)] items-center gap-[0.5em] whitespace-nowrap"
+        >
           <input
             ref={box}
             type="text"
@@ -228,30 +234,32 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
             autoComplete="off"
             maxLength={600}
             disabled={!asking}
-            className="min-w-0 flex-1 rounded-lg border-2 border-stone-500/50 bg-white/70 px-[0.6em] py-[0.35em] text-[0.95em] text-stone-900 placeholder:text-stone-500 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:opacity-50"
+            className="h-[calc(var(--line)*0.8)] py-0 min-w-0 flex-1 rounded-lg border-2 border-stone-500/50 bg-white/70 px-[0.6em] text-[0.75em] text-stone-900 placeholder:text-stone-500 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!asking}
-            className="cursor-pointer rounded-lg bg-sky-700 px-[0.8em] py-[0.35em] text-[0.9em] font-semibold text-white hover:bg-sky-800 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:cursor-default disabled:opacity-50"
+            className="flex h-[calc(var(--line)*0.8)] py-0 cursor-pointer items-center rounded-lg bg-sky-700 px-[0.8em] text-[0.75em] font-semibold text-white hover:bg-sky-800 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:cursor-default disabled:opacity-50"
           >
             Answer
           </button>
         </form>
       )}
-      <p className="m-0 mt-[0.4em] text-[0.7em] text-stone-600">
-        {mic.error ? (
-          <span role="alert" className="font-bold text-amber-800">
-            {mic.error} Type your answer instead.
-          </span>
-        ) : voice && asking ? (
-          labHasFinishedSpeaking ? (
-            MIC_WORDS[micState]
-          ) : (
-            'The microphone opens when the question has been asked.'
-          )
-        ) : null}
-      </p>
+      {(mic.error || (voice && asking)) && (
+        <p className="m-0 text-[0.7em] text-stone-600">
+          {mic.error ? (
+            <span role="alert" className="font-bold text-amber-800">
+              {mic.error} Type your answer instead.
+            </span>
+          ) : voice && asking ? (
+            labHasFinishedSpeaking ? (
+              MIC_WORDS[micState]
+            ) : (
+              'The microphone opens when the question has been asked.'
+            )
+          ) : null}
+        </p>
+      )}
     </div>
   )
 }
