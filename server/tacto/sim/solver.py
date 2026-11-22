@@ -21,7 +21,9 @@ from tacto.sim.types import Circuit, Dot, Part, Topology, Wire
 
 # TODO(sim owner): measure the kit's real bulb and resistor and set these to match.
 BULB_OHMS = 10.0
-RESISTOR_OHMS = 10.0
+# A standard value, realistic for limiting a small 6 V lamp (Katie, 22 Nov 2026; was 10).
+# Behind it a bulb at 6 V is dim (0.19 A) beside a bright one (0.6 A); at 3 V still lit.
+RESISTOR_OHMS = 22.0
 # A bulb at this power is drawn fully lit: one 10 ohm bulb at 6 V.
 FULL_BRIGHT_WATTS = 3.6
 # Wires and closed switches get a tiny resistance so that each one has its own current

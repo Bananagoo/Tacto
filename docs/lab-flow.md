@@ -55,7 +55,7 @@ flowchart LR
 The presenter lays this out on the mat, so the judge only ever changes one thing at a time:
 
 - **A loop:** battery, one bulb and wires, with the **open (cyan) switch already in it**.
-- **A side branch** beside the bulb with a gap where the second bulb goes: a **resistor** from (2,1) to (2,2) and a wire from (3,1) to (3,2). The resistor makes the second bulb glow dimmer than the first, and gives the meter a resistor to read.
+- **A side branch** beside the bulb with a gap where the second bulb goes: a **22 Ω resistor** from (2,1) to (2,2) and a wire from (3,1) to (3,2). The resistor makes the second bulb glow dimmer than the first, and gives the meter a resistor to read.
 - **Within reach:** the closed (green) switch and the second bulb.
 - **Mouse on** (it connects by itself; check it once with Dev tools, Haptics, Test the connection), lab opened from the circuit board, then **Lab** pressed: the lesson starts at step 1 and **3 V**.
 
@@ -70,7 +70,7 @@ Each step is finished when its goal has held for half a second, then shows **✓
 | 1 | *Close the circuit: swap in the green switch.* | Circuit working, the bulb lit, the switch closed | The bulb lights on screen (dim, 0.3 A) and the battery lights up |
 | 2 | *Touch the bulb to feel the pulse, then scroll up to 6 V.* | Finger on the bulb, 6 V or more | The pulse speeds up and strengthens, the LED turns bright, the tag counts up to 6.0 V |
 | | *(spoken question, section 5)* | | |
-| 3 | *Drop the second bulb into the gap, then touch the battery.* | Two bulbs lit in parallel, finger on the battery | The second bulb glows dimmer (0.3 A, behind the resistor); the battery gives the strongest pulse of the demo (0.9 A, 4.5 a second) |
+| 3 | *Drop the second bulb into the gap, then touch the battery.* | Two bulbs lit in parallel, finger on the battery | The first bulb bright, the second dim (0.19 A, behind the 22 Ω resistor); the battery gives the strongest pulse of the demo (0.79 A, about 4 a second) |
 
 After step 3: **✓ Lesson complete** with *"Lab complete! Turning up the voltage pushed more current through the bulb. Adding a second bulb on its own branch meant the battery had to carry the current for both at once, which is why it pulsed the strongest."*
 
@@ -187,8 +187,8 @@ flowchart TD
 |---|---|---|---|
 | One bulb, or a wire in its loop | 0.6 A | 3 a second | 50% |
 | The first bulb, with the second branch in | 0.6 A | 3 a second | 50% |
-| The second bulb or the resistor (its branch) | 0.3 A | 1.5 a second | 25% |
-| The battery with both branches | 0.9 A | 4.5 a second | 75% |
+| The second bulb or the resistor (its branch, 22 Ω) | 0.19 A | about 1 a second | 16% |
+| The battery with both branches | 0.79 A | about 4 a second | 66% |
 | Anything in an open loop | 0 | silent | |
 | A shorted piece | | continuous buzz | 100% |
 

@@ -121,8 +121,9 @@ def test_a_spoken_exit_line_gets_its_full_twelve_seconds_after_it_ends():
 
 
 def test_the_resistor_in_the_branch_leaves_steps_one_and_two_alone_and_dims_the_second_bulb():
-    # Hand-worked, at 6 V. Before step 3 the branch is open: one bulb, 10 ohms, 0.6 A. After,
-    # the second branch is bulb + resistor, 20 ohms, 0.3 A; the battery carries 0.6 + 0.3.
+    # Hand-worked, at 6 V, with a 22 ohm resistor (Katie, 22 Nov 2026: a realistic value).
+    # Before step 3 the branch is open: one bulb, 10 ohms, 0.6 A. After, the second branch is
+    # bulb + resistor, 32 ohms: 6 / 32 = 0.1875 A; the battery carries 0.6 + 0.1875 = 0.7875.
     pieces, circuit = solve_pieces(CLOSED, 6.0)
     by_id = {piece.id: piece for piece in pieces}
     assert by_id[BULB_A].current == pytest.approx(0.6, abs=1e-3)
@@ -130,22 +131,37 @@ def test_the_resistor_in_the_branch_leaves_steps_one_and_two_alone_and_dims_the_
 
     pieces, circuit = solve_pieces(PARALLEL, 6.0)
     by_id = {piece.id: piece for piece in pieces}
-    # 0.899: the wires' own 0.001 ohm each, eight of them shared, take a little.
-    assert circuit.total_current == pytest.approx(0.9, abs=2e-3)
+    # The wires' own 0.001 ohm each take a little.
+    assert circuit.total_current == pytest.approx(0.7875, abs=2e-3)
     assert abs(by_id[BULB_A].current) == pytest.approx(0.6, abs=1e-3)
-    assert abs(by_id[BULB_B].current) == pytest.approx(0.3, abs=1e-3)
-    assert abs(by_id[RESISTOR].current) == pytest.approx(0.3, abs=1e-3)
-    assert abs(by_id[RESISTOR].voltage) == pytest.approx(3.0, abs=1e-2)
-    assert by_id[BULB_B].brightness < by_id[BULB_A].brightness
+    assert abs(by_id[BULB_B].current) == pytest.approx(0.1875, abs=1e-3)
+    assert abs(by_id[RESISTOR].current) == pytest.approx(0.1875, abs=1e-3)
+    assert abs(by_id[RESISTOR].voltage) == pytest.approx(4.125, abs=1e-2)  # 0.1875 x 22
+    assert abs(by_id[BULB_B].voltage) == pytest.approx(1.875, abs=1e-2)  # 0.1875 x 10
+
+
+def test_the_two_bulbs_show_the_brightness_gradient():
+    # The screen has three LED pictures: off below 0.02, dim, bright from 0.5 (Bulb.tsx).
+    # At 6 V the first bulb is bright and the one behind the resistor dim; at 3 V it is
+    # still (just) lit, so the lesson's "two lit bulbs" holds there too.
+    def brightness(volts):
+        pieces, _ = solve_pieces(PARALLEL, volts)
+        by_id = {piece.id: piece for piece in pieces}
+        return by_id[BULB_A].brightness, by_id[BULB_B].brightness
+
+    first, second = brightness(6.0)
+    assert first >= 0.5 and 0.02 < second < 0.5
+    first, second = brightness(3.0)
+    assert 0.02 < second < first
 
 
 def test_the_meter_gets_ohms_for_bulbs_and_resistors_and_they_fit_ohms_law():
     pieces, _ = solve_pieces(PARALLEL, 6.0)
     by_id = {piece.id: piece for piece in pieces}
-    for piece_id in (BULB_A, BULB_B, RESISTOR):
+    for piece_id, ohms in ((BULB_A, 10.0), (BULB_B, 10.0), (RESISTOR, 22.0)):
         piece = by_id[piece_id]
-        assert piece.resistance == 10.0
-        assert abs(piece.voltage) == pytest.approx(abs(piece.current) * 10.0, abs=1e-2)
+        assert piece.resistance == ohms
+        assert abs(piece.voltage) == pytest.approx(abs(piece.current) * ohms, abs=1e-2)
     assert by_id[BATTERY].resistance is None
     # Like a real meter (22 Nov 2026): a wire and a closed switch read 0 ohms; an open switch
     # has no number (the meter shows OL, open line).

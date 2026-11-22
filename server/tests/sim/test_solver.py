@@ -178,10 +178,12 @@ def test_island_not_connected_to_the_battery_never_reaches_ngspice():
 
 
 def test_series_resistor_and_closed_switch():
-    """Bulb (10) + resistor (10) in series through a closed switch: 6 / 20 = 0.3 A.
+    """Bulb (10) + resistor (22) in series through a closed switch: 6 / 32 = 0.1875 A.
 
-    The resistor drops 0.3 * 10 = 3 V and never glows. The switch drops nothing.
-    One lit bulb, so the topology is `single`.
+    The resistor drops 0.1875 * 22 = 4.125 V and never glows. The switch drops nothing.
+    The bulb gets 0.1875^2 * 10 = 0.352 W of the 3.6 W that is full: brightness 0.098.
+    One lit bulb, so the topology is `single`. (Reworked 22 Nov 2026 when the resistor went
+    from 10 to 22 ohms.)
     """
     parts = [
         battery(),
@@ -192,13 +194,13 @@ def test_series_resistor_and_closed_switch():
     circuit = solve_circuit(parts, [wire((4, 3), (0, 3))], SOURCE_VOLTS)
     solved = by_id(circuit)
     assert circuit.topology == "single"
-    assert circuit.total_current == pytest.approx(0.3, abs=AMPS)
-    assert solved["R"].current == pytest.approx(0.3, abs=AMPS)
-    assert solved["R"].voltage == pytest.approx(3.0, abs=VOLTS)
+    assert circuit.total_current == pytest.approx(0.1875, abs=AMPS)
+    assert solved["R"].current == pytest.approx(0.1875, abs=AMPS)
+    assert solved["R"].voltage == pytest.approx(4.125, abs=VOLTS)
     assert solved["R"].brightness == 0.0
-    assert solved["sw"].current == pytest.approx(0.3, abs=AMPS)
+    assert solved["sw"].current == pytest.approx(0.1875, abs=AMPS)
     assert solved["sw"].voltage == pytest.approx(0.0, abs=VOLTS)
-    assert solved["A"].brightness == pytest.approx(0.25, abs=BRIGHTNESS)
+    assert solved["A"].brightness == pytest.approx(0.0977, abs=BRIGHTNESS)
 
 
 def test_series_bulb_feeding_a_parallel_pair_is_mixed():
