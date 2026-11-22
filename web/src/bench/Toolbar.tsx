@@ -1,4 +1,5 @@
 import cameraUrl from '../assets/camera.png'
+import markerUrl from '../assets/marker.png'
 import multimeterUrl from '../assets/Multimeter.png'
 import { MARKER_COLORS } from './markers'
 
@@ -58,15 +59,7 @@ export function Toolbar({
         onClick={() => onPick('marker')}
         className={`${TOOL_BUTTON} ${tool === 'marker' ? IN_HAND : PUT_DOWN}`}
       >
-        <svg viewBox="0 0 64 64" className="h-20 w-20" aria-hidden="true">
-          <path
-            d="M10 54 14 40 42 12a6 6 0 0 1 8 0l2 2a6 6 0 0 1 0 8L24 50Z"
-            className="fill-none stroke-current"
-            strokeWidth={4}
-            strokeLinejoin="round"
-          />
-          <path d="M36 18 46 28" className="stroke-current" strokeWidth={4} />
-        </svg>
+        <img src={markerUrl} alt="" className="h-20 object-contain" />
         Marker
       </button>
       {tool === 'marker' && (
