@@ -1,9 +1,11 @@
 import type { Part } from '../contract'
 import { dotToPoint } from './grid'
 
-// How far the tag sits from the battery's middle, beside it rather than on it: the battery
-// drawing is about 70 across (a dot pitch is 100).
-const OFFSET = 62
+// The battery drawing (parts/Battery.tsx) is 1.6 times as long as its two dots are apart and
+// about 0.69 of that gap across. The tag sits this far clear of it, on its left.
+const DRAWING_LENGTH_PER_GAP = 1.6
+const DRAWING_WIDTH_PER_GAP = 0.69
+const GAP = 14
 const WIDTH = 96
 const HEIGHT = 44
 
@@ -15,9 +17,13 @@ const HEIGHT = 44
 export function VoltageTag({ battery, volts }: { battery: Part; volts: number }) {
   const a = dotToPoint(battery.a)
   const b = dotToPoint(battery.b)
-  const across = a.y === b.y // lying left to right: the tag goes below it, else to its right
-  const x = (a.x + b.x) / 2 + (across ? 0 : OFFSET + WIDTH / 2 - 20)
-  const y = (a.y + b.y) / 2 + (across ? OFFSET : 0)
+  const gap = Math.hypot(b.x - a.x, b.y - a.y)
+  const across = a.y === b.y // lying left to right, or standing up and down
+  // Half of what the drawing takes up from left to right, whichever way it lies. The tag sits
+  // that far, and a little more, to the left of the battery's middle.
+  const halfWide = ((across ? DRAWING_LENGTH_PER_GAP : DRAWING_WIDTH_PER_GAP) * gap) / 2
+  const x = (a.x + b.x) / 2 - halfWide - GAP - WIDTH / 2
+  const y = (a.y + b.y) / 2
   return (
     <g
       transform={`translate(${x} ${y})`}
