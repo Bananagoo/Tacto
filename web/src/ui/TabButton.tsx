@@ -19,6 +19,7 @@ export function TabButton({
   pressed,
   label,
   long,
+  besidePicture,
   children,
 }: {
   /** The coloured tab, shown when chosen. */
@@ -33,6 +34,8 @@ export function TabButton({
   label?: string
   /** Longer words ("Connect mouse"): written a size smaller to stay clear of the edges. */
   long?: boolean
+  /** The coloured tab has a picture at its left (Home's house): the words sit to its right. */
+  besidePicture?: boolean
   children: ReactNode
 }) {
   return (
@@ -63,7 +66,7 @@ export function TabButton({
         } group-active:scale-95`}
       />
       <span
-        className={`absolute inset-y-0 left-[6%] right-[20%] flex items-center justify-center gap-1.5 pt-0.5 font-['Patrick_Hand'] ${long ? 'text-[1.05rem]' : 'text-[1.35rem]'} leading-none whitespace-nowrap transition-colors ${
+        className={`absolute inset-y-0 ${besidePicture ? 'left-[30%] right-[18%]' : 'left-[6%] right-[20%]'} flex items-center justify-center gap-1.5 pt-0.5 font-['Patrick_Hand'] ${long ? 'text-[1.05rem]' : 'text-[1.35rem]'} leading-none whitespace-nowrap transition-colors ${
           chosen ? 'text-[#1f2a14]' : 'text-stone-100'
         } group-focus-visible:underline`}
       >

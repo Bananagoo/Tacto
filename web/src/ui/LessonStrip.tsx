@@ -2,7 +2,7 @@ import { TabButton } from './TabButton'
 import tabHome from '../assets/TabHome.png'
 import tabLab from '../assets/TabLab.png'
 import tabTinker from '../assets/TabTinker.png'
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import notebookUrl from '../assets/Notebook.png'
 import { useTacto } from '../useTacto'
 import { Reflection } from './Reflection'
@@ -82,8 +82,6 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
 
   const ready = connected && lesson && lesson.step_count > 0
   const done = ready && lesson.step_done
-  // The mode tabs start plain (Katie): one takes its colour once it has been clicked.
-  const [picked, setPicked] = useState(false)
 
   if (part === 'panel' && mode !== 'lab') return null
   if (part === 'bar')
@@ -91,10 +89,11 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 font-['Patrick_Hand']">
         <div className="flex items-center gap-3">
           {/* Back to the opening page (Root.tsx shows it whenever the address is not #lab).
-              Plain, like the others; pointing at it shows its pink tab with the house. */}
+              Always its pink tab with the house: a way out, not a mode to choose. */}
           <TabButton
             art={tabHome}
-            chosen={false}
+            chosen
+            besidePicture
             title="Back to the opening page"
             label="Home"
             onClick={() => {
@@ -108,11 +107,10 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               <TabButton
                 key={choice}
                 art={choice === 'tinker' ? tabTinker : tabLab}
-                chosen={picked && mode === choice}
+                chosen={mode === choice}
                 pressed={mode === choice}
                 disabled={!connected}
                 onClick={() => {
-                  setPicked(true)
                   if (mode !== choice) send({ type: 'set_mode', mode: choice })
                 }}
                 title={
