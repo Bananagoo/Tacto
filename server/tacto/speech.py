@@ -19,7 +19,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from websockets.asyncio.client import connect
 from websockets.exceptions import WebSocketException
 
-MODEL = "openai/whisper-large-v3"
+from tacto.voice_models import STT_MODEL
+
+MODEL = STT_MODEL
 BYTES_PER_SECOND = 16_000 * 2
 MAX_SECONDS = 180
 CONNECT_SECONDS = 15
