@@ -3,12 +3,19 @@ import { useTacto } from '../useTacto'
 import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
 import { matToPoint, placeKeys, VIEW_HEIGHT, VIEW_WIDTH, type Point } from './grid'
-import { MARKER_COLORS, MARKER_WIDTH, strokePath, type Stroke } from './markers'
+import {
+  ERASER_RADIUS,
+  MARKER_COLORS,
+  MARKER_WIDTH,
+  strokePath,
+  strokeTouches,
+  type Stroke,
+} from './markers'
 import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
 import { Readout } from './Readout'
 import { readingAt, readingOf } from './readingAt'
-import { saveScreenshot } from './screenshot'
+import { saveScreenshot, SKIP_IN_SCREENSHOT } from './screenshot'
 import { Toolbar, type Tool } from './Toolbar'
 import { WireLine } from './WireLine'
 
@@ -72,19 +79,33 @@ export function Bench({ children }: { children?: ReactNode }) {
     return { x: onMat.x, y: onMat.y }
   }
 
+  // The eraser takes away every line it touches, whole. Cheap: a few lines, a few points each.
+  const erase = (spot: Point) =>
+    setStrokes((all) =>
+      all.some((stroke) => strokeTouches(stroke, spot))
+        ? all.filter((stroke) => !strokeTouches(stroke, spot))
+        : all,
+    )
+
+  // Pressing with the marker starts a line, and with the eraser starts erasing.
   const startInk = (event: PointerEvent<SVGSVGElement>) => {
-    const spot = tool === 'marker' ? spotOnMat(event) : null
+    if (tool !== 'marker' && tool !== 'eraser') return
+    const spot = spotOnMat(event)
     if (!spot) return
     event.currentTarget.setPointerCapture(event.pointerId)
     inking.current = true
-    setStrokes((all) => [...all, { color: markerColor, points: [spot] }])
+    if (tool === 'eraser') erase(spot)
+    else setStrokes((all) => [...all, { color: markerColor, points: [spot] }])
   }
 
   const movePointer = (event: PointerEvent<SVGSVGElement>) => {
     const spot = spotOnMat(event)
     if (!spot) return
-    if (probing) setPointer(spot)
-    else if (tool === 'marker' && inking.current)
+    // The multimeter and the eraser's ring both follow the pointer.
+    if (probing || tool === 'eraser') setPointer(spot)
+    if (!inking.current) return
+    if (tool === 'eraser') erase(spot)
+    else if (tool === 'marker')
       setStrokes((all) => {
         const last = all[all.length - 1]
         return last ? [...all.slice(0, -1), { ...last, points: [...last.points, spot] }] : all
@@ -105,10 +126,10 @@ export function Bench({ children }: { children?: ReactNode }) {
         onPointerUp={() => (inking.current = false)}
         onPointerCancel={() => (inking.current = false)}
         onPointerLeave={() => setPointer(null)}
-        style={{ touchAction: tool === 'marker' ? 'none' : undefined }}
+        style={{ touchAction: tool === 'marker' || tool === 'eraser' ? 'none' : undefined }}
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         // A stale picture is dimmed while the server is away, so it is not taken for live.
-        className={`absolute inset-y-0 right-0 left-40 h-full w-[calc(100%-10rem)] transition-opacity ${probing ? 'cursor-none' : tool === 'marker' ? 'cursor-crosshair' : ''} ${connected ? '' : 'opacity-25'}`}
+        className={`absolute inset-y-0 right-0 left-40 h-full w-[calc(100%-10rem)] transition-opacity ${probing || tool === 'eraser' ? 'cursor-none' : tool === 'marker' ? 'cursor-crosshair' : ''} ${connected ? '' : 'opacity-25'}`}
         role="img"
         aria-label="The circuit on the mat"
       >
@@ -150,7 +171,19 @@ export function Bench({ children }: { children?: ReactNode }) {
             aria-label="The fingertip on the mat"
           />
         )}
-        <Multimeter point={pointer} />
+        <Multimeter point={probing ? pointer : null} />
+        {tool === 'eraser' && pointer && (
+          // A ring the size of the eraser's reach, so it is clear what it will take.
+          <circle
+            cx={pointer.x}
+            cy={pointer.y}
+            r={ERASER_RADIUS}
+            className="fill-white/20 stroke-white"
+            strokeWidth={4}
+            pointerEvents="none"
+            {...{ [SKIP_IN_SCREENSHOT]: true }}
+          />
+        )}
       </svg>
       {/* With the server's circuit hidden, a mat that is connected reads as empty. */}
       <BenchNotice

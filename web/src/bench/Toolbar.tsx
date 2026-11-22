@@ -1,15 +1,16 @@
 import cameraUrl from '../assets/camera.png'
+import eraserUrl from '../assets/eraser.png'
 import markerUrl from '../assets/marker.png'
 import multimeterUrl from '../assets/Multimeter.png'
 import { MARKER_COLORS } from './markers'
 
-/** What the pointer is doing over the mat: nothing, reading as the multimeter, or drawing. */
-export type Tool = 'none' | 'multimeter' | 'marker'
+/** What the pointer is doing over the mat: nothing, reading as the multimeter, drawing, or erasing. */
+export type Tool = 'none' | 'multimeter' | 'marker' | 'eraser'
 
 interface ToolbarProps {
   tool: Tool
   /** Pick a tool up, or put it down if it is already in hand. */
-  onPick: (tool: 'multimeter' | 'marker') => void
+  onPick: (tool: 'multimeter' | 'marker' | 'eraser') => void
   markerColor: string
   onMarkerColor: (color: string) => void
   onClearMarker: () => void
@@ -61,6 +62,15 @@ export function Toolbar({
       >
         <img src={markerUrl} alt="" className="h-20 object-contain" />
         Marker
+      </button>
+      <button
+        type="button"
+        aria-pressed={tool === 'eraser'}
+        onClick={() => onPick('eraser')}
+        className={`${TOOL_BUTTON} ${tool === 'eraser' ? IN_HAND : PUT_DOWN}`}
+      >
+        <img src={eraserUrl} alt="" className="h-16 object-contain" />
+        Eraser
       </button>
       {tool === 'marker' && (
         <div className="flex flex-col items-center gap-3 rounded-xl bg-white/10 p-3">
