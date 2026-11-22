@@ -18,7 +18,7 @@ function shown(reading: Reading | null, mode: MeterMode): string {
 }
 
 /**
- * The multimeter, set down large on the bench while it is picked up. What the probe reads (the
+ * The multimeter, standing large in the bench's corner while it is picked up. What the probe reads (the
  * mouse pointer over the mat, or else the fingertip on the paper) shows on its own screen, in
  * the unit its dial is set to. Every number is the server's.
  */
@@ -28,7 +28,8 @@ export function BenchMeter({ reading, mode }: { reading: Reading | null; mode: M
     <div
       role="status"
       aria-label={`Multimeter: ${value} ${mode}`}
-      className="pointer-events-none absolute top-4 right-4 z-10 aspect-[608/842] h-[62%]"
+      // Standing in the bottom-right corner, its leads running off the bottom of the bench.
+      className="pointer-events-none absolute right-6 bottom-0 z-10 aspect-[608/842] h-[50%] translate-y-[9%]"
     >
       <img src={multimeterUrl} alt="" className="h-full w-full -scale-x-100 drop-shadow-xl" />
       <div

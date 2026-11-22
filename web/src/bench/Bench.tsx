@@ -220,7 +220,9 @@ export function Bench({ children }: { children?: ReactNode }) {
         onEraserRadius={setEraserRadius}
         onScreenshot={takeScreenshot}
       />
-      {children}
+      {/* The camera picture lives in the bottom-right corner; while the meter stands there it
+          moves up to the top-right, where the corner reading would be. */}
+      <div className={probing ? '[&>*]:!top-4 [&>*]:!bottom-auto' : ''}>{children}</div>
     </figure>
   )
 }
