@@ -59,7 +59,7 @@ Run from the repo root.
 | `server/tacto/mat.py`, `kit/mats/` | The mat: grid size and dot spacing as data |
 | `server/tacto/vision/` | The camera reader. `source.py` runs it: `tracker.py` (find and hold the mat), `focus.py`, `classify.py` (read each segment against the mat's colour squares), `stable.py`, `hands.py`. Also `exposure.py` and the printable mat |
 | `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the camera bench |
-| `web/devtools/` | Tooling pages for the vision lane (camera bench, live state view, haptics test page) |
+| `web/devtools/` | Tooling pages for the vision lane (camera bench, setup check, haptics test page) |
 
 Tooling may import the product (`server/tacto/`); the product never imports tooling. `server/tests/test_boundaries.py` enforces this.
 
@@ -99,7 +99,7 @@ Tooling may import the product (`server/tacto/`); the product never imports tool
 
 ## Git
 
-- The reset lives on the branch `core-lab` until the UI team is ready for the new contract; then it merges to `main`.
+- Work lands on `main`; the core-lab reset has been merged.
 - Small commits, imperative subject line, one concern each. Run `make check` first.
 - Never force-push. Ask before deleting files you did not create.
 

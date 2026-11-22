@@ -57,7 +57,7 @@ A reflection asks at most three graded questions and cannot loop. The wording of
 - A funnel shares its target idea, confirmation and misconceptions across its levels; each level has its own question and example answers.
 - A reflection in the lesson file may still be a single question, which behaves as before.
 - The 90% fixture check in phase 3 is a script run on demand, not an automated test: the project never calls a real provider from its tests.
-- Speech in will be one clip per answer over HTTP. The streaming relay in `server/tacto/speech.py` stays until then.
+- Speech in will be one clip per answer over HTTP. The earlier streaming relay (`speech.py`) was removed on 22 Nov once this was built.
 
 ## Progress
 
@@ -82,6 +82,6 @@ A reflection asks at most three graded questions and cannot loop. The wording of
 
 ## Still to decide
 
-- `server/tacto/speech.py`, the earlier streaming relay, is no longer used by the page. It is still mounted. Remove it, or keep it for live captions.
+- The earlier streaming relay, `server/tacto/speech.py`, was removed on 22 Nov: nothing in the page used it.
 - Wording of every line and of the example answers in `lessons/circuits-101.yaml` is a draft.
 
