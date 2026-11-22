@@ -139,6 +139,8 @@ export interface Part {
   current: number
   voltage: number
   brightness: number
+  /** On the shorted path. */
+  shorted: boolean
 }
 
 export interface Wire {
