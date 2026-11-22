@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from tacto.contract import Circuit, CircuitStatus, Dot, Piece, PieceType, Touch, segment_id
 from tacto.sim.feel import pulse_hz, strength
-from tacto.sim.solver import solve_circuit
+from tacto.sim.solver import BULB_OHMS, RESISTOR_OHMS, solve_circuit
 from tacto.sim.types import Part, Wire
 
 _STATUS: dict[str, CircuitStatus] = {
@@ -39,6 +39,10 @@ class Placed:
     @property
     def conducts_freely(self) -> bool:
         return self.type == "wire" or (self.type == "switch" and self.closed)
+
+
+# What the meter shows as ohms: the solver's own values, so V = I x R always adds up.
+OHMS: dict[str, float] = {"bulb": BULB_OHMS, "resistor": RESISTOR_OHMS}
 
 
 def solve_pieces(placed: Sequence[Placed], volts: float) -> tuple[list[Piece], Circuit]:
@@ -68,6 +72,7 @@ def solve_pieces(placed: Sequence[Placed], volts: float) -> tuple[list[Piece], C
                 current=_tidy(part.current if part else wire.current if wire else 0.0),
                 voltage=_tidy(part.voltage) if part else 0.0,
                 brightness=_tidy(part.brightness) if part and p.type == "bulb" else None,
+                resistance=OHMS.get(p.type),
                 shorted=(wire is not None and wire.overloaded)
                 or (status == "shorted" and p.id == battery_id),
             )

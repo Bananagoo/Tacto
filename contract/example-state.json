@@ -1,6 +1,6 @@
 {
   "type": "state",
-  "version": 3,
+  "version": 4,
   "seq": 412,
   "t": 27.4,
   "source": "manual",
@@ -26,6 +26,7 @@
       "current": -0.6,
       "voltage": 0.0,
       "brightness": null,
+      "resistance": null,
       "shorted": false
     },
     {
@@ -43,6 +44,7 @@
       "current": 0.6,
       "voltage": 0.0,
       "brightness": null,
+      "resistance": null,
       "shorted": false
     },
     {
@@ -60,6 +62,7 @@
       "current": 0.6,
       "voltage": 0.0,
       "brightness": 1.0,
+      "resistance": null,
       "shorted": false
     },
     {
@@ -77,6 +80,7 @@
       "current": 0.6,
       "voltage": 0.0,
       "brightness": null,
+      "resistance": null,
       "shorted": false
     },
     {
@@ -94,6 +98,7 @@
       "current": 0.6,
       "voltage": 0.0,
       "brightness": null,
+      "resistance": null,
       "shorted": false
     },
     {
@@ -111,6 +116,7 @@
       "current": 0.6,
       "voltage": 0.0,
       "brightness": null,
+      "resistance": null,
       "shorted": false
     }
   ],

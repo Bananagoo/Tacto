@@ -137,3 +137,14 @@ def test_the_resistor_in_the_branch_leaves_steps_one_and_two_alone_and_dims_the_
     assert abs(by_id[RESISTOR].current) == pytest.approx(0.3, abs=1e-3)
     assert abs(by_id[RESISTOR].voltage) == pytest.approx(3.0, abs=1e-2)
     assert by_id[BULB_B].brightness < by_id[BULB_A].brightness
+
+
+def test_the_meter_gets_ohms_for_bulbs_and_resistors_and_they_fit_ohms_law():
+    pieces, _ = solve_pieces(PARALLEL, 6.0)
+    by_id = {piece.id: piece for piece in pieces}
+    for piece_id in (BULB_A, BULB_B, RESISTOR):
+        piece = by_id[piece_id]
+        assert piece.resistance == 10.0
+        assert abs(piece.voltage) == pytest.approx(abs(piece.current) * 10.0, abs=1e-2)
+    assert by_id[BATTERY].resistance is None
+    assert all(p.resistance is None for p in pieces if p.type in ("wire", "switch"))

@@ -260,6 +260,19 @@
           "default": null,
           "title": "Brightness"
         },
+        "resistance": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resistance"
+        },
         "shorted": {
           "default": false,
           "title": "Shorted",
@@ -335,7 +348,7 @@
       "type": "string"
     },
     "version": {
-      "default": 3,
+      "default": 4,
       "title": "Version",
       "type": "integer"
     },

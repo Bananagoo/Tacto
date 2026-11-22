@@ -32,6 +32,8 @@ export interface ServerPiece {
   voltage: number
   /** Bulbs only, 0 to 1. */
   brightness: number | null
+  /** Ohms; bulbs and resistors only. */
+  resistance: number | null
   /** On the shorted path. */
   shorted: boolean
 }
@@ -139,6 +141,8 @@ export interface Part {
   current: number
   voltage: number
   brightness: number
+  /** Ohms; null for a battery or a switch. */
+  resistance: number | null
   /** On the shorted path. */
   shorted: boolean
 }

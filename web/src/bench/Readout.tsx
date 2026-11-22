@@ -5,7 +5,8 @@ import type { Reading } from './readingAt'
  * the multimeter put down, what is under the learner's fingertip on the paper. Sizes only:
  * which way the current runs is shown by the moving dashes, not by a minus sign. The
  * vibration is the current, in amps; the volts are across the part touched (a wire has about
- * none), not the wheel's battery setting, which the status bar shows.
+ * none), not the wheel's battery setting, which the status bar shows. The ohms show for a
+ * bulb or a resistor, so the three numbers can be checked against V = I x R.
  */
 export function Readout({ reading }: { reading: Reading | null }) {
   const short = reading?.short === true
@@ -23,6 +24,10 @@ export function Readout({ reading }: { reading: Reading | null }) {
       <dt className={short ? 'invisible' : ''}>V</dt>
       <dd className={`m-0 min-w-[4ch] text-right ${short ? 'invisible' : ''}`}>
         {reading ? Math.abs(reading.volts).toFixed(1) : '--'}
+      </dd>
+      <dt className={short ? 'invisible' : ''}>Ω</dt>
+      <dd className={`m-0 min-w-[4ch] text-right ${short ? 'invisible' : ''}`}>
+        {reading?.ohms != null ? reading.ohms.toFixed(0) : '--'}
       </dd>
       {short && <dd className="absolute inset-0 m-0 flex items-center justify-center">SHORT</dd>}
     </dl>

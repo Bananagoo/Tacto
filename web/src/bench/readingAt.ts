@@ -11,6 +11,8 @@ export interface Reading {
   current: number
   /** Volts across it: a part's drop, and about nothing for a plain wire. */
   volts: number
+  /** Ohms, for a bulb or a resistor; null for anything else. */
+  ohms: number | null
   /** The wire's place key, as `placeKeys` names it, so the bench can light it. Null for a part. */
   wireKey: string | null
   /** The wire is on the shorted path. */
@@ -44,7 +46,13 @@ export function readingAt(
     if (distance <= PART_REACH && (!nearest || distance < nearest.distance)) {
       nearest = {
         distance,
-        reading: { current: part.current, volts: part.voltage, wireKey: null, short: false },
+        reading: {
+          current: part.current,
+          volts: part.voltage,
+          ohms: part.resistance,
+          wireKey: null,
+          short: false,
+        },
       }
     }
   }
@@ -58,6 +66,7 @@ export function readingAt(
         reading: {
           current: wire.current,
           volts: 0,
+          ohms: null,
           wireKey: wireKeys[index] ?? null,
           short: wire.overloaded,
         },
@@ -78,13 +87,22 @@ export function readingOf(
 ): Reading | null {
   if (!circuit || id === null) return null
   const part = circuit.parts.find((candidate) => candidate.id === id)
-  if (part) return { current: part.current, volts: part.voltage, wireKey: null, short: false }
+  if (part) {
+    return {
+      current: part.current,
+      volts: part.voltage,
+      ohms: part.resistance,
+      wireKey: null,
+      short: false,
+    }
+  }
   const index = circuit.wires.findIndex((candidate) => candidate.id === id)
   if (index < 0) return null
   const wire = circuit.wires[index]
   return {
     current: wire.current,
     volts: 0,
+    ohms: null,
     wireKey: wireKeys[index] ?? null,
     short: wire.overloaded,
   }
