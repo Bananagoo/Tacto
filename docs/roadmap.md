@@ -1,51 +1,34 @@
 # Roadmap
 
-Reset on 21 Nov 2026 to the core lab. The state before the reset is the git tag `pre-pivot`. Work is on the branch `core-lab`, merged to `main` when the UI team is ready for the new contract.
+Where the build stands on 22 Nov 2026. Reset to the core lab on 21 Nov; the state before that reset is the git tag `pre-pivot`.
 
 ## Done means
 
 Twenty different layouts read correctly under venue lighting with a hand moving over the mat, and a change on the mat reaches the state message in under half a second. Reported as accuracy and latency numbers.
 
-## Build order (vision and circuit state lane)
+## Built
 
 | # | Step | State |
 |---|---|---|
 | 1 | State contract, JSON schema, recorded sample, replay mock | Done. `contract/`, `make mock` |
-| 2 | Mat flattening: four corner markers to a homography | Done. Works on the printed mat (22 Nov): all four markers read at 1080p from the webcam position |
-| 2b | Hold the mat's position while a hand covers a corner marker (`vision/tracker.py`); manual exposure (`vision/exposure.py`) | Built, 21 Nov. Tracker tested on rendered images. On the real desk manual exposure fixed the burnt-out paper. Focus cannot be locked on this camera (see `docs/hardware-log.md`) |
-| 3 | Segment patches: one fixed-size crop per dot-to-dot segment | Done on rendered images. `vision/patches.py` |
-| 4 | Classification per segment | Done (`vision/classify.py`): each patch matched to the mat's seven colour squares; battery polarity from its red half; open and closed switches as different pieces. 20 careless layouts right in each of 9 rendered views; 8 of 8 pieces right on the printed mat (one layout) |
-| 5 | Capture tool: labelled patches from the real camera; held-out layouts; per-class accuracy | Not built. No trained classifier is needed so far; what is missing is the 20-layout accuracy number on the real mat |
-| 6 | Stability: 3 agreeing frames; unsure segments and segments under a hand hold | Done on rendered frames (`vision/stable.py`, `vision/source.py`). Not tried with real hands |
-| 7 | Graph and solver: open, short, DC current per piece, hand-worked tests | Done. One bulb, series, parallel, short across a bulb, bypassed bulb |
-| 8 | Finger: fingertip to mat to nearest segment | Wired to the camera (`vision/source.py`); tested with a fake hand on rendered frames. Not tried with a real hand. Switches no longer toggle by tap on the camera: the learner swaps the piece |
-| 9 | Lesson steps: fixed sequence, each completes from the circuit | Done. Wording is placeholder |
+| 2 | Mat flattening from four corner markers; holding the position through a covered corner | Done. All four markers read at 1080p from the webcam position (22 Nov) |
+| 3 | Camera control: manual exposure, brightness calibrated on the paper then held, the autofocus kick | Done (`vision/exposure.py`, `brightness.py`, `focus.py`). Live: settled at gain 6, paper 203, held 12 s |
+| 4 | Segment patches and colour reading against the mat's seven colour squares; battery polarity from its red half | Done (`vision/patches.py`, `classify.py`). 20 careless layouts right in each of 9 rendered views; on the printed mat 8 of 8 pieces in 33 of 33 samples, later 15 of 15 and 12 of 12 |
+| 5 | Stability and the hand: 3 agreeing frames (8 with a hand about); hand and forearm mask held 0.5 s | Done (`vision/stable.py`, `hands.py`). A still real hand: no change in 12 s. A moving real hand: not yet measured |
+| 6 | Graph and solver: open, short, DC current per piece, hand-worked tests | Done (`sim/`) |
+| 7 | Fingertip to the nearest piece; current to pulse rate and strength | Done (`lab.py`, `sim/feel.py`). Felt on the mouse by a person |
+| 8 | The lab on the camera: `make dev`, 15 state messages a second | Done. `make dev TACTO_SOURCE=replay` runs recorded frames |
+| 9 | Lesson: Tinker and Lab modes; the three-step demo lesson (`docs/lab-flow.md`) | Done. Not yet run start to finish on the real mat |
+| 10 | Voice reflections (`docs/voice-reflections-plan.md`) | Done, behind `VOICE_ENABLED=1`. Grader 108 of 111; 10 of 10 synthesised spoken answers. Ten answers into a real microphone: not yet done |
+| 11 | Setup check: one button that calibrates and checks camera, mat, focus, brightness, colours, speed and voice | Done (`setup_check.py`, `web/devtools/setup/`). 3.4 s on the real camera |
 
-| 10 | The lab on the camera: `make dev` | Runs (`tacto/main.py`): 15 state messages a second from the real camera, 22 Nov. `GET /debug/reader` shows what the reader sees and the milliseconds per step. `make dev TACTO_SOURCE=replay` runs recorded frames |
-| 11 | Feel the current: tick rate and vibration strength both proportional to the current through the touched piece | Server done (`sim/feel.py`, `touch.strength` in the state). The lab plays it on the mouse through the UI team's driver; felt and tuned by Katie on 22 Nov 2026 |
-| 12 | Lesson workflow: Tinker and Lab modes, a six-step lesson with finger, switch and voltage goals, spoken reflections with Continue, Restart | Built (`lesson.py`, `lab.py`, `web/src/ui/LessonStrip.tsx`), tested on rendered circuits. Not run on the real mat yet |
-| 13 | Voice reflections (`docs/voice-reflections-plan.md`): the lab asks aloud, hears the answer, grades it and narrows the question | All seven phases built, behind `VOICE_ENABLED=1`. Checked against the real service by script; the microphone and the sound in a browser are not yet tried by a person. The earlier streaming relay (`speech.py`) is superseded and still mounted |
+## Still to measure on the hardware
 
-Removed on 22 Nov: the hand-set mat (`make manual`). The UI team builds against `make mock`; the demo fallbacks are recorded frames and the recorded states.
-
-## Waiting on other lanes
-
-| What | Who | Blocks |
-|---|---|---|
-| Grid size and dot spacing | Kit owner | Printing the final mat; patch size (step 3) |
-| Colour of each piece type, and the card itself | Kit owner | Steps 4 and 5 |
-| A mark for the battery's positive end | Kit owner | Current direction on screen |
-| Camera mounted straight above the mat, paper filling the frame | Kit owner | Any real-camera number |
-| Lesson wording | Kit owner | Nothing; edit `lessons/circuits-101.yaml` |
-| Adopting the new contract in `web/src/` | Done on the branch `ui-merge` (22 Nov): `web/src/fromServer.ts` turns the state message into the shapes the bench already drew. Waiting for the UI team to look at it | Merging `ui-merge` into `core-lab` and `main` |
-
-## Needs a person on the hardware
-
-- Print `kit/out/mat.pdf` at 100% and check the 50 mm bar.
-- Check the corner markers are found under hall lighting (`make bench`, camera tab, Markers).
-- Feel the pulse rates (1.5, 3 and 6 Hz) and the short-circuit buzz on the real mouse.
-- Try the half-second switch tap with a real hand.
+- Twenty layouts on the real mat under venue lighting, with a moving hand.
+- The delay from a piece moving to the state changing (estimated 0.2 s).
+- Ten spoken answers into a real microphone.
+- The demo lesson start to finish on the real mat, at the venue.
 
 ## Parked
 
-Voice tutor, speech-to-text, text-to-speech, voice detection, the agent loop, LLM hints and any Together or OpenRouter calls, zone score, learner model, concept map, lab report, freehand sketch reading, 3D parts.
+A free-talking voice tutor, generated tutor speech, an agent loop, LLM-written hints, any LLM call outside the answer grader, learner model, concept map, lab report, freehand sketch reading, 3D parts.

@@ -54,7 +54,7 @@ Measured on the demo laptop on 21 Nov 2026 (`docs/hardware-log.md`) unless marke
 
 ## Not using
 
-- Any LLM, speech or text-to-speech service (parked).
+- Any language model outside the answer grader (parked; see `CLAUDE.md`).
 - A database (parked with the learner model).
 - The LogiInsight SSH/AI link and the camera's face AI.
 - Logi Hands Tracker and Logi Gaze Tracker.

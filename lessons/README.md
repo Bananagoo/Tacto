@@ -92,7 +92,7 @@ pulse contrast on the real hardware.
 make check-server
 ```
 
-A file with a mistake fails with a message that names the file and the field. To try the lesson: `make dev`, build on the mat, and watch `localhost:5173/devtools/#state`.
+A file with a mistake fails with a message that names the file and the field. To try the lesson: `make dev`, build on the mat, and watch the lab, or the setup check's reading at `localhost:5173/devtools/#setup`.
 
 ## A reflection as a funnel
 

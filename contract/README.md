@@ -50,10 +50,10 @@ but recorded circuit numbers do not react to the wheel.
   preserves circuit and voltage.
 - `lesson.prompt` is the text to show. `step_done` turns true once the circuit has met
   every circuit and touch goal for half a second on a visible mat, and stays true.
-  Six seconds later the next prompt arrives, unless `reflection` contains a spoken
+  After a short pause (`linger_seconds` in the lesson file) the next prompt arrives, unless `reflection` contains a spoken
   question. That question waits for `continue_lesson` with the current `step_id`.
   Stale or early Continue messages do nothing. `lesson_done` turns true after the
-  final reflection is acknowledged. Speech is not recorded or analysed yet.
+  final reflection is acknowledged. With `VOICE_ENABLED=1` a spoken answer is transcribed and graded on the server; the sound is never kept.
 - A switch's `closed` comes from the piece: the learner swaps the closed switch piece
   (green) for the open one (cyan). A fingertip on a switch changes nothing.
 

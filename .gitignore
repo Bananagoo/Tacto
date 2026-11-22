@@ -27,9 +27,6 @@ scripts/out/
 .claude/settings.local.json
 CLAUDE.local.md
 
-# The local database: learners and their progress
-server/data/
-
 # Scratch for plan execution (ledger, briefs); never committed
 .superpowers/
 # One file per session of graded spoken answers; never committed
