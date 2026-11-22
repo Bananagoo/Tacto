@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import notebookUrl from '../assets/Notebook.png'
 import { useTacto } from '../useTacto'
 import { Reflection } from './Reflection'
+import { StatusBar } from './StatusBar'
 
 function restartLesson() {
   const { connected, state, send } = useTacto.getState()
@@ -132,11 +133,14 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
             ))}
           </div>
         </div>
-        <p className="m-0 text-lg text-stone-300">
-          {mode === 'tinker'
-            ? 'Build freely. Touch a piece to feel its current.'
-            : 'Build, feel, then explain out loud.'}
-        </p>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <p className="m-0 text-lg text-stone-300">
+            {mode === 'tinker'
+              ? 'Build freely. Touch a piece to feel its current.'
+              : 'Build, feel, then explain out loud.'}
+          </p>
+          <StatusBar />
+        </div>
       </header>
     )
   return (

@@ -6,7 +6,6 @@ import { HapticsProvider } from './haptics/HapticsContext'
 import { Instrument } from './Instrument'
 import { CameraCorner } from './ui/CameraCorner'
 import { LessonPanel, ModeBar } from './ui/LessonStrip'
-import { StatusBar } from './ui/StatusBar'
 
 export default function App() {
   return (
@@ -26,7 +25,6 @@ export default function App() {
             </Bench>
           </main>
         </div>
-        <StatusBar />
       </div>
     </HapticsProvider>
   )
