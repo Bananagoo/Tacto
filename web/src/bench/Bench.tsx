@@ -11,7 +11,8 @@ import {
   eraseFromStroke,
   type Stroke,
 } from './markers'
-import { Multimeter } from './Multimeter'
+import { BenchMeter, type MeterMode } from './BenchMeter'
+import { Probe } from './Probe'
 import { PartView } from './PartView'
 import { VoltageTag } from './VoltageTag'
 import { Readout } from './Readout'
@@ -28,7 +29,8 @@ const DRAW_SERVER_CIRCUIT = true
 /**
  * The mat as the camera reads it, drawn straight from the latest state. Nothing here knows
  * a layout: it draws whatever parts and wires the server lists. `children` are laid over the
- * mat's corner (the camera picture). The multimeter is the pointer over the mat.
+ * mat's corner (the camera picture). Picked up, the multimeter sits large on the bench and
+ * the pointer is its probe.
  */
 export function Bench({ children }: { children?: ReactNode }) {
   const connected = useTacto((store) => store.connected)
@@ -42,6 +44,7 @@ export function Bench({ children }: { children?: ReactNode }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [tool, setTool] = useState<Tool>('none')
   const probing = tool === 'multimeter'
+  const [meterMode] = useState<MeterMode>('A')
   const [pointer, setPointer] = useState<Point | null>(null)
   // The learner's fingertip on the paper mat, as the camera places it.
   const probe = useTacto((store) => store.state?.probe)
@@ -188,7 +191,7 @@ export function Bench({ children }: { children?: ReactNode }) {
             aria-label="The fingertip on the mat"
           />
         )}
-        <Multimeter point={probing ? pointer : null} />
+        <Probe point={probing ? pointer : null} />
         {tool === 'eraser' && pointer && (
           // A ring the size of the eraser's reach, so it is clear what it will take.
           <circle
@@ -207,7 +210,8 @@ export function Bench({ children }: { children?: ReactNode }) {
         connected={connected}
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
-      <Readout reading={reading} />
+      {/* The meter shows the reading on its own screen; put down, the corner box does. */}
+      {probing ? <BenchMeter reading={reading} mode={meterMode} /> : <Readout reading={reading} />}
       <Toolbar
         tool={tool}
         onPick={pickTool}

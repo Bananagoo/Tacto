@@ -68,7 +68,7 @@ export function Toolbar({
         onClick={() => onPick('multimeter')}
         className={`${TOOL_BUTTON} ${tool === 'multimeter' ? IN_HAND : PUT_DOWN}`}
       >
-        <img src={multimeterUrl} alt="" className="h-20 object-contain" />
+        <img src={multimeterUrl} alt="" className="h-20 -scale-x-100 object-contain" />
         Multimeter
       </button>
       <button
