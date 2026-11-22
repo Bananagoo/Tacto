@@ -107,6 +107,15 @@ if VOICE_ENABLED:
     if together is not None:
         together.close()
 
+# One connection to Together for the life of the server: opening a new one for every
+# answer costs a handshake each time.
+_together = grader.together_client() if VOICE_ENABLED else None
+
+
+def _grade(transcript: str, **asked: object) -> grader.Grade:
+    return grader.grade(transcript, client=_together, **asked)  # type: ignore[arg-type]
+
+
 lab = Lab(
     mat.grid,
     source,
@@ -114,7 +123,7 @@ lab = Lab(
     lesson=LessonRunner(
         lesson_file, adaptive=VOICE_ENABLED, audio_for=lambda line: spoken.get(line)
     ),
-    grader=grader.grade if VOICE_ENABLED else None,
+    grader=_grade if VOICE_ENABLED else None,
     ledger=AnswerLedger() if VOICE_ENABLED else None,
 )
 print(f"main: adaptive reflections are {'on' if VOICE_ENABLED else 'off (set VOICE_ENABLED=1)'}")
@@ -136,6 +145,12 @@ if VOICE_ENABLED:
             (lambda wav: listen.transcribe(wav, listening)) if listening is not None else None,
         )
     )
+
+
+@app.get("/debug/reflect")
+def jump_to_reflection(step: str = "raise_voltage") -> dict:
+    """For trying the questions without building the circuit: open /debug/reflect?step=series."""
+    return {"step": step, "jumped": lab.jump_to_reflection(step), "voice": VOICE_ENABLED}
 
 
 @app.get("/debug/reader")

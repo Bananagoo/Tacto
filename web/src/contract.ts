@@ -112,6 +112,8 @@ export interface AnswerReflection {
   type: 'answer_reflection'
   step_id: string
   text: string
+  /** The reflection_line_id being answered, so a late answer is dropped, not misplaced. */
+  line_id?: number
 }
 
 /** A line's audio finished playing, or could not be played. */

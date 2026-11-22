@@ -16,6 +16,19 @@
       "maxLength": 2000,
       "title": "Text",
       "type": "string"
+    },
+    "line_id": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Line Id"
     }
   },
   "required": [

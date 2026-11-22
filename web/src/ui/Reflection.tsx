@@ -30,12 +30,12 @@ function choseVoice(): boolean {
   }
 }
 
-/** True for the keys' targets that already use Space or Enter themselves. */
-function isControl(target: EventTarget | null): boolean {
+/** True where Space is typing a space: push-to-talk leaves those alone. */
+function isTextEntry(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
     (target.isContentEditable ||
-      target.closest('input, textarea, select, button, a, [role="textbox"]') !== null)
+      target.closest('input, textarea, select, [role="textbox"]') !== null)
   )
 }
 
@@ -83,7 +83,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
 
   // ---------- the learner's voice ----------
   const [voice, setVoice] = useState(choseVoice)
-  const mic = useAnswerMic(stepId)
+  const mic = useAnswerMic(stepId, lineId)
   const { state: micState, open: openMic, close: closeMic, talk, release } = mic
   const openedFor = useRef('')
   const mayListen = voice && asking && labHasFinishedSpeaking
@@ -103,21 +103,32 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
     if (!mayListen) return
     let held = false
     const down = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || event.repeat || isControl(event.target)) return
+      if (event.code !== 'Space' || isTextEntry(event.target)) return
+      // Also on a focused button: Space is the talk key here, not "press this button".
       event.preventDefault()
+      if (event.repeat || held) return
       held = true
       talk()
     }
-    const up = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || !held) return
+    const letGo = () => {
+      if (!held) return
       held = false
       release()
     }
+    const up = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || isTextEntry(event.target)) return
+      event.preventDefault() // or the browser would click the focused button now
+      letGo()
+    }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
+    // Switching window with the key down: the key-up never arrives here.
+    window.addEventListener('blur', letGo)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', letGo)
+      letGo()
     }
   }, [mayListen, talk, release])
 
@@ -131,6 +142,8 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
     }
     if (!on) closeMic()
     else openedFor.current = ''
+    // The button keeps the focus after a click, and Space would then press it again.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   }
 
   const submit = (event: FormEvent) => {
@@ -138,7 +151,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
     const text = box.current?.value.trim() ?? ''
     if (!asking || !text) return
     closeMic()
-    send({ type: 'answer_reflection', step_id: stepId, text })
+    send({ type: 'answer_reflection', step_id: stepId, text, line_id: lineId })
   }
 
   // What the learner sees the lab doing: the server's word, sharpened by what the
@@ -154,7 +167,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
     <div className="mt-4 border-t border-white/15 pt-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         {/* aria-live: a new line from the lab is read out, the same question again included. */}
-        <div role="status" aria-live="polite" className="min-w-0 flex-1">
+        <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-full">
           <p
             className={`m-0 text-sm font-semibold tracking-wide uppercase ${
               status === 'resolved'

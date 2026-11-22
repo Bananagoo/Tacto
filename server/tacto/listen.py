@@ -61,7 +61,11 @@ def answer_router(lab: TakesAnswers, transcriber: Transcriber | None) -> APIRout
     router = APIRouter()
 
     @router.post("/voice/answer")
-    async def answer(request: Request, step_id: str = Query(min_length=1, max_length=100)) -> dict:
+    async def answer(
+        request: Request,
+        step_id: str = Query(min_length=1, max_length=100),
+        line_id: int | None = Query(None, ge=0, description="the line being answered"),
+    ) -> dict:
         declared = int(request.headers.get("content-length") or 0)
         if declared > MAX_CLIP_BYTES:
             raise HTTPException(status_code=413, detail="the clip is too long")
@@ -79,7 +83,7 @@ def answer_router(lab: TakesAnswers, transcriber: Transcriber | None) -> APIRout
             except Exception as error:  # noqa: BLE001 - whatever went wrong, ask again
                 print(f"listen: a clip could not be transcribed: {type(error).__name__}")
         taken_ms = round((time.perf_counter() - started) * 1000)
-        lab.handle(AnswerReflection(step_id=step_id, text=text))
+        lab.handle(AnswerReflection(step_id=step_id, text=text, line_id=line_id))
         return {"text": text, "transcribed": transcribed, "transcribe_ms": taken_ms}
 
     return router

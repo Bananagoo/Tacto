@@ -15,7 +15,21 @@ function continueLesson() {
 }
 
 /** One instruction beside the bench; completion stays visible while the learner feels it. */
-export function LessonStrip() {
+/** The Tinker / Lab switch: a thin bar along the top. It also owns the lesson's keys. */
+export function ModeBar() {
+  return <LessonStrip part="bar" />
+}
+
+/**
+ * The lesson itself, in Lab mode: the prompt, and the reflection when one is up. It stands
+ * in a column beside the mat on a wide screen, so the mat keeps its full height however
+ * much the lesson has to say. Nothing in Tinker mode.
+ */
+export function LessonPanel() {
+  return <LessonStrip part="panel" />
+}
+
+function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
   const connected = useTacto((store) => store.connected)
   const mode = useTacto((store) => store.state?.mode ?? 'tinker')
   const send = useTacto((store) => store.send)
@@ -23,6 +37,8 @@ export function LessonStrip() {
   const volts = useTacto((store) => store.state?.circuit.source_voltage)
 
   useEffect(() => {
+    // Once, by the bar: the panel comes and goes with the mode.
+    if (part !== 'bar') return
     const onKey = (event: KeyboardEvent) => {
       if (useTacto.getState().state?.mode !== 'lab') return
       // R restarts; Enter moves on from a reflection, so nobody has to find the button
@@ -57,13 +73,14 @@ export function LessonStrip() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [part])
 
   const ready = connected && lesson && lesson.step_count > 0
   const done = ready && lesson.step_done
 
-  return (
-    <>
+  if (part === 'panel' && mode !== 'lab') return null
+  if (part === 'bar')
+    return (
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div
           role="group"
@@ -96,15 +113,18 @@ export function LessonStrip() {
             : 'Build, feel, then explain out loud.'}
         </p>
       </header>
+    )
+  return (
+    <>
       {mode === 'lab' && (
         <section
           aria-label="Lesson"
-          className={`shrink-0 rounded-3xl border-2 px-6 py-4 transition-colors lg:px-8 ${
+          className={`shrink-0 rounded-3xl border-2 px-6 py-4 transition-colors lg:w-[26rem] lg:overflow-y-auto ${
             done ? 'border-emerald-400/60 bg-emerald-400/10' : 'border-white/10 bg-white/5'
           }`}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div role="status" aria-atomic="true" className="min-w-0 flex-1">
+            <div role="status" aria-atomic="true" className="min-w-0 flex-1 basis-full">
               <p className="m-0 mb-2 text-lg font-semibold text-stone-300">
                 {ready
                   ? `Step ${lesson.step_index + 1} of ${lesson.step_count}`
@@ -141,7 +161,7 @@ export function LessonStrip() {
           )}
           {ready && lesson.reflection && !lesson.reflectionStatus && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-white/15 pt-4">
-              <div role="status" className="min-w-0 flex-1">
+              <div role="status" className="min-w-0 flex-1 basis-full">
                 <p className="m-0 text-sm font-semibold tracking-wide text-emerald-300 uppercase">
                   Explain out loud
                 </p>

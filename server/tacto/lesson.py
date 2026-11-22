@@ -108,6 +108,16 @@ class ExitGoal(DoneWhen):
     # finished: "touch the other bulb".
     different_piece: bool = False
 
+    @model_validator(mode="after")
+    def _asks_for_something(self) -> ExitGoal:
+        # An empty goal is always met, and would end the exit as soon as it began.
+        conditions = self.model_dump(exclude={"different_piece"})
+        if all(value is None for value in conditions.values()):
+            raise ValueError("an exit goal needs at least one condition")
+        if self.different_piece and self.touching is None:
+            raise ValueError("different_piece needs `touching`: a different piece of what?")
+        return self
+
 
 class FunnelExit(_Strict):
     """What happens when no answer landed: the lab says the idea and asks for an action."""
@@ -366,13 +376,33 @@ class LessonRunner:
 
     # ---------- answers ----------
 
-    def begin_answer(self, step_id: str, text: str) -> AnswerTicket | None:
+    def jump_to_reflection(self, step_id: str) -> bool:
+        """Go straight to a step's reflection as if the step had just been finished, for
+        trying the questions without building the circuit. False for a step without one."""
+        for index, step in enumerate(self._lesson.steps):
+            if step.id == step_id and step.reflection is not None:
+                self._index = index
+                self._met_since = None
+                self._done_at = self._now()
+                self._continued = False
+                self._clear_reflection()
+                if self._adaptive and step.funnel is not None:
+                    self._asking, line = funnel_rules.start(step.funnel)
+                    self._say(line)
+                return True
+        return False
+
+    def begin_answer(
+        self, step_id: str, text: str, line_id: int | None = None
+    ) -> AnswerTicket | None:
         """Take an answer to the question being asked. None when no answer is wanted now:
-        another step, no question up, one already being graded, or the exit."""
+        another step, no question up, one already being graded, the exit, or an answer to
+        a line the lab is no longer on."""
         step = self._lesson.steps[self._index]
         asking = self._asking
         if (
             step.id != step_id
+            or (line_id is not None and line_id != self._line_id)
             or step.funnel is None
             or asking is None
             or asking.status != "asking"
@@ -473,8 +503,14 @@ class LessonRunner:
                 self._goal_since = None
             elif self._goal_since is None:
                 self._goal_since = now
-            # Held, like a step's own goal, so a hand passing over does not count.
-            held = self._goal_since is not None and now - self._goal_since >= SETTLE_SECONDS
+            # Held, like a step's own goal, so a hand passing over does not count. And not
+            # before the idea has been stated: a finger already resting on the right piece
+            # must not end the exit while the lab is still saying why.
+            held = (
+                self._goal_since is not None
+                and now - self._goal_since >= SETTLE_SECONDS
+                and now >= self._said_by(state.exit_started_s or now)
+            )
             after, _ = funnel_rules.on_mat(asked, state, goal_met=held, now=now)
             if after.exit_goal != state.exit_goal:
                 self._goal_since = None
@@ -486,16 +522,26 @@ class LessonRunner:
         # A right answer's confirmation stays up a moment. The exit has already said its
         # piece and been acted on, or timed out: nothing to wait for.
         if state.outcome == "correct":
+            until = self._said_by(self._resolved_at)
             if self._heard_at is not None:
-                until = self._heard_at + AFTER_HEARD_SECONDS
-            elif self._line is not None and self._audio_for(self._line) is not None:
-                until = self._resolved_at + CONFIRM_MAX_SECONDS
-            else:
-                until = self._resolved_at + CONFIRM_SECONDS
+                until = max(until, self._heard_at + AFTER_HEARD_SECONDS)
             if now < until:
                 return False
         self._advance()
         return True
+
+    def _said_by(self, began: float) -> float:
+        """When the line that began at `began` can be taken as said and taken in.
+
+        Heard: once the browser reports it, but never sooner than the time to read it
+        (the report also comes when the sound could not be played). Spoken but not yet
+        reported: the longest a line takes. Only shown: the time to read it.
+        """
+        if self._heard_at is not None:
+            return max(self._heard_at, began + CONFIRM_SECONDS)
+        if self._line is not None and self._audio_for(self._line) is not None:
+            return began + CONFIRM_MAX_SECONDS
+        return began + CONFIRM_SECONDS
 
     def _linger(self, step: Step) -> float:
         if step.linger_seconds is not None:

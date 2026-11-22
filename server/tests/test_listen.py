@@ -1,7 +1,5 @@
 """A spoken answer arriving as a clip: transcribed, then handed on like a typed one."""
 
-import json
-
 import httpx
 import pytest
 from fastapi import FastAPI
@@ -118,4 +116,11 @@ def test_a_transcription_reply_without_text_raises_for_the_caller_to_handle():
     )
     with pytest.raises(KeyError):
         listen.transcribe(WAV, client)
-    assert json.dumps({"ok": True})  # nothing else to check: the router turns this into ""
+
+
+def test_a_clip_carries_the_line_it_answers():
+    lab = Lab()
+    client_for(lab, lambda wav: "harder").post(
+        "/voice/answer", params={"step_id": "series", "line_id": 3}, content=WAV, headers=AUDIO
+    )
+    assert lab.handled == [AnswerReflection(step_id="series", text="harder", line_id=3)]

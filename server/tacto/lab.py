@@ -38,6 +38,10 @@ from tacto.pieces import Placed, solve_pieces, touch_for
 
 # The wheel step raises this to 6 V, leaving room for the final parallel comparison.
 DEFAULT_VOLTS = 3.0
+# An answer is given this long to be graded, counted on the clock, whatever the network
+# is doing: connecting, resolving a name and reading each have their own timeouts in the
+# HTTP client and can add up to far more. Past it the answer counts as partial.
+GRADE_DEADLINE_S = 4.5
 # How far from a piece, in dot spacings, a fingertip still counts as on it.
 # TODO(vision owner): tune on the real mat; hand tracking jitters by a few millimetres.
 REACH_DOTS = 0.35
@@ -109,7 +113,9 @@ class Lab:
                     self._lesson.line_heard(message.step_id, message.line_id)
             elif isinstance(message, AnswerReflection):
                 if self._mode == "lab" and self._lesson is not None:
-                    ticket = self._lesson.begin_answer(message.step_id, message.text)
+                    ticket = self._lesson.begin_answer(
+                        message.step_id, message.text, message.line_id
+                    )
                     if ticket is not None:
                         summary = circuit_summary(*self._solved)
                         self._background(lambda: self._grade(ticket, summary))
@@ -122,15 +128,32 @@ class Lab:
         label, misconception, was_graded = "partial", None, False
         started = time.perf_counter()
         if self._grader is not None:
-            try:
-                graded = self._grader(
-                    ticket.transcript, funnel=ticket.funnel, level=ticket.level, circuit=circuit
-                )
-                label = str(graded.label)  # type: ignore[attr-defined]
+            outcome: list = []
+
+            def ask() -> None:
+                try:
+                    outcome.append(
+                        self._grader(  # type: ignore[misc]
+                            ticket.transcript,
+                            funnel=ticket.funnel,
+                            level=ticket.level,
+                            circuit=circuit,
+                        )
+                    )
+                except Exception as error:  # noqa: BLE001 - a grader must not take the lab down
+                    outcome.append(error)
+
+            # On its own thread so that a call that hangs can be walked away from.
+            asking = Thread(target=ask, name="grader-call", daemon=True)
+            asking.start()
+            asking.join(GRADE_DEADLINE_S)
+            graded = outcome[0] if outcome else TimeoutError(f"no grade in {GRADE_DEADLINE_S} s")
+            if isinstance(graded, Exception):
+                print(f"lab: an answer could not be graded and counted as partial: {graded!r}")
+            else:
+                label = str(graded.label)
                 misconception = getattr(graded, "misconception", None)
                 was_graded = True
-            except Exception as error:  # noqa: BLE001 - a grader must not take the lab down
-                print(f"lab: an answer could not be graded and counted as partial: {error!r}")
         grade_ms = round((time.perf_counter() - started) * 1000)
         with self._lock:
             if self._lesson is not None:
@@ -151,6 +174,14 @@ class Lab:
                 )
             except Exception as error:  # noqa: BLE001 - nor must the record of it
                 print(f"lab: an answer was not written to the ledger: {error!r}")
+
+    def jump_to_reflection(self, step_id: str) -> bool:
+        """For trying the questions without the mat: Lab mode, at this step's reflection."""
+        with self._lock:
+            if self._lesson is None:
+                return False
+            self._mode = "lab"
+            return self._lesson.jump_to_reflection(step_id)
 
     def restart_lesson(self) -> None:
         with self._lock:
