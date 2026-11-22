@@ -8,7 +8,7 @@ import {
   MARKER_COLORS,
   MARKER_WIDTH,
   strokePath,
-  strokeTouches,
+  eraseFromStroke,
   type Stroke,
 } from './markers'
 import { Multimeter } from './Multimeter'
@@ -80,13 +80,17 @@ export function Bench({ children }: { children?: ReactNode }) {
     return { x: onMat.x, y: onMat.y }
   }
 
-  // The eraser takes away every line it touches, whole. Cheap: a few lines, a few points each.
+  // The eraser takes out only the part of a line under it, and leaves the rest.
   const erase = (spot: Point) =>
-    setStrokes((all) =>
-      all.some((stroke) => strokeTouches(stroke, spot, eraserRadius))
-        ? all.filter((stroke) => !strokeTouches(stroke, spot, eraserRadius))
-        : all,
-    )
+    setStrokes((all) => {
+      let changed = false
+      const next = all.flatMap((stroke) => {
+        const left = eraseFromStroke(stroke, spot, eraserRadius)
+        if (left.length !== 1 || left[0] !== stroke) changed = true
+        return left
+      })
+      return changed ? next : all
+    })
 
   // Pressing with the marker starts a line, and with the eraser starts erasing.
   const startInk = (event: PointerEvent<SVGSVGElement>) => {

@@ -50,3 +50,42 @@ export function strokeTouches(stroke: Stroke, spot: Point, radius: number): bool
   if (points.length === 1) return distanceToSegment(spot, points[0], points[0]) <= radius
   return points.slice(1).some((point, i) => distanceToSegment(spot, points[i], point) <= radius)
 }
+
+// A line is a few points with straight pieces between them, so before cutting it is filled in
+// with a point every few units; otherwise a quick stroke could pass through the eraser untouched.
+const CUT_STEP = 4
+
+function filledIn(points: readonly Point[]): Point[] {
+  const out: Point[] = points.length > 0 ? [points[0]] : []
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]
+    const b = points[i]
+    const pieces = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / CUT_STEP))
+    for (let step = 1; step <= pieces; step++) {
+      const t = step / pieces
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
+    }
+  }
+  return out
+}
+
+/**
+ * What is left of a line after the eraser at `spot` has taken the part under it: nothing, the
+ * same line if it was not touched, or one or two shorter lines either side of the cut. A bit
+ * too short to see (a single point left over) is dropped.
+ */
+export function eraseFromStroke(stroke: Stroke, spot: Point, radius: number): Stroke[] {
+  if (!strokeTouches(stroke, spot, radius)) return [stroke]
+  const pieces: Point[][] = []
+  let run: Point[] = []
+  for (const point of filledIn(stroke.points)) {
+    if (Math.hypot(point.x - spot.x, point.y - spot.y) <= radius) {
+      if (run.length > 0) pieces.push(run)
+      run = []
+    } else run.push(point)
+  }
+  if (run.length > 0) pieces.push(run)
+  return pieces
+    .filter((points) => points.length >= 2)
+    .map((points) => ({ color: stroke.color, points }))
+}
