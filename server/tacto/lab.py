@@ -14,10 +14,11 @@ import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from threading import RLock
+from threading import RLock, Thread
 from typing import Protocol, TypeVar
 
 from tacto.contract import (
+    AnswerReflection,
     Circuit,
     ClientMessage,
     ContinueLesson,
@@ -31,7 +32,7 @@ from tacto.contract import (
     State,
     Touch,
 )
-from tacto.lesson import LessonRunner
+from tacto.lesson import AnswerTicket, LessonRunner, circuit_summary
 from tacto.pieces import Placed, solve_pieces, touch_for
 
 # The wheel step raises this to 6 V, leaving room for the final parallel comparison.
@@ -66,10 +67,16 @@ class Lab:
         *,
         source_name: Source,
         lesson: LessonRunner | None = None,
+        grader: Callable[..., object] | None = None,
+        background: Callable[[Callable[[], None]], None] | None = None,
         now: Callable[[], float] = time.monotonic,
     ) -> None:
         self._grid = grid
         self._lock = RLock()
+        # Grades a learner's answer: `tacto.grader.grade`, or a stand-in. It may take
+        # seconds and use the network, so it never runs on the thread that sends states.
+        self._grader = grader
+        self._background = background or _in_a_thread
         self._mode = "tinker"
         self._source = source
         self._source_name: Source = source_name
@@ -93,8 +100,30 @@ class Lab:
             elif isinstance(message, ContinueLesson):
                 if self._mode == "lab" and self._lesson is not None:
                     self._lesson.continue_step(message.step_id)
+            elif isinstance(message, AnswerReflection):
+                if self._mode == "lab" and self._lesson is not None:
+                    ticket = self._lesson.begin_answer(message.step_id, message.text)
+                    if ticket is not None:
+                        summary = circuit_summary(*self._solved)
+                        self._background(lambda: self._grade(ticket, summary))
             else:
                 self._volts = message.volts
+
+    def _grade(self, ticket: AnswerTicket, circuit: str) -> None:
+        """Grade one answer and hand the label to the lesson. Runs off the state thread.
+        An answer that cannot be graded counts as partial: more help, never less."""
+        label = "partial"
+        if self._grader is not None:
+            try:
+                graded = self._grader(
+                    ticket.transcript, funnel=ticket.funnel, level=ticket.level, circuit=circuit
+                )
+                label = str(graded.label)  # type: ignore[attr-defined]
+            except Exception as error:  # noqa: BLE001 - a grader must not take the lab down
+                print(f"lab: an answer could not be graded and counted as partial: {error!r}")
+        with self._lock:
+            if self._lesson is not None:
+                self._lesson.finish_answer(ticket, label)
 
     def restart_lesson(self) -> None:
         with self._lock:
@@ -176,3 +205,7 @@ def _distance_to_segment(point: tuple[float, float], a: Dot, b: Dot) -> float:
     # How far along the segment the closest point is, held between its two ends.
     along = max(0.0, min(1.0, (px - a[0]) * dx + (py - a[1]) * dy))
     return math.hypot(px - (a[0] + along * dx), py - (a[1] + along * dy))
+
+
+def _in_a_thread(work: Callable[[], None]) -> None:
+    Thread(target=work, name="grade-answer", daemon=True).start()

@@ -2,8 +2,8 @@
 //
 // 1. The wire contract: a mirror of server/tacto/contract.py, which is the source of
 //    truth (JSON schema in contract/). `ServerState` is the one message the server sends;
-//    the page sends SetVoltage, SetMode, RestartLesson or ContinueLesson. Change both
-//    sides together.
+//    the page sends SetVoltage, SetMode, RestartLesson, ContinueLesson or
+//    AnswerReflection. Change both sides together.
 //
 // 2. The page's own picture of that state (`State`, `Part`, `Wire`, `Probe`): the shapes
 //    the bench, the multimeter and the haptics were built on. `fromServer.ts` turns a
@@ -72,8 +72,16 @@ export interface ServerState {
     step_done: boolean
     lesson_done: boolean
     reflection: string | null
+    /** The five below are set only while an adaptive reflection runs (contract/README.md). */
+    reflection_level: number | null
+    reflection_status: ReflectionStatus | null
+    reflection_line: string | null
+    reflection_line_id: number
+    reflection_transcript: string | null
   }
 }
+
+export type ReflectionStatus = 'asking' | 'listening' | 'thinking' | 'resolved' | 'exit'
 
 // ---------- the wire contract: web -> server ----------
 
@@ -96,6 +104,12 @@ export interface SetMode {
 export interface ContinueLesson {
   type: 'continue_lesson'
   step_id: string
+}
+
+export interface AnswerReflection {
+  type: 'answer_reflection'
+  step_id: string
+  text: string
 }
 
 // ---------- the page's picture of the state ----------
@@ -154,6 +168,14 @@ export interface Lesson {
   step_done: boolean
   lesson_done: boolean
   reflection: string | null
+  /** Null unless an adaptive reflection is running: then what the lab is doing ... */
+  reflectionStatus: ReflectionStatus | null
+  /** ... what it is saying now (a question, a confirmation, or the idea stated) ... */
+  reflectionLine: string | null
+  /** ... which changes with step_id and this id, the same line said again included ... */
+  reflectionLineId: number
+  /** ... and the learner's last answer. */
+  reflectionTranscript: string | null
 }
 
 export interface State {
@@ -170,7 +192,7 @@ export interface State {
 }
 
 export type ClientMessage =
-  SetVoltage | RestartLesson | SetMode | ContinueLesson | ParkedClientMessage
+  SetVoltage | RestartLesson | SetMode | ContinueLesson | AnswerReflection | ParkedClientMessage
 
 // ---------- parked ----------
 // The tutor, the concept map and the voice are out of the product for now (CLAUDE.md,

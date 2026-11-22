@@ -8,6 +8,11 @@ Both go through the same reader (`vision/source.py`). GET /debug/reader says wha
 last saw and how many milliseconds each step takes.
 
 TACTO_CAMERA_INDEX overrides the camera, which is otherwise found by name.
+
+VOICE_ENABLED=1 turns on adaptive reflections (docs/voice-reflections-plan.md): a step's
+reflection becomes a funnel of questions whose answers are graded through Together, which
+needs TOGETHER_API_KEY and the network. Left off, a reflection is one question on screen
+and Continue, and nothing here uses the network.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from tacto import grader
 from tacto.app import create_lab_app
 from tacto.lab import Lab
 from tacto.lesson import LessonRunner, load_lesson
@@ -31,6 +37,7 @@ from tacto.vision.source import CameraMatSource
 load_dotenv()
 
 SOURCE = os.getenv("TACTO_SOURCE", "camera")
+VOICE_ENABLED = os.getenv("VOICE_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
 CAMERA_NAME = "LVNext"
 REPO = Path(__file__).resolve().parents[2]
 LESSON_FILE = REPO / "lessons" / "circuits-101.yaml"
@@ -88,8 +95,10 @@ lab = Lab(
     mat.grid,
     source,
     source_name=SOURCE,  # type: ignore[arg-type]
-    lesson=LessonRunner(load_lesson(LESSON_FILE)),
+    lesson=LessonRunner(load_lesson(LESSON_FILE), adaptive=VOICE_ENABLED),
+    grader=grader.grade if VOICE_ENABLED else None,
 )
+print(f"main: adaptive reflections are {'on' if VOICE_ENABLED else 'off (set VOICE_ENABLED=1)'}")
 app = create_lab_app(lab, source=SOURCE)
 
 

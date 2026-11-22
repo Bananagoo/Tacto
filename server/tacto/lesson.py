@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -24,6 +25,7 @@ from pydantic import (
     model_validator,
 )
 
+from tacto import funnel as funnel_rules
 from tacto.contract import MAX_VOLTS, Circuit, CircuitStatus, LessonStep, Piece, PieceType, Touch
 from tacto.sim.feel import MIN_CURRENT_AMPS
 
@@ -34,6 +36,10 @@ LIT_THRESHOLD = 0.02
 # The goal must hold this long before the step counts, so a circuit that only passes
 # through the goal while pieces are being moved does not finish the step.
 SETTLE_SECONDS = 0.5
+# After a right answer the confirmation stays up this long, to be read or heard, before
+# the next step's prompt replaces it.
+# TODO(Katie): tune once the lines are spoken; the longest confirmation takes about 5 s to say.
+CONFIRM_SECONDS = 3.0
 # Two currents within this fraction of each other are "the same" (wires have a tiny resistance).
 SAME_CURRENT = 0.02
 
@@ -249,17 +255,53 @@ def _lit_bulbs(pieces: Sequence[Piece]) -> list[Piece]:
     return [p for p in pieces if p.type == "bulb" and (p.brightness or 0) > LIT_THRESHOLD]
 
 
+def circuit_summary(pieces: Sequence[Piece], circuit: Circuit) -> str:
+    """The mat in a line of plain words, for whoever grades an answer about it."""
+    batteries = sum(p.type == "battery" for p in pieces)
+    bulbs = sum(p.type == "bulb" for p in pieces)
+    arrangement = arrangement_of(pieces, circuit)
+    how = f", in {arrangement}" if arrangement in ("series", "parallel") else ""
+    return (
+        f"{'One battery' if batteries == 1 else f'{batteries} batteries'} at "
+        f"{circuit.voltage:g} V. {bulbs} bulb{'' if bulbs == 1 else 's'}, "
+        f"{len(_lit_bulbs(pieces))} lit{how}. {circuit.total_current:.2f} A at the battery. "
+        f"The circuit is {circuit.status}."
+    )
+
+
+@dataclass(frozen=True)
+class AnswerTicket:
+    """One answer on its way to being graded: what was asked, and proof it is still current."""
+
+    step_id: str
+    funnel: Funnel
+    level: int
+    transcript: str
+    attempt: int
+
+
 class LessonRunner:
     """Walks one learner through a lesson's steps as the circuit changes.
 
     A step is done once its goal has held for `SETTLE_SECONDS`, and stays done even if
     the learner then changes the mat. After the linger time the next prompt appears,
-    except a reflection waits for Continue. The last reflection ends the lesson.
+    except a reflection waits: for Continue, or, when `adaptive`, for the funnel of
+    questions to be answered (`funnel.py`). The last reflection ends the lesson.
     """
 
-    def __init__(self, lesson: Lesson, *, now: Callable[[], float] = time.monotonic) -> None:
+    def __init__(
+        self,
+        lesson: Lesson,
+        *,
+        now: Callable[[], float] = time.monotonic,
+        adaptive: bool = False,
+    ) -> None:
         self._lesson = lesson
         self._now = now
+        # False: a reflection is one question on screen and Continue, whatever the lesson
+        # file holds. True: a step with a funnel asks, takes answers and narrows.
+        self._adaptive = adaptive
+        self._attempt = 0
         self.restart()
 
     def restart(self) -> None:
@@ -267,17 +309,71 @@ class LessonRunner:
         self._met_since: float | None = None
         self._done_at: float | None = None
         self._continued = False
+        self._clear_reflection()
 
-    def continue_step(self, step_id: str) -> None:
-        """Acknowledge a spoken reflection; late clicks cannot skip another step."""
-        step = self._lesson.steps[self._index]
-        if step.id != step_id or step.reflection is None or self._done_at is None:
-            return
+    def _clear_reflection(self) -> None:
+        self._asking: funnel_rules.FunnelState | None = None
+        self._line: str | None = None
+        self._line_id = 0
+        self._transcript: str | None = None
+        self._thinking = False
+        self._touched_when_done: str | None = None
+        self._goal_since: float | None = None
+        self._resolved_at: float | None = None
+        # Any answer still being graded belongs to a question that is no longer asked.
+        self._attempt += 1
+
+    def _say(self, line: str | None) -> None:
+        if line is not None:
+            self._line = line
+            self._line_id += 1
+
+    def _advance(self) -> None:
         if self._index == len(self._lesson.steps) - 1:
             self._continued = True
         else:
             self._index += 1
             self._met_since = self._done_at = None
+        self._clear_reflection()
+
+    def continue_step(self, step_id: str) -> None:
+        """Move on from a reflection, skipping what is left of it; late clicks cannot skip
+        another step."""
+        step = self._lesson.steps[self._index]
+        if step.id != step_id or step.reflection is None or self._done_at is None:
+            return
+        if not self._continued:
+            self._advance()
+
+    # ---------- answers ----------
+
+    def begin_answer(self, step_id: str, text: str) -> AnswerTicket | None:
+        """Take an answer to the question being asked. None when no answer is wanted now:
+        another step, no question up, one already being graded, or the exit."""
+        step = self._lesson.steps[self._index]
+        asking = self._asking
+        if (
+            step.id != step_id
+            or step.funnel is None
+            or asking is None
+            or asking.status != "asking"
+            or self._thinking
+        ):
+            return None
+        self._transcript = " ".join(text.split())
+        self._thinking = True
+        self._attempt += 1
+        return AnswerTicket(step_id, step.funnel, asking.level, self._transcript, self._attempt)
+
+    def finish_answer(self, ticket: AnswerTicket, label: str) -> None:
+        """Take the grade of an answer. Dropped if the question has since gone."""
+        if ticket.attempt != self._attempt or not self._thinking or self._asking is None:
+            return
+        self._thinking = False
+        self._asking, line = funnel_rules.answer(ticket.funnel, self._asking, label, self._now())
+        self._say(line)
+
+    # ---------- the mat ----------
 
     def update(
         self,
@@ -298,11 +394,24 @@ class LessonRunner:
                 self._met_since = now
             elif now - self._met_since >= SETTLE_SECONDS:
                 self._done_at = now
+                if self._adaptive and step.funnel is not None:
+                    self._touched_when_done = touch.piece_id if touch else None
+                    self._asking, line = funnel_rules.start(step.funnel)
+                    self._say(line)
+        elif self._asking is not None and step.funnel is not None:
+            if self._run_reflection(step.funnel, pieces, circuit, touch, mat_visible, now):
+                # The mat that finished the exit may already meet the next step's goal.
+                return self.update(pieces, circuit, touch, mat_visible=mat_visible)
         elif not last and step.reflection is None and now - self._done_at >= self._linger(step):
             self._index += 1
             self._met_since = self._done_at = None
             # The circuit that finished the last step may already meet the next goal.
             return self.update(pieces, circuit, touch, mat_visible=mat_visible)
+        reflecting = self._done_at is not None and not self._continued
+        asking = self._asking if reflecting else None
+        question = step.reflection_question
+        if asking is not None and step.funnel is not None:
+            question = step.funnel.levels[asking.level].question
         return LessonStep(
             lesson_id=self._lesson.id,
             step_id=step.id,
@@ -313,10 +422,51 @@ class LessonRunner:
             lesson_done=(
                 last and self._done_at is not None and (step.reflection is None or self._continued)
             ),
-            reflection=step.reflection_question
-            if self._done_at is not None and not self._continued
-            else None,
+            reflection=question if reflecting else None,
+            reflection_level=asking.level if asking else None,
+            reflection_status=("thinking" if self._thinking else asking.status) if asking else None,
+            reflection_line=self._line if asking else None,
+            reflection_line_id=self._line_id if asking else 0,
+            reflection_transcript=self._transcript if asking else None,
         )
+
+    def _run_reflection(
+        self,
+        asked: Funnel,
+        pieces: Sequence[Piece],
+        circuit: Circuit,
+        touch: Touch | None,
+        mat_visible: bool,
+        now: float,
+    ) -> bool:
+        """One look at the mat while a reflection is up. True when the lesson moved on."""
+        state = self._asking
+        assert state is not None
+        if state.status == "exit":
+            goal = asked.exit.then[state.exit_goal]
+            met = mat_visible and is_satisfied(goal, pieces, circuit, touch)
+            if met and goal.different_piece:
+                met = touch is not None and touch.piece_id not in (None, self._touched_when_done)
+            if not met:
+                self._goal_since = None
+            elif self._goal_since is None:
+                self._goal_since = now
+            # Held, like a step's own goal, so a hand passing over does not count.
+            held = self._goal_since is not None and now - self._goal_since >= SETTLE_SECONDS
+            after, _ = funnel_rules.on_mat(asked, state, goal_met=held, now=now)
+            if after.exit_goal != state.exit_goal:
+                self._goal_since = None
+            self._asking = state = after
+        if state.status != "resolved":
+            return False
+        if self._resolved_at is None:
+            self._resolved_at = now
+        # A right answer's confirmation stays up a moment. The exit has already said its
+        # piece and been acted on, or timed out: nothing to wait for.
+        if state.outcome == "correct" and now - self._resolved_at < CONFIRM_SECONDS:
+            return False
+        self._advance()
+        return True
 
     def _linger(self, step: Step) -> float:
         if step.linger_seconds is not None:

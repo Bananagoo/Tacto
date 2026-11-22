@@ -1,6 +1,6 @@
 {
   "type": "state",
-  "version": 2,
+  "version": 3,
   "seq": 412,
   "t": 27.4,
   "source": "manual",
@@ -137,6 +137,11 @@
     "prompt": "Keep your finger there. Turn the wheel up to 6 V.",
     "step_done": true,
     "lesson_done": false,
-    "reflection": "Why did the pulse get faster when you raised the voltage?"
+    "reflection": "Why did the pulse get faster when you raised the voltage?",
+    "reflection_level": null,
+    "reflection_status": null,
+    "reflection_line": null,
+    "reflection_line_id": 0,
+    "reflection_transcript": null
   }
 }

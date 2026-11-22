@@ -18,7 +18,9 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 # 2 (22 Nov 2026): touch.strength, piece.voltage, mode, lesson.reflection, and the browser's
 # set_mode, restart_lesson and continue_lesson messages. Nothing was removed or renamed.
-CONTRACT_VERSION = 2
+# 3 (22 Nov 2026): lesson.reflection_level, _status, _line, _line_id and _transcript, and the
+# browser's answer_reflection message. Nothing was removed or renamed.
+CONTRACT_VERSION = 3
 
 Dot = tuple[int, int]
 
@@ -29,6 +31,10 @@ PieceType = Literal["wire", "battery", "bulb", "resistor", "switch"]
 CircuitStatus = Literal["working", "open", "shorted"]
 Source = Literal["camera", "replay", "manual"]
 Mode = Literal["tinker", "lab"]
+# asking: waiting for an answer.  listening: the microphone is open.  thinking: an answer
+# is being graded.  resolved: answered; the confirmation is up.  exit: the lab has stated
+# the idea and is waiting for an action on the mat.
+ReflectionStatus = Literal["asking", "listening", "thinking", "resolved", "exit"]
 
 
 def segment_id(a: Dot, b: Dot) -> str:
@@ -95,7 +101,18 @@ class LessonStep(BaseModel):
     prompt: str = ""  # the text to show for this step
     step_done: bool = False  # latched after the circuit and touch goal holds for half a second
     lesson_done: bool = False  # every step has been completed
-    reflection: str | None = None  # spoken question after the action; Continue advances it
+    reflection: str | None = None  # the question being asked now; Continue skips it
+    # The five below are set only while an adaptive reflection is running (the server's
+    # VOICE_ENABLED); otherwise a reflection is just `reflection` and Continue.
+    reflection_level: int | None = None  # 0 is the open question; higher is narrower
+    reflection_status: ReflectionStatus | None = None
+    # What the lab is saying now: the question, the confirmation of a right answer, or
+    # the idea stated at the exit. Always a line written in the lesson file.
+    reflection_line: str | None = None
+    # Goes up by one each time the lab says something, the same question again included.
+    # It starts again at 1 with each reflection, so tell lines apart by step_id and this.
+    reflection_line_id: int = 0
+    reflection_transcript: str | None = None  # the learner's last answer, as heard or typed
 
 
 class State(BaseModel):
@@ -148,7 +165,18 @@ class ContinueLesson(BaseModel):
     step_id: str
 
 
+class AnswerReflection(BaseModel):
+    """The learner's answer to the reflection question being asked, as text. It is graded
+    into a label; the label, not the text, decides what the lab says next."""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["answer_reflection"] = "answer_reflection"
+    step_id: str
+    text: str = Field(max_length=2000)
+
+
 ClientMessage = Annotated[
-    SetVoltage | RestartLesson | SetMode | ContinueLesson, Field(discriminator="type")
+    SetVoltage | RestartLesson | SetMode | ContinueLesson | AnswerReflection,
+    Field(discriminator="type"),
 ]
 CLIENT_MESSAGE = TypeAdapter(ClientMessage)

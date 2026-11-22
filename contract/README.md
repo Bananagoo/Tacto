@@ -10,7 +10,8 @@ them. Changes need the vision owner's sign-off.
 | `set_voltage.schema.json` | Set battery voltage (0–9 V) |
 | `set_mode.schema.json` | Choose `tinker` or `lab` |
 | `restart_lesson.schema.json` | Restart Lab at step one and 3 V |
-| `continue_lesson.schema.json` | Acknowledge a reflection with its `step_id` |
+| `continue_lesson.schema.json` | Acknowledge a reflection with its `step_id`, or skip the rest of one |
+| `answer_reflection.schema.json` | The learner's answer to the question being asked, as text |
 | `example-state.json` | One state: a bulb on a closed loop at 6 V, a finger on the bulb |
 | `example-set-voltage.json` | One browser message |
 | `sample-states.jsonl` | About 90 seconds: switches, touch, voltage 3 → 6 V, series, parallel and spoken reflections; no short |
@@ -55,6 +56,28 @@ but recorded circuit numbers do not react to the wheel.
   final reflection is acknowledged. Speech is not recorded or analysed yet.
 - A switch's `closed` comes from the piece: the learner swaps the closed switch piece
   (green) for the open one (cyan). A fingertip on a switch changes nothing.
+
+## Adaptive reflections
+
+With `VOICE_ENABLED=1` on the server a reflection is a short exchange, not one question.
+The plan and its rules are in `docs/voice-reflections-plan.md`. While one is running,
+`lesson` also carries:
+
+- `reflection_status`: `asking` (waiting for an answer), `thinking` (an answer is being
+  graded), `resolved` (answered; the confirmation is up), `exit` (the lab has stated the
+  idea and waits for an action on the mat). `listening` is reserved for the microphone.
+- `reflection_line`: what the lab is saying now. Show it; later it is also spoken.
+- `reflection_line_id`: goes up each time the lab says something, a repeated question
+  included. It restarts at 1 with each reflection: key on `step_id` and this.
+- `reflection_level`: 0 for the open question, higher for narrower ones.
+- `reflection_transcript`: the learner's last answer.
+- `reflection` is still the question being asked, and `continue_lesson` still moves on,
+  now as a skip.
+
+Send the learner's answer as `answer_reflection` with the current `step_id`. It is taken
+only while the status is `asking`. With the flag off none of these fields is set and
+`answer_reflection` is ignored: a reflection is `reflection` and `continue_lesson`, as
+before.
 
 ## After changing the models
 

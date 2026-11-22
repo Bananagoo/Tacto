@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useTacto } from '../useTacto'
+import { Reflection } from './Reflection'
 
 function restartLesson() {
   const { connected, state, send } = useTacto.getState()
@@ -51,7 +52,8 @@ export function LessonStrip() {
         return
       event.preventDefault()
       if (key === 'r') restartLesson()
-      else continueLesson()
+      // In an adaptive reflection Enter belongs to the answer box; moving on is the Skip button.
+      else if (!useTacto.getState().state?.lesson.reflectionStatus) continueLesson()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -134,7 +136,10 @@ export function LessonStrip() {
               Restart <kbd className="ml-2 rounded bg-black/20 px-2 py-1 text-sm">R</kbd>
             </button>
           </div>
-          {ready && lesson.reflection && (
+          {ready && lesson.reflection && lesson.reflectionStatus && (
+            <Reflection lesson={lesson} onSkip={continueLesson} />
+          )}
+          {ready && lesson.reflection && !lesson.reflectionStatus && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-white/15 pt-4">
               <div role="status" className="min-w-0 flex-1">
                 <p className="m-0 text-sm font-semibold tracking-wide text-emerald-300 uppercase">

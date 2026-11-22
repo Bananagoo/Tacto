@@ -102,6 +102,66 @@
           ],
           "default": null,
           "title": "Reflection"
+        },
+        "reflection_level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reflection Level"
+        },
+        "reflection_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "asking",
+                "listening",
+                "thinking",
+                "resolved",
+                "exit"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reflection Status"
+        },
+        "reflection_line": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reflection Line"
+        },
+        "reflection_line_id": {
+          "default": 0,
+          "title": "Reflection Line Id",
+          "type": "integer"
+        },
+        "reflection_transcript": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reflection Transcript"
         }
       },
       "title": "LessonStep",
@@ -263,7 +323,7 @@
       "type": "string"
     },
     "version": {
-      "default": 2,
+      "default": 3,
       "title": "Version",
       "type": "integer"
     },
@@ -342,7 +402,12 @@
         "prompt": "",
         "step_done": false,
         "lesson_done": false,
-        "reflection": null
+        "reflection": null,
+        "reflection_level": null,
+        "reflection_status": null,
+        "reflection_line": null,
+        "reflection_line_id": 0,
+        "reflection_transcript": null
       }
     }
   },

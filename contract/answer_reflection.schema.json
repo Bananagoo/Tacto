@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "description": "The learner's answer to the reflection question being asked, as text. It is graded\ninto a label; the label, not the text, decides what the lab says next.",
+  "properties": {
+    "type": {
+      "const": "answer_reflection",
+      "default": "answer_reflection",
+      "title": "Type",
+      "type": "string"
+    },
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    },
+    "text": {
+      "maxLength": 2000,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "step_id",
+    "text"
+  ],
+  "title": "AnswerReflection",
+  "type": "object"
+}

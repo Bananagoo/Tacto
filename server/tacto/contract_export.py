@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from tacto.contract import (
+    AnswerReflection,
     Circuit,
     ContinueLesson,
     Grid,
@@ -85,12 +86,18 @@ def contract_files() -> dict[str, str]:
         "restart_lesson.schema.json": dump(RestartLesson.model_json_schema()),
         "set_mode.schema.json": dump(SetMode.model_json_schema()),
         "continue_lesson.schema.json": dump(ContinueLesson.model_json_schema()),
+        "answer_reflection.schema.json": dump(AnswerReflection.model_json_schema()),
         "example-state.json": dump(example_state().model_dump(mode="json")),
         "example-set-voltage.json": dump(SetVoltage(volts=6.5).model_dump(mode="json")),
         "example-restart-lesson.json": dump(RestartLesson().model_dump(mode="json")),
         "example-set-mode.json": dump(SetMode(mode="lab").model_dump(mode="json")),
         "example-continue-lesson.json": dump(
             ContinueLesson(step_id="raise_voltage").model_dump(mode="json")
+        ),
+        "example-answer-reflection.json": dump(
+            AnswerReflection(step_id="raise_voltage", text="more push so more flow").model_dump(
+                mode="json"
+            )
         ),
     }
 

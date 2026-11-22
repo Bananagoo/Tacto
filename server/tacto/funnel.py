@@ -17,9 +17,10 @@ So a reflection grades at most one answer per level and cannot loop
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from tacto.lesson import Funnel
+if TYPE_CHECKING:  # the lesson runner imports this module; it only needs the type here
+    from tacto.lesson import Funnel
 
 Label = Literal["correct", "partial", "incorrect", "unclear"]
 Status = Literal["asking", "exit", "resolved"]

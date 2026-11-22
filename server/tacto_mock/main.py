@@ -15,7 +15,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
-from tacto.contract import CLIENT_MESSAGE, ContinueLesson, LessonStep, RestartLesson, SetMode
+from tacto.contract import (
+    CLIENT_MESSAGE,
+    AnswerReflection,
+    ContinueLesson,
+    LessonStep,
+    RestartLesson,
+    SetMode,
+)
 from tacto.speech import speech_router
 
 from .sample import SAMPLE_PATH
@@ -83,6 +90,8 @@ def create_mock_app(sample_path: Path = SAMPLE_PATH, *, state_hz: float = STATE_
                                 ),
                                 cursor,
                             )
+                    elif isinstance(message, AnswerReflection):
+                        print(f"mock: answer to {message.step_id!r} (a replay does not grade)")
                     else:
                         print(f"mock: set_voltage {message.volts} V (a replay does not react)")
                 except ValidationError as err:
