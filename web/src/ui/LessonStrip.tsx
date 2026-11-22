@@ -179,8 +179,9 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
                 bottom: '15.2%',
                 fontSize: '5.2cqw',
                 lineHeight: 'var(--line)',
-                // Lowers each line of writing from the middle of its band onto the rule below.
-                paddingTop: 'calc(var(--line) * 0.2)',
+                // Raises each line of writing a little in its band, so it rests on the rule below
+                // instead of below it (set by eye, 22 Nov 2026).
+                marginTop: 'calc(var(--line) * -0.15)',
               } as CSSProperties
             }
           >
