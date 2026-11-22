@@ -167,7 +167,9 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               at its 7:10 shape is 9cqw. Every line of writing is one --line tall, and every
               gap is a whole line, so text sits on the rules all the way down. */}
           <div
-            className="absolute overflow-y-auto font-['Patrick_Hand'] text-stone-800 [&_button]:font-['Space_Grotesk_Variable'] [&_input]:font-['Space_Grotesk_Variable']"
+            // Never scrolls: a scrolled page would lift the writing off its lines. The page
+            // holds 11 lines, and what it shows is kept to that (below).
+            className="absolute overflow-hidden font-['Patrick_Hand'] text-stone-800 [&_button]:font-['Space_Grotesk_Variable'] [&_input]:font-['Space_Grotesk_Variable']"
             style={
               {
                 '--line': '9cqw',
@@ -179,9 +181,9 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
                 bottom: '15.2%',
                 fontSize: '5.2cqw',
                 lineHeight: 'var(--line)',
-                // Raises each line of writing a little in its band, so it rests on the rule below
-                // instead of below it (set by eye, 22 Nov 2026).
-                marginTop: 'calc(var(--line) * -0.15)',
+                // Lowers each line of writing from the middle of its band to rest on the rule
+                // below it.
+                paddingTop: 'calc(var(--line) * 0.22)',
               } as CSSProperties
             }
           >
@@ -197,15 +199,19 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
                     </span>
                   )}
                 </p>
-                <p className="m-0 text-[1.25em] font-semibold">
-                  {ready
-                    ? lesson.lesson_done
-                      ? 'Same two bulbs, different connections—and a difference you can feel.'
-                      : lesson.prompt
-                    : connected
-                      ? 'Waiting for the lesson…'
-                      : 'Connecting to the lab…'}
-                </p>
+                {/* While a question is up the step is already done, so its instruction gives
+                    way to the question and the page never needs more than its 11 lines. */}
+                {!(ready && lesson.reflection) && (
+                  <p className="m-0 text-[1.25em] font-semibold">
+                    {ready
+                      ? lesson.lesson_done
+                        ? 'Same two bulbs, different connections—and a difference you can feel.'
+                        : lesson.prompt
+                      : connected
+                        ? 'Waiting for the lesson…'
+                        : 'Connecting to the lab…'}
+                  </p>
+                )}
               </div>
             </div>
             {ready && lesson.reflection && lesson.reflectionStatus && (

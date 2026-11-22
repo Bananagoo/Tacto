@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Lesson } from '../contract'
 import { useTacto } from '../useTacto'
-import { useAnswerMic, type MicState } from '../voice/useAnswerMic'
+import { useAnswerMic } from '../voice/useAnswerMic'
 
 const HEADING = {
   asking: 'Explain it',
@@ -10,15 +10,6 @@ const HEADING = {
   resolved: '✓ That is it',
   exit: 'Here is the idea. Now try it on the mat',
 } as const
-
-const MIC_WORDS: Record<MicState, string> = {
-  off: 'Hold Space to talk, or type below.',
-  starting: 'Opening the microphone…',
-  listening: 'Go ahead, I am listening.',
-  hearing: 'I can hear you…',
-  sending: 'Working out what you said…',
-  failed: '',
-}
 
 const VOICE_CHOICE = 'tacto-answer-by-voice'
 
@@ -245,19 +236,11 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
           </button>
         </form>
       )}
-      {(mic.error || (voice && asking)) && (
-        <p className="m-0 text-[0.7em] text-stone-600">
-          {mic.error ? (
-            <span role="alert" className="font-bold text-amber-800">
-              {mic.error} Type your answer instead.
-            </span>
-          ) : voice && asking ? (
-            labHasFinishedSpeaking ? (
-              MIC_WORDS[micState]
-            ) : (
-              'The microphone opens when the question has been asked.'
-            )
-          ) : null}
+      {/* Only a problem gets a line of its own; what the microphone is doing shows in the
+          heading above (Listening…, Thinking…), so the page keeps to its lines. */}
+      {mic.error && (
+        <p role="alert" className="m-0 text-[0.7em] font-bold text-amber-800">
+          {mic.error} Type your answer instead.
         </p>
       )}
     </div>
