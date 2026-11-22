@@ -1,26 +1,21 @@
-import { Leads } from './Leads'
+import resistorUrl from '../../assets/Resistor.png'
 
-const WIDTH = 84
-const PEAK = 18
-const ZIGS = 6
+// The picture is about 4 wide to 1 high, with a wire out of each end, so it is drawn as wide as
+// the part is long and the wire tips reach the two dots.
+const HEIGHT_PER_LENGTH = 0.25
 
-/** The zigzag resistor symbol. */
+/** A resistor: the blue body with its colour bands, and a wire out of each end. */
 export function Resistor({ length }: { length: number }) {
-  const start = (length - WIDTH) / 2
-  const step = WIDTH / ZIGS
-  // Peaks sit halfway along each step and alternate sides, so the zigzag starts and ends
-  // on the axis where the leads meet it.
-  const peaks = Array.from(
-    { length: ZIGS },
-    (_, index) => `${start + (index + 0.5) * step},${index % 2 === 0 ? -PEAK : PEAK}`,
-  )
+  const height = length * HEIGHT_PER_LENGTH
   return (
-    <>
-      <Leads length={length} bodyWidth={WIDTH} />
-      <polyline
-        points={`${start},0 ${peaks.join(' ')} ${start + WIDTH},0`}
-        strokeLinejoin="round"
-      />
-    </>
+    <image
+      href={resistorUrl}
+      x={0}
+      y={-height / 2}
+      width={length}
+      height={height}
+      preserveAspectRatio="xMidYMid meet"
+      aria-label="Resistor"
+    />
   )
 }

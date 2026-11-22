@@ -16,7 +16,7 @@ function Symbol({ part, length, angleDeg }: { part: Part; length: number; angleD
       return <Resistor length={length} />
     case 'switch':
       // `closed` is null for anything the camera could not read; an unknown switch is open.
-      return <Switch length={length} closed={part.closed === true} />
+      return <Switch length={length} angleDeg={angleDeg} closed={part.closed === true} />
   }
 }
 
