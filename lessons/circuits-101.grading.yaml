@@ -1,0 +1,150 @@
+# Answers a learner might give to each reflection question in circuits-101.yaml, with the
+# label a careful teacher would give. `scripts/grade_fixtures.py` scores the answer grader
+# against them. Written the way speech recognition returns speech: lower case, no
+# punctuation, sometimes rambling.
+#
+# The labels (the grader's prompt in server/tacto/grader.py says the same):
+#   correct    gives the idea the question is after, in any words
+#   partial    on topic and not wrong, but does not get there; or "i dont know"
+#   incorrect  physically wrong, a listed misconception, or the wrong option
+#   unclear    not an answer: off topic, a bare yes or no, a question back, "say again"
+#
+# An entry is [label, answer] or [label, answer, misconception tag].
+# If the grader gets one wrong, fix the grader's prompt, not the label here.
+
+lesson: circuits-101
+steps:
+  raise_voltage:
+    - level: 0   # Why did the pulse get faster when you raised the voltage?
+      answers:
+        - [correct, "because more voltage pushes more current through the bulb"]
+        - [correct, "the battery is pushing harder so more electricity flows"]
+        - [correct, "more push so more flow"]
+        - [correct, "higher voltage means more current and the pulse is the current"]
+        - [partial, "because theres more voltage"]
+        - [partial, "the bulb got brighter", brightness_only]
+        - [partial, "because i turned the wheel up"]
+        - [partial, "um i dont know"]
+        - [incorrect, "the pulse is the voltage so it went up", pulse_is_voltage]
+        - [incorrect, "because the voltage is what youre feeling in the mouse", pulse_is_voltage]
+        - [incorrect, "less current is flowing so it speeds up"]
+        - [unclear, "can you repeat that"]
+        - [unclear, "is this thing on"]
+    - level: 1   # The pulse is the current through the bulb. What does the battery's voltage do to that current?
+      answers:
+        - [correct, "it makes the current bigger"]
+        - [correct, "more voltage gives more current"]
+        - [correct, "it pushes it harder so more flows"]
+        - [correct, "it increases it"]
+        - [partial, "it changes it"]
+        - [partial, "it does something to the speed i think"]
+        - [partial, "i dont know"]
+        - [incorrect, "it makes it smaller"]
+        - [incorrect, "nothing the current stays the same"]
+        - [incorrect, "the voltage is the current theyre the same thing", pulse_is_voltage]
+        - [unclear, "sorry what"]
+        - [unclear, "hello"]
+    - level: 2   # Does a higher voltage push more current round the loop, or less?
+      answers:
+        - [correct, "more"]
+        - [correct, "more current"]
+        - [correct, "it pushes more"]
+        - [correct, "more i think"]
+        - [partial, "im not sure"]
+        - [partial, "it depends"]
+        - [incorrect, "less"]
+        - [incorrect, "less current"]
+        - [incorrect, "the same amount"]
+        - [unclear, "yes"]
+        - [unclear, "what was the question"]
+        - [unclear, "banana"]
+
+  series:
+    - level: 0   # Why did adding a second bulb make the pulse slower?
+      answers:
+        - [correct, "theres more resistance now so less current flows"]
+        - [correct, "two bulbs are harder to get through so the current went down"]
+        - [correct, "the current has to push through both so theres less of it"]
+        - [correct, "more stuff in the way so less flow"]
+        - [partial, "because theres two bulbs now"]
+        - [partial, "the bulbs are dimmer"]
+        - [partial, "i dont know"]
+        - [incorrect, "the first bulb uses up some of the current", current_used_up]
+        - [incorrect, "the current gets used up going round so theres less left", current_used_up]
+        - [incorrect, "the battery gives the same current and the two bulbs share it", current_shared]
+        - [incorrect, "the battery voltage went down"]
+        - [unclear, "can you say that again"]
+        - [unclear, "what bulb"]
+    - level: 1   # The current now has to go through both bulbs, one after the other. Is that easier or harder than going through one?
+      answers:
+        - [correct, "harder"]
+        - [correct, "its harder"]
+        - [correct, "harder because theres more to push through"]
+        - [correct, "harder so less current gets through"]
+        - [partial, "not sure"]
+        - [partial, "i dont know"]
+        - [incorrect, "easier"]
+        - [incorrect, "its easier with two"]
+        - [incorrect, "the same"]
+        - [unclear, "what"]
+        - [unclear, "yes"]
+        - [unclear, "i like the colours"]
+    - level: 2   # With two bulbs in a row, is the total resistance bigger or smaller?
+      answers:
+        - [correct, "bigger"]
+        - [correct, "its bigger"]
+        - [correct, "more resistance"]
+        - [correct, "bigger i think"]
+        - [partial, "i dont know"]
+        - [partial, "not sure"]
+        - [incorrect, "smaller"]
+        - [incorrect, "less resistance"]
+        - [incorrect, "the same"]
+        - [unclear, "repeat please"]
+        - [unclear, "yes"]
+        - [unclear, "blue"]
+
+  parallel:
+    - level: 0   # Why is the pulse faster at the battery than at either bulb?
+      answers:
+        - [correct, "because the battery supplies both bulbs so the two currents add up"]
+        - [correct, "each bulb has its own current and they join at the battery"]
+        - [correct, "the battery has to feed both branches so it carries both currents"]
+        - [correct, "its both bulbs currents together"]
+        - [partial, "because there are two bulbs"]
+        - [partial, "theres more current at the battery"]
+        - [partial, "i dont know"]
+        - [incorrect, "the battery is the source so its just stronger", battery_is_stronger]
+        - [incorrect, "the battery is more powerful than the bulbs", battery_is_stronger]
+        - [incorrect, "it should be the same everywhere in the circuit", same_as_series]
+        - [incorrect, "the bulbs use up the current before it gets back"]
+        - [unclear, "what do you mean"]
+        - [unclear, "is it recording"]
+    - level: 1   # Each bulb has its own path back to the battery. Where do the two currents meet?
+      answers:
+        - [correct, "at the battery"]
+        - [correct, "they meet at the battery"]
+        - [correct, "in the wire next to the battery"]
+        - [correct, "where the branches join by the battery"]
+        - [partial, "somewhere in the wires"]
+        - [partial, "i dont know"]
+        - [partial, "in the circuit"]
+        - [incorrect, "at the bulbs"]
+        - [incorrect, "they dont meet"]
+        - [incorrect, "in the second bulb"]
+        - [unclear, "huh"]
+        - [unclear, "say again"]
+    - level: 2   # Is the current at the battery one bulb's current, or both added together?
+      answers:
+        - [correct, "both added together"]
+        - [correct, "both"]
+        - [correct, "the two added up"]
+        - [correct, "added together"]
+        - [partial, "not sure"]
+        - [partial, "i dont know"]
+        - [incorrect, "one bulbs current"]
+        - [incorrect, "just one"]
+        - [incorrect, "its the same as one bulb", same_as_series]
+        - [unclear, "yes"]
+        - [unclear, "what"]
+        - [unclear, "can you repeat the question"]

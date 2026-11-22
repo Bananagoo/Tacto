@@ -65,3 +65,4 @@ A reflection asks at most three graded questions and cannot loop. The wording of
 |---|---|
 | 0 | Done 22 Nov. Smoke test 3 of 3: speech 0.23 to 0.68 s, transcription 0.58 to 0.70 s, grader 0.14 to 0.53 s. Models in `server/tacto/voice_models.py` |
 | 1 | Done 22 Nov. Funnels for steps 4 to 6 are in the lesson file; schema tests in `server/tests/test_funnel_schema.py` |
+| 2 | Done 22 Nov. `server/tacto/funnel.py`, 26 tests in `server/tests/test_funnel.py`, including every sequence of six labels |
