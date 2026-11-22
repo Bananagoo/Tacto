@@ -1,3 +1,4 @@
+import cameraUrl from '../assets/camera.png'
 import multimeterUrl from '../assets/Multimeter.png'
 import { MARKER_COLORS } from './markers'
 
@@ -100,15 +101,7 @@ export function Toolbar({
         onClick={onScreenshot}
         className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl border-4 border-stone-100/40 px-2 py-3 text-lg font-semibold text-stone-100 hover:border-stone-100 focus-visible:outline-4 focus-visible:outline-sky-300"
       >
-        <svg viewBox="0 0 64 48" className="h-20 w-20" aria-hidden="true">
-          <path
-            d="M8 12h12l4-6h16l4 6h12a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V16a4 4 0 0 1 4-4Z"
-            className="fill-none stroke-stone-100"
-            strokeWidth={4}
-            strokeLinejoin="round"
-          />
-          <circle cx={32} cy={28} r={9} className="fill-none stroke-stone-100" strokeWidth={4} />
-        </svg>
+        <img src={cameraUrl} alt="" className="h-20 object-contain" />
         Screenshot
       </button>
     </nav>
