@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import App from './App'
 import { Gallery } from './ui/Gallery'
 import { Launch } from './ui/Launch'
+import { openIn } from './useTacto'
 
 const LAB_HASH = '#lab'
 const GALLERY_HASH = '#gallery'
@@ -22,7 +23,10 @@ export default function Root() {
   if (hash === GALLERY_HASH) return <Gallery onBack={() => (location.hash = '')} />
   return (
     <Launch
-      onOpen={() => (location.hash = LAB_HASH)}
+      onOpen={(mode) => {
+        openIn(mode)
+        location.hash = LAB_HASH
+      }}
       onOpenGallery={() => (location.hash = GALLERY_HASH)}
     />
   )

@@ -17,6 +17,21 @@ export const useTacto = create<Store>(() => ({
   send: () => {},
 }))
 
+// The mode the opening page asked for (the circuit board: Tinker; the play button: Lab). It is
+// sent once, as soon as the lab is connected, and then forgotten, so a reconnect later does
+// not restart the lesson.
+let openingMode: 'tinker' | 'lab' | null = null
+
+export function openIn(mode: 'tinker' | 'lab') {
+  openingMode = mode
+  // Already connected (back from the opening page with the lab still open): send it now.
+  const { connected, send } = useTacto.getState()
+  if (connected) {
+    send({ type: 'set_mode', mode })
+    openingMode = null
+  }
+}
+
 /** Open the WebSocket once, at the top of the app. Reconnects on its own. */
 export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
   // Kept in a ref so that a new handler (for example after the mouse connects and the
@@ -37,7 +52,7 @@ export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
       const learner = new URLSearchParams(location.search).get('learner')
       const query = learner ? `?learner=${encodeURIComponent(learner)}` : ''
       socket = new WebSocket(`${scheme}://${location.host}/ws${query}`)
-      socket.onopen = () =>
+      socket.onopen = () => {
         useTacto.setState({
           connected: true,
           send: (msg) => {
@@ -48,6 +63,11 @@ export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
             socket.send(JSON.stringify(msg))
           },
         })
+        if (openingMode !== null) {
+          useTacto.getState().send({ type: 'set_mode', mode: openingMode })
+          openingMode = null
+        }
+      }
       socket.onmessage = (event) => {
         // The server sends one kind of message, the state. One-off haptic patterns are no
         // longer sent; `onHaptic` stays for the day they are.
