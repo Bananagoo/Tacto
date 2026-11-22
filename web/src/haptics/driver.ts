@@ -161,6 +161,42 @@ interface Hid {
   requestDevice(options: {
     filters: { vendorId: number; productId: number }[]
   }): Promise<HidDevice[]>
+  /** The devices this page was already allowed to use: no picker, no click needed. */
+  getDevices(): Promise<HidDevice[]>
+  addEventListener(type: 'connect' | 'disconnect', listener: () => void): void
+  removeEventListener(type: 'connect' | 'disconnect', listener: () => void): void
+}
+
+function webHid(): Hid | undefined {
+  return (navigator as Navigator & { hid?: Hid }).hid
+}
+
+/** Our mouse or its receiver, by its USB ids. */
+function isOurs(device: HidDevice & { vendorId?: number }): boolean {
+  return (
+    (device.vendorId === undefined || device.vendorId === LOGITECH) &&
+    [...MOUSE_PRODUCT_IDS, BOLT_RECEIVER_PRODUCT_ID].includes(device.productId)
+  )
+}
+
+/** How many of our devices the browser already lets this site use (0 until allowed once). */
+export async function allowedMice(): Promise<number> {
+  const hid = webHid()
+  if (!hid) return 0
+  return (await hid.getDevices()).filter(isOurs).length
+}
+
+/** Calls `listener` whenever a HID device is plugged in or unplugged, or switched on or off.
+ *  Returns the function that stops it. */
+export function onMousePlugged(listener: () => void): () => void {
+  const hid = webHid()
+  if (!hid) return () => {}
+  hid.addEventListener('connect', listener)
+  hid.addEventListener('disconnect', listener)
+  return () => {
+    hid.removeEventListener('connect', listener)
+    hid.removeEventListener('disconnect', listener)
+  }
 }
 
 const LOGITECH = 0x046d
@@ -168,6 +204,9 @@ const MOUSE_PRODUCT_IDS = [0xb042, 0xb048] // MX Master 4 and the Business editi
 /** Said when the device picker is closed without choosing: the person changed their mind, which
  *  is not a fault, so the page shows nothing for it. */
 export const PICKER_CLOSED = 'No mouse was selected'
+/** Said when the site has never been allowed to use the mouse: allow it once in the dev tools. */
+export const NOT_ALLOWED_YET =
+  'This browser has not been allowed to use the mouse yet: allow it once in Dev tools, Haptics.'
 const BOLT_RECEIVER_PRODUCT_ID = 0xc548
 const LONG_REPORT = 0x11
 const LONG_REPORT_BYTES = 19
@@ -194,8 +233,9 @@ export class WebHidHaptics implements HapticsDriver {
     return this.device?.opened === true
   }
 
+  /** Opens the browser's device picker: must be called from a click. */
   async connect() {
-    const hid = (navigator as Navigator & { hid?: Hid }).hid
+    const hid = webHid()
     if (!hid) throw new Error('WebHID is not available in this browser')
     const devices = await hid.requestDevice({
       filters: [...MOUSE_PRODUCT_IDS, BOLT_RECEIVER_PRODUCT_ID].map((productId) => ({
@@ -203,6 +243,22 @@ export class WebHidHaptics implements HapticsDriver {
         productId,
       })),
     })
+    await this.openFrom(devices)
+  }
+
+  /**
+   * Connects to a mouse this site was allowed to use before, with no picker and no click, so
+   * the lab can connect on its own at start. Throws when there is none, or it does not answer.
+   */
+  async connectKnown() {
+    const hid = webHid()
+    if (!hid) throw new Error('WebHID is not available in this browser')
+    const devices = (await hid.getDevices()).filter(isOurs)
+    if (devices.length === 0) throw new Error(NOT_ALLOWED_YET)
+    await this.openFrom(devices)
+  }
+
+  private async openFrom(devices: HidDevice[]) {
     // A receiver shows up as several HID devices; only one of them takes the long report.
     const device =
       devices.find((candidate) =>

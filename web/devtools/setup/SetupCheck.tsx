@@ -145,8 +145,8 @@ export default function SetupCheck() {
             ))}
           </ul>
           <p className="m-0 text-sm text-stone-400">
-            Not checked here: the mouse (press Connect mouse in the lab and touch a lit bulb), and
-            the sound (open a question with /debug/reflect and listen).
+            Not checked here: the mouse (Haptics tab: Test the connection), and the sound (open a
+            question with /debug/reflect and listen).
           </p>
         </section>
       )}

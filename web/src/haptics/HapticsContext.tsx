@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { DRIVERS, PICKER_CLOSED, type HapticsDriver } from './driver'
+import { DRIVERS, onMousePlugged, PICKER_CLOSED, WebHidHaptics, type HapticsDriver } from './driver'
 import { HapticsContext, type Haptics } from './useHaptics'
 
 /**
  * Owns the one haptics driver. The page starts on the console driver, so the whole lesson
- * runs with no mouse; a click on "Connect mouse" swaps in the WebHID driver.
+ * runs with no mouse, and connects to the mouse on its own (Katie, 22 Nov 2026): at start, and
+ * again whenever a mouse or its receiver is plugged in or switched on. That needs the site to
+ * have been allowed the mouse once, from Dev tools, Haptics; the browser remembers it.
  */
 export function HapticsProvider({ children }: { children: ReactNode }) {
   const [driver, setDriver] = useState<HapticsDriver>(DRIVERS.console)
@@ -36,6 +38,42 @@ export function HapticsProvider({ children }: { children: ReactNode }) {
     } finally {
       connectingRef.current = false
       setConnecting(false)
+    }
+  }, [])
+
+  // Connect on our own to a mouse the browser already allows, and keep it connected: try at
+  // start and whenever a device comes or goes. Quiet when there is none: the lab runs without.
+  const driverRef = useRef(driver)
+  useEffect(() => {
+    driverRef.current = driver
+  }, [driver])
+  useEffect(() => {
+    let stopped = false
+    const reconnect = async () => {
+      const current = driverRef.current
+      if (current.name === 'webhid' && current.isConnected) return
+      if (current.name === 'webhid') setDriver(DRIVERS.console) // it was unplugged
+      if (connectingRef.current) return
+      connectingRef.current = true
+      const mouse = new WebHidHaptics()
+      try {
+        await mouse.connectKnown()
+        if (stopped) mouse.close()
+        else {
+          setDriver(mouse)
+          setMouseError('')
+        }
+      } catch {
+        mouse.close()
+      } finally {
+        connectingRef.current = false
+      }
+    }
+    void reconnect()
+    const stop = onMousePlugged(() => void reconnect())
+    return () => {
+      stopped = true
+      stop()
     }
   }, [])
 

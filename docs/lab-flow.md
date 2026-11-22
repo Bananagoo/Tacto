@@ -57,7 +57,7 @@ The presenter lays this out on the mat, so the judge only ever changes one thing
 - **A loop:** battery, one bulb and wires, with the **open (cyan) switch already in it**.
 - **A side branch** beside the bulb with a gap where the second bulb goes: a **resistor** from (2,1) to (2,2) and a wire from (3,1) to (3,2). The resistor makes the second bulb glow dimmer than the first, and gives the meter a resistor to read.
 - **Within reach:** the closed (green) switch and the second bulb.
-- **Mouse connected,** lab opened from the circuit board, then **Lab** pressed: the lesson starts at step 1 and **3 V**.
+- **Mouse on** (it connects by itself; check it once with Dev tools, Haptics, Test the connection), lab opened from the circuit board, then **Lab** pressed: the lesson starts at step 1 and **3 V**.
 
 ---
 

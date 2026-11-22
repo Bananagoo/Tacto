@@ -6,10 +6,95 @@
 // one code path to the mouse. The `console` driver needs no hardware (flashes a dot instead).
 
 import { useEffect, useMemo, useState } from 'react'
-import { DRIVERS, MAX_WAVEFORM_INDEX, type DriverName } from '../../src/haptics/driver'
+import {
+  allowedMice,
+  DRIVERS,
+  MAX_WAVEFORM_INDEX,
+  onMousePlugged,
+  WebHidHaptics,
+  type DriverName,
+} from '../../src/haptics/driver'
 
 const MIN_RATE_HZ = 1
 const MAX_RATE_HZ = 30
+
+/**
+ * The mouse connection test. The lab connects to the mouse on its own, but only to one the
+ * browser was allowed once: this is where that is done, and where it is checked before a demo.
+ */
+function MouseConnection() {
+  const [allowed, setAllowed] = useState<number | null>(null)
+  const [result, setResult] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const look = () => void allowedMice().then(setAllowed)
+    look()
+    return onMousePlugged(look)
+  }, [])
+
+  const attempt = async (how: 'allow' | 'test') => {
+    setBusy(true)
+    setResult('')
+    const mouse = new WebHidHaptics()
+    try {
+      if (how === 'allow') await mouse.connect()
+      else await mouse.connectKnown()
+      mouse.play('tick')
+      const strength = await mouse.getStrength()
+      setResult(
+        `✓ Connected without a click${how === 'allow' ? ' from now on' : ''}: you should have felt one tick. Strength setting ${strength ?? 'unknown'}%.`,
+      )
+    } catch (error) {
+      setResult(`✗ ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      mouse.close()
+      setAllowed(await allowedMice())
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-3 rounded-3xl bg-white/5 p-6">
+      <h2 className="m-0 font-['Patrick_Hand'] text-3xl text-stone-100">Mouse connection</h2>
+      <p className="m-0 text-stone-300">
+        The lab connects to the MX Master 4 by itself at start and after it is switched on or
+        plugged in, once this browser has been allowed to use it. Allow it once here; the browser
+        remembers.
+      </p>
+      <p className={`m-0 text-lg ${allowed ? 'text-emerald-300' : 'text-amber-200'}`}>
+        {allowed === null
+          ? 'Checking…'
+          : allowed
+            ? `✓ Allowed (${allowed} device${allowed === 1 ? '' : 's'}): the lab will connect on its own.`
+            : '! Not allowed yet: press Allow the mouse and pick the USB Receiver or the MX Master 4.'}
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void attempt('allow')}
+          className="rounded-2xl bg-white/10 px-5 py-2 text-lg hover:bg-white/20 disabled:opacity-50"
+        >
+          Allow the mouse
+        </button>
+        <button
+          type="button"
+          disabled={busy || !allowed}
+          onClick={() => void attempt('test')}
+          className="rounded-2xl bg-emerald-500 px-5 py-2 text-lg text-emerald-950 hover:bg-emerald-400 disabled:opacity-50"
+        >
+          Test the connection
+        </button>
+      </div>
+      {result && <p className="m-0 text-stone-100">{result}</p>}
+      <p className="m-0 text-sm text-stone-400">
+        The test connects the way the lab does (no picker), plays one tick, and lets go. If the lab
+        is open in another tab it may hold the mouse: close it for the test.
+      </p>
+    </section>
+  )
+}
 
 export default function HapticTestPage() {
   const [driverName, setDriverName] = useState<DriverName>('console')
@@ -53,8 +138,9 @@ export default function HapticTestPage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-md flex-col gap-4 p-8">
-      <h1 className="text-2xl font-semibold">Haptics test</h1>
+    <main className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
+      <MouseConnection />
+      <h1 className="m-0 mt-4 font-['Patrick_Hand'] text-3xl font-normal">Waveform test</h1>
       <select
         className="rounded bg-white/10 px-2 py-1"
         value={driverName}
