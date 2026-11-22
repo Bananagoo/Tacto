@@ -93,6 +93,10 @@ def evaluate(samples: list[dict], *, seconds: float, voice: dict | None = None) 
     state = bright.get("state", "off")
     status, fix = {
         "settled": ("pass", ""),
+        "glare": (
+            "warn",
+            "A shiny spot on the mat limits the brightness: use matte tape, or tilt the lamp.",
+        ),
         "adjusting": ("warn", "Still adjusting: run the check again in a moment."),
         "too dark": ("fail", "Too dark even at full gain: add light over the mat."),
         "too bright": ("fail", "Too bright even at the lowest gain: move out of the glare."),
@@ -191,9 +195,16 @@ def evaluate(samples: list[dict], *, seconds: float, voice: dict | None = None) 
     return checks
 
 
-async def run(report: Callable[[], dict], voice: Callable[[], dict] | None = None) -> dict:
-    """Let brightness settle, watch for SECONDS, and judge. Takes about 3 to 8 seconds."""
+async def run(
+    report: Callable[[], dict],
+    voice: Callable[[], dict] | None = None,
+    recalibrate: Callable[[], None] | None = None,
+) -> dict:
+    """Find the brightness for the room now, let it settle, watch for SECONDS, and judge.
+    Takes about 3 to 8 seconds. Brightness is held between checks (vision/brightness.py)."""
     started = time.monotonic()
+    if recalibrate is not None:
+        recalibrate()
     while time.monotonic() - started < SETTLE_S:
         if report().get("brightness", {}).get("state") not in ("waiting", "adjusting"):
             break

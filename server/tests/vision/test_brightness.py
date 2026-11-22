@@ -118,3 +118,69 @@ def test_paper_level_is_the_paper_and_clipping_is_counted():
     assert level == pytest.approx(190, abs=1) and clipped == 0.0
     page[:, :100] = 255
     assert paper_level(page)[1] == pytest.approx(100 / 297, abs=0.02)
+
+
+# ---------- calibrate, then hold still (22 Nov 2026) ----------
+# Live, the gain kept moving: with a glare spot on the mat the paper read dim (so up) and the
+# spot clipped (so down), every 0.4 s, and each change shifted every colour the reader saw.
+
+
+class GlareCamera(Camera):
+    """Dim paper with a shiny spot that clips once the gain reaches 20, whatever the paper."""
+
+    @property
+    def clipped(self) -> float:
+        return 0.03 if self.gain >= 20 else 0.0
+
+
+def test_a_glare_spot_does_not_make_it_swing_up_and_down():
+    camera = GlareCamera(base=140)  # the paper alone would want gain 29
+    auto = run(camera, seconds=30)
+    assert camera.gain < 20  # never left clipping
+    assert len(camera.set_to) <= 10  # closed in and stopped, no back and forth
+    assert auto.state == "glare" and auto.locked
+
+
+def test_once_calibrated_a_shadow_or_a_hand_changes_nothing():
+    camera = Camera(base=120)
+    auto = run(camera)
+    assert auto.locked
+    settled_at = list(camera.set_to)
+    clock = [100.0]
+    auto._clock = lambda: clock[0]  # noqa: SLF001 - the same controller, later
+    for paper in (90.0, 60.0, 240.0, 120.0) * 20:  # a hand, a shadow, a lamp, ...
+        clock[0] += 0.05
+        auto.saw(paper, 0.0)
+    assert camera.set_to == settled_at
+
+
+def test_recalibrating_unlocks_it_for_the_new_light():
+    camera = Camera(base=120)
+    clock = [0.0]
+    auto = AutoGain(camera.apply, clock=lambda: clock[0])
+
+    def look(seconds):
+        for _ in range(round(seconds * 20)):
+            clock[0] += 0.05
+            auto.saw(camera.paper, camera.clipped)
+
+    look(15)
+    assert auto.locked
+    camera.base = 140  # the room got brighter
+    look(5)
+    assert abs(camera.paper - TARGET_PAPER) > 12  # held: nobody asked
+    auto.recalibrate()
+    assert not auto.locked
+    look(15)
+    assert abs(camera.paper - TARGET_PAPER) <= 12 and auto.locked
+
+
+def test_calibration_gives_up_and_holds_after_its_time_limit():
+    # A paper reading that wanders forever must still end in a held setting.
+    camera = Camera(base=120)
+    clock = [0.0]
+    auto = AutoGain(camera.apply, clock=lambda: clock[0])
+    for i in range(400):
+        clock[0] += 0.05
+        auto.saw(150.0 if i % 2 else 250.0, 0.0)
+    assert auto.locked

@@ -238,12 +238,18 @@ class CameraMatSource:
         with self._lock:
             return self._last_frame
 
+    def recalibrate_brightness(self) -> None:
+        """Find the camera's brightness again for the room's light now; then it is held."""
+        if self._brightness is not None:
+            self._brightness.recalibrate()
+
     def _brightness_report(self) -> dict:
         auto = self._brightness
         if auto is None:
             return {"state": "off"}
         return {
             "state": auto.state,
+            "locked": auto.locked,
             "gain": auto.gain,
             "paper": None if auto.paper is None else round(auto.paper, 1),
             "clipped": None if auto.clipped is None else round(auto.clipped, 3),

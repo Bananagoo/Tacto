@@ -1,5 +1,8 @@
 """The pre-demo setup check: a few seconds of the reader's reports in, a verdict per check out."""
 
+import asyncio
+
+from tacto import setup_check
 from tacto.setup_check import evaluate
 
 
@@ -64,6 +67,7 @@ def test_a_soft_picture_warns_on_focus():
 def test_brightness_verdicts_follow_the_controller():
     for state, expected in [
         ("settled", "pass"),
+        ("glare", "warn"),
         ("adjusting", "warn"),
         ("too dark", "fail"),
         ("too bright", "fail"),
@@ -108,3 +112,12 @@ def test_voice_is_checked_only_when_it_is_on():
 def test_no_samples_at_all_fails_the_camera_not_everything_else():
     result = verdicts([], seconds=2.0)
     assert result["camera"] == "fail"
+
+
+def test_the_check_recalibrates_brightness_before_it_watches(monkeypatch):
+    monkeypatch.setattr(setup_check, "SECONDS", 0.0)
+    calls = []
+    result = asyncio.run(
+        setup_check.run(lambda: sample(100), recalibrate=lambda: calls.append("recalibrate"))
+    )
+    assert calls == ["recalibrate"] and "checks" in result

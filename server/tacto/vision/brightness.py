@@ -6,14 +6,24 @@ camera's gain so that the paper, measured on the flattened mat every frame, sits
 TARGET_PAPER of 255 whatever the room's light. It never lets the paper clip to pure white,
 which would wash out the colour squares and the markers.
 
+It calibrates, then holds still. Every change of gain shifts every colour the reader sees,
+and a hand or a shadow on the mat changes the paper's level, so once it has found a setting
+it is `locked` and leaves the camera alone until `recalibrate()` is called (the setup check
+does, and so does a start). Live on 22 Nov 2026 it never stopped: a shiny spot clipped (so
+down) while the paper read dim (so up), every 0.4 s.
+
 It is a small state machine:
 
     waiting      no paper measured yet (the mat is not found)
-    adjusting    the paper is off target; the gain is being stepped towards it
-    settled      the paper is within DEADBAND of the target
-    too dark     at MAX_GAIN and still dim: more light is needed in the room
-    too bright   at gain 0 and still too bright: less light, or move out of the glare
+    adjusting    calibrating: the paper is off target; the gain is being stepped towards it
+    settled      locked: the paper is within DEADBAND of the target
+    glare        locked: the paper is dim, but one step brighter clips a shiny spot, so it
+                 holds the brightest setting that does not
+    too dark     locked: at MAX_GAIN and still dim: more light is needed in the room
+    too bright   locked: at gain 0 and still too bright: less light, or move out of the glare
     unavailable  the camera's gain cannot be set (uvc-util missing, or no camera)
+
+Calibrating stops after CALIBRATE_LIMIT_S whatever the readings, so it always ends held.
 """
 
 from __future__ import annotations
@@ -36,8 +46,10 @@ MAX_CLIPPED = 0.01
 # One change at most this often: the camera takes a few frames to show a new gain.
 PERIOD_S = 0.4
 LARGEST_STEP = 6
+# Calibration ends here at the latest, and the setting it reached is held.
+CALIBRATE_LIMIT_S = 10.0
 
-State = Literal["waiting", "adjusting", "settled", "too dark", "too bright", "unavailable"]
+State = Literal["waiting", "adjusting", "settled", "glare", "too dark", "too bright", "unavailable"]
 
 
 def paper_level(page: np.ndarray) -> tuple[float, float]:
@@ -66,32 +78,68 @@ class AutoGain:
         self.clipped: float | None = None
         self._last_change_s: float | None = None
         self._failures = 0
+        self.locked = False
+        self._began_s: float | None = None
+        # The lowest gain seen to clip, and the highest seen not to: the search runs between.
+        self._ceiling = MAX_GAIN + 1
+        self._last_good: int | None = None
+
+    def recalibrate(self) -> None:
+        """Find the setting again, for the room's light now (the setup check calls this)."""
+        self.locked = False
+        self._began_s = None
+        self._last_change_s = None
+        self._ceiling = MAX_GAIN + 1
+        self._last_good = None
+        if self.state != "unavailable":
+            self.state = "adjusting" if self.paper is not None else "waiting"
+
+    def _hold(self, state: State) -> None:
+        self.state = state
+        self.locked = True
 
     def saw(self, paper: float | None, clipped: float | None) -> None:
         """Call once a frame with `paper_level`'s two numbers, or None when no mat is seen."""
         if paper is None or clipped is None:
             return
         self.paper, self.clipped = paper, clipped
-        if self.state == "unavailable":
+        if self.state == "unavailable" or self.locked:
             return
         now = self._clock()
+        if self._began_s is None:
+            self._began_s = now
+        if now - self._began_s >= CALIBRATE_LIMIT_S:
+            self._hold("settled" if abs(TARGET_PAPER - paper) <= DEADBAND else self.state)
+            return
         if self._last_change_s is not None and now - self._last_change_s < PERIOD_S:
             return
         error = TARGET_PAPER - paper
         if clipped > MAX_CLIPPED:
-            # Clipped paper has lost its colour: come down fast, whatever the median says.
-            wanted = self.gain - LARGEST_STEP
-        elif abs(error) <= DEADBAND:
-            self.state = "settled"
-            return
+            # Clipped paper has lost its colour: come down, whatever the median says. Halfway
+            # back to the last setting that did not clip, so a glare spot is closed in on, not
+            # swung across.
+            self._ceiling = min(self._ceiling, self.gain)
+            if self._last_good is not None and self._last_good < self.gain:
+                wanted = (self._last_good + self.gain) // 2
+            else:
+                wanted = self.gain - LARGEST_STEP
         else:
+            self._last_good = self.gain
+            if abs(error) <= DEADBAND:
+                self._hold("settled")
+                return
             # About 2 levels of paper per step of gain; go two-thirds of the way each time,
-            # so it closes in without overshooting.
+            # so it closes in without overshooting. Never up into a gain seen to clip.
             step = int(np.clip(round(abs(error) / 3), 1, LARGEST_STEP))
             wanted = self.gain + (step if error > 0 else -step)
+            if error > 0 and self._ceiling <= MAX_GAIN and wanted >= self._ceiling:
+                wanted = self._ceiling - 1
+                if wanted <= self.gain:
+                    self._hold("glare")
+                    return
         wanted = int(np.clip(wanted, 0, MAX_GAIN))
         if wanted == self.gain:
-            self.state = "too dark" if error > 0 else "too bright"
+            self._hold("too dark" if error > 0 else "too bright")
             return
         self._last_change_s = now
         if not self._apply(wanted):

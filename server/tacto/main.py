@@ -185,7 +185,9 @@ def _voice_state() -> dict:
 @app.get("/setup/check")
 async def check_setup() -> dict:
     """The pre-demo check behind /devtools/#setup. Takes about 3 to 8 seconds."""
-    return await setup_check.run(source.report, _voice_state)
+    return await setup_check.run(
+        source.report, _voice_state, recalibrate=source.recalibrate_brightness
+    )
 
 
 # What the reader sees, for the setup page: the flattened mat with its readings, a few
