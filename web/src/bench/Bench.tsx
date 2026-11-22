@@ -15,7 +15,8 @@ import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
 import { Readout } from './Readout'
 import { readingAt, readingOf } from './readingAt'
-import { saveScreenshot, SKIP_IN_SCREENSHOT } from './screenshot'
+import { saveShot } from '../gallery/shots'
+import { screenshotBlob, SKIP_IN_SCREENSHOT } from './screenshot'
 import { Toolbar, type Tool } from './Toolbar'
 import { WireLine } from './WireLine'
 
@@ -64,9 +65,10 @@ export function Bench({ children }: { children?: ReactNode }) {
     setPointer(null)
   }
 
-  const takeScreenshot = () => {
-    if (svgRef.current)
-      saveScreenshot(svgRef.current).catch((error: unknown) => console.error('bench:', error))
+  // Keeps a dated picture of the circuit in the gallery. Resolves when it is saved.
+  const takeScreenshot = async () => {
+    if (!svgRef.current) return
+    await saveShot(await screenshotBlob(svgRef.current))
   }
 
   const spotOnMat = (event: PointerEvent<SVGSVGElement>): Point | null => {
