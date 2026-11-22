@@ -250,9 +250,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
           ) : (
             'The microphone opens when the question has been asked.'
           )
-        ) : (
-          'What you answer is transcribed and graded, and the words are saved on this laptop. The sound is not kept.'
-        )}
+        ) : null}
       </p>
     </div>
   )

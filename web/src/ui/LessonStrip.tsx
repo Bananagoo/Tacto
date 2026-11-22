@@ -117,13 +117,13 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
   return (
     <>
       {mode === 'lab' && (
-        // The lesson is written on a notebook page (assets/Notebook.png). The picture keeps its
-        // shape: on a wide screen it is as tall as the mat beside it, and its type grows and
-        // shrinks with it (cqw: a share of the notebook's width), so the page reads the same
-        // on the laptop and on the projector.
+        // The lesson is handwritten on a notebook page (assets/Notebook.png). On a wide screen
+        // it is as tall as the mat beside it, drawn a little wider than the picture (7:10, not
+        // 0.64) so the writing has room. Its type grows and shrinks with it (cqw: a share of
+        // the notebook's width), so the page reads the same on the laptop and the projector.
         <section
           aria-label="Lesson"
-          className="@container relative aspect-[1010/1517] w-full max-w-md shrink-0 self-center lg:h-full lg:w-auto lg:max-w-none"
+          className="@container relative aspect-[7/10] w-full max-w-lg shrink-0 self-center lg:h-full lg:w-auto lg:max-w-none"
         >
           <img
             src={notebookUrl}
@@ -134,13 +134,13 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
           />
           {/* The writable part of the page: right of the red margin, below the rings. */}
           <div
-            className="absolute overflow-y-auto text-stone-800"
+            className="absolute overflow-y-auto font-['Patrick_Hand'] text-stone-800 [&_button]:font-['Space_Grotesk_Variable'] [&_input]:font-['Space_Grotesk_Variable']"
             style={{
-              left: '23%',
-              right: '13%',
-              top: '12%',
-              bottom: '10%',
-              fontSize: 'clamp(11px, 4.4cqw, 26px)',
+              left: '21%',
+              right: '9%',
+              top: '10%',
+              bottom: '14%', // room for the Restart lab button below
+              fontSize: 'clamp(13px, 5.4cqw, 32px)',
             }}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -165,19 +165,6 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
                       : 'Connecting to the lab…'}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={restartLesson}
-                disabled={!connected}
-                aria-keyshortcuts="R"
-                title="Restart at step 1 and 3 V. Put the pieces back in the starting layout."
-                className="cursor-pointer rounded-lg bg-stone-900/10 px-[0.7em] py-[0.35em] text-[0.85em] font-semibold hover:bg-stone-900/20 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:cursor-default disabled:opacity-40"
-              >
-                Restart{' '}
-                <kbd className="ml-2 rounded bg-stone-900/10 px-[0.4em] py-[0.1em] text-[0.8em]">
-                  R
-                </kbd>
-              </button>
             </div>
             {ready && lesson.reflection && lesson.reflectionStatus && (
               <Reflection lesson={lesson} onSkip={continueLesson} />
@@ -207,6 +194,20 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               </div>
             )}
           </div>
+          {/* Pinned to the page's bottom-right corner, outside the writing, so it is always
+              in the same place whatever the page says. */}
+          <button
+            type="button"
+            onClick={restartLesson}
+            disabled={!connected}
+            aria-keyshortcuts="R"
+            title="Restart at step 1 and 3 V. Put the pieces back in the starting layout."
+            className="absolute cursor-pointer rounded-lg bg-stone-800 px-[0.8em] py-[0.35em] font-['Space_Grotesk_Variable'] font-semibold text-white hover:bg-stone-700 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:cursor-default disabled:opacity-40"
+            style={{ right: '9%', bottom: '5%', fontSize: 'clamp(11px, 4.2cqw, 24px)' }}
+          >
+            Restart lab{' '}
+            <kbd className="ml-2 rounded bg-white/20 px-[0.4em] py-[0.1em] text-[0.8em]">R</kbd>
+          </button>
         </section>
       )}
     </>

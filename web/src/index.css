@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 /* Bundled with the app, so the font loads with Wi-Fi off. */
 @import '@fontsource-variable/space-grotesk';
+/* The lab instructions are handwritten on the notebook page. Also bundled. */
+@import '@fontsource/patrick-hand';
 
 @theme {
   /* An overloaded wire throbs. Faster and deeper than Tailwind's pulse, so it reads as alarm. */
