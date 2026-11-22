@@ -12,7 +12,6 @@ import {
   type Stroke,
 } from './markers'
 import { BenchMeter, type MeterMode } from './BenchMeter'
-import { Probe } from './Probe'
 import { PartView } from './PartView'
 import { VoltageTag } from './VoltageTag'
 import { Readout } from './Readout'
@@ -30,7 +29,7 @@ const DRAW_SERVER_CIRCUIT = true
  * The mat as the camera reads it, drawn straight from the latest state. Nothing here knows
  * a layout: it draws whatever parts and wires the server lists. `children` are laid over the
  * mat's corner (the camera picture). Picked up, the multimeter sits large on the bench and
- * the pointer is its probe.
+ * reads whatever the pointer is over.
  */
 export function Bench({ children }: { children?: ReactNode }) {
   const connected = useTacto((store) => store.connected)
@@ -140,7 +139,7 @@ export function Bench({ children }: { children?: ReactNode }) {
         style={{ touchAction: tool === 'marker' || tool === 'eraser' ? 'none' : undefined }}
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         // A stale picture is dimmed while the server is away, so it is not taken for live.
-        className={`absolute inset-y-0 right-0 left-40 h-full w-[calc(100%-10rem)] transition-opacity ${probing || tool === 'eraser' ? 'cursor-none' : tool === 'marker' ? 'cursor-crosshair' : ''} ${connected ? '' : 'opacity-25'}`}
+        className={`absolute inset-y-0 right-0 left-40 h-full w-[calc(100%-10rem)] transition-opacity ${tool === 'eraser' ? 'cursor-none' : tool === 'marker' ? 'cursor-crosshair' : ''} ${connected ? '' : 'opacity-25'}`}
         role="img"
         aria-label="The circuit on the mat"
       >
@@ -191,7 +190,6 @@ export function Bench({ children }: { children?: ReactNode }) {
             aria-label="The fingertip on the mat"
           />
         )}
-        <Probe point={probing ? pointer : null} />
         {tool === 'eraser' && pointer && (
           // A ring the size of the eraser's reach, so it is clear what it will take.
           <circle
