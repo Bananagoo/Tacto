@@ -18,7 +18,7 @@ export default function Root() {
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
 
-  if (hash === LAB_HASH) return <App onHome={() => (location.hash = '')} />
+  if (hash === LAB_HASH) return <App />
   if (hash === GALLERY_HASH) return <Gallery onBack={() => (location.hash = '')} />
   return (
     <Launch

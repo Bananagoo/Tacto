@@ -177,6 +177,9 @@ class AnswerReflection(BaseModel):
     type: Literal["answer_reflection"] = "answer_reflection"
     step_id: str
     text: str = Field(max_length=2000)
+    # The `reflection_line_id` being answered. Send it: an answer that arrives after the
+    # lab has moved on to another question is then dropped instead of graded against it.
+    line_id: int | None = Field(None, ge=0)
 
 
 class ReflectionHeard(BaseModel):

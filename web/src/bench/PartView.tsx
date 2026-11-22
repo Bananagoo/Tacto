@@ -6,10 +6,20 @@ import { Bulb } from './parts/Bulb'
 import { Resistor } from './parts/Resistor'
 import { Switch } from './parts/Switch'
 
+// Below this many amps a part counts as carrying nothing: the server's own threshold for
+// silence on the mouse (MIN_CURRENT_AMPS in server/tacto/sim/feel.py), so the picture and the
+// vibration agree.
+const CARRYING_AMPS = 0.005
+
+/** Current flows through it, or it is on a short (where the server reports no number). */
+function isLive(part: Part): boolean {
+  return part.shorted || Math.abs(part.current) >= CARRYING_AMPS
+}
+
 function Symbol({ part, length, angleDeg }: { part: Part; length: number; angleDeg: number }) {
   switch (part.kind) {
     case 'battery':
-      return <Battery length={length} />
+      return <Battery length={length} live={isLive(part)} />
     case 'bulb':
       return <Bulb length={length} angleDeg={angleDeg} brightness={part.brightness} />
     case 'resistor':
@@ -29,7 +39,8 @@ function sameDrawing({ part: before }: { part: Part }, { part: after }: { part: 
     before.b[0] === after.b[0] &&
     before.b[1] === after.b[1] &&
     before.closed === after.closed &&
-    before.brightness === after.brightness
+    before.brightness === after.brightness &&
+    isLive(before) === isLive(after)
   )
 }
 

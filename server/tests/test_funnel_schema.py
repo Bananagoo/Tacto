@@ -170,3 +170,19 @@ def test_min_and_max_voltage_together_make_a_range():
     wanted = DoneWhen(min_voltage=3, max_voltage=6)
     for volts, met in [(2.5, False), (3, True), (4.5, True), (6, True), (6.5, False)]:
         assert is_satisfied(wanted, [], Circuit(status="working", voltage=volts)) is met
+
+
+# ---------- found by the review of 22 Nov 2026 ----------
+
+
+@pytest.mark.parametrize(
+    "what, goal",
+    [
+        ("nothing at all", {}),
+        ("only 'a different piece', with nothing to touch", {"different_piece": True}),
+    ],
+)
+def test_an_exit_goal_must_ask_for_something(what, goal, tmp_path):
+    path = write(tmp_path, lesson_with(funnel(exit={"line": "x", "then": [goal]})))
+    with pytest.raises(LessonFileError, match="steps.0.reflection"):
+        load_lesson(path)

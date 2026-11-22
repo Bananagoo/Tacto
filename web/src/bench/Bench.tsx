@@ -13,6 +13,7 @@ import {
 } from './markers'
 import { Multimeter } from './Multimeter'
 import { PartView } from './PartView'
+import { VoltageTag } from './VoltageTag'
 import { Readout } from './Readout'
 import { readingAt, readingOf } from './readingAt'
 import { saveShot } from '../gallery/shots'
@@ -153,6 +154,15 @@ export function Bench({ children }: { children?: ReactNode }) {
             touched={reading?.wireKey === wireKeys[index]}
           />
         ))}
+        {parts
+          .filter((part) => part.kind === 'battery')
+          .map((battery) => (
+            <VoltageTag
+              key={`volts-${battery.id}`}
+              battery={battery}
+              volts={circuit?.source_voltage ?? 0}
+            />
+          ))}
         {parts.map((part) => (
           <PartView key={part.id} part={part} />
         ))}

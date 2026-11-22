@@ -22,6 +22,7 @@ function toPart(piece: ServerPiece & { type: Part['kind'] }): Part {
     current: piece.current,
     voltage: piece.voltage,
     brightness: piece.brightness ?? 0,
+    shorted: piece.shorted,
   }
 }
 

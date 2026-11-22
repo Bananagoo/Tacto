@@ -96,11 +96,15 @@ def ensure_cached(
             if not audio.startswith(b"RIFF"):
                 print(f"tts: the reply for {line[:40]!r} was not a WAV file; not kept")
                 continue
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            # Written whole or not at all: a start cut short must not leave half a file.
-            partial = path.with_suffix(".part")
-            partial.write_bytes(audio)
-            partial.replace(path)
+            try:
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                # Written whole or not at all: a start cut short must not leave half a file.
+                partial = path.with_suffix(".part")
+                partial.write_bytes(audio)
+                partial.replace(path)
+            except OSError as error:
+                print(f"tts: could not keep the audio for {line[:40]!r}: {error}")
+                continue
             spoken += 1
         cached[line] = name
     print(f"tts: {len(cached)} of {len(lines)} lines have audio; {spoken} synthesised just now")

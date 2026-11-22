@@ -30,12 +30,12 @@ function choseVoice(): boolean {
   }
 }
 
-/** True for the keys' targets that already use Space or Enter themselves. */
-function isControl(target: EventTarget | null): boolean {
+/** True where Space is typing a space: push-to-talk leaves those alone. */
+function isTextEntry(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
     (target.isContentEditable ||
-      target.closest('input, textarea, select, button, a, [role="textbox"]') !== null)
+      target.closest('input, textarea, select, [role="textbox"]') !== null)
   )
 }
 
@@ -83,7 +83,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
 
   // ---------- the learner's voice ----------
   const [voice, setVoice] = useState(choseVoice)
-  const mic = useAnswerMic(stepId)
+  const mic = useAnswerMic(stepId, lineId)
   const { state: micState, open: openMic, close: closeMic, talk, release } = mic
   const openedFor = useRef('')
   const mayListen = voice && asking && labHasFinishedSpeaking
@@ -103,21 +103,32 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
     if (!mayListen) return
     let held = false
     const down = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || event.repeat || isControl(event.target)) return
+      if (event.code !== 'Space' || isTextEntry(event.target)) return
+      // Also on a focused button: Space is the talk key here, not "press this button".
       event.preventDefault()
+      if (event.repeat || held) return
       held = true
       talk()
     }
-    const up = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || !held) return
+    const letGo = () => {
+      if (!held) return
       held = false
       release()
     }
+    const up = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || isTextEntry(event.target)) return
+      event.preventDefault() // or the browser would click the focused button now
+      letGo()
+    }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
+    // Switching window with the key down: the key-up never arrives here.
+    window.addEventListener('blur', letGo)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', letGo)
+      letGo()
     }
   }, [mayListen, talk, release])
 
@@ -131,6 +142,8 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
     }
     if (!on) closeMic()
     else openedFor.current = ''
+    // The button keeps the focus after a click, and Space would then press it again.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   }
 
   const submit = (event: FormEvent) => {
@@ -138,7 +151,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
     const text = box.current?.value.trim() ?? ''
     if (!asking || !text) return
     closeMic()
-    send({ type: 'answer_reflection', step_id: stepId, text })
+    send({ type: 'answer_reflection', step_id: stepId, text, line_id: lineId })
   }
 
   // What the learner sees the lab doing: the server's word, sharpened by what the
@@ -151,32 +164,32 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
         : serverStatus
 
   return (
-    <div className="mt-4 border-t border-white/15 pt-4">
+    <div className="mt-[0.8em] border-t border-stone-500/40 pt-[0.8em]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         {/* aria-live: a new line from the lab is read out, the same question again included. */}
-        <div role="status" aria-live="polite" className="min-w-0 flex-1">
+        <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-full">
           <p
-            className={`m-0 text-sm font-semibold tracking-wide uppercase ${
+            className={`m-0 text-[0.75em] font-semibold tracking-wide uppercase ${
               status === 'resolved'
-                ? 'text-emerald-300'
+                ? 'text-emerald-700'
                 : status === 'listening'
-                  ? 'text-rose-300'
-                  : 'text-sky-300'
+                  ? 'text-rose-700'
+                  : 'text-sky-700'
             }`}
           >
             {status === 'listening' && <span aria-hidden="true">● </span>}
             {HEADING[status]}
           </p>
-          <p className="m-0 mt-1 text-xl font-semibold lg:text-2xl">
+          <p className="m-0 mt-1 text-[1.1em] leading-snug font-semibold">
             {lesson.reflectionLine ?? lesson.reflection}
           </p>
           {lesson.reflectionTranscript !== null && (
-            <p className="m-0 mt-2 text-lg text-stone-300">
+            <p className="m-0 mt-[0.4em] text-[0.85em] text-stone-600">
               You said: “{lesson.reflectionTranscript || '(nothing heard)'}”
             </p>
           )}
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-[0.5em]">
           <button
             type="button"
             aria-pressed={voice}
@@ -186,10 +199,10 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
                 ? 'Stop using the microphone'
                 : 'Answer out loud. What you say is sent to be transcribed and graded.'
             }
-            className={`cursor-pointer rounded-xl px-4 py-3 text-lg font-semibold focus-visible:outline-4 focus-visible:outline-sky-300 ${
+            className={`cursor-pointer rounded-lg px-[0.7em] py-[0.35em] text-[0.85em] font-semibold focus-visible:outline-4 focus-visible:outline-sky-600 ${
               voice
-                ? 'bg-rose-300 text-rose-950 hover:bg-rose-200'
-                : 'bg-white/15 hover:bg-white/25'
+                ? 'bg-rose-700 text-white hover:bg-rose-800'
+                : 'bg-stone-900/10 hover:bg-stone-900/20'
             }`}
           >
             {voice ? 'Voice on' : 'Answer by voice'}
@@ -198,7 +211,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
             type="button"
             onClick={onSkip}
             title="Move on without finishing this question"
-            className="cursor-pointer rounded-xl bg-white/15 px-4 py-3 text-lg font-semibold hover:bg-white/25 focus-visible:outline-4 focus-visible:outline-sky-300"
+            className="cursor-pointer rounded-lg bg-stone-900/10 px-[0.7em] py-[0.35em] text-[0.85em] font-semibold hover:bg-stone-900/20 focus-visible:outline-4 focus-visible:outline-sky-600"
           >
             Skip
           </button>
@@ -206,7 +219,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
       </div>
       {(asking || serverStatus === 'thinking') && (
         // key: a new line from the lab starts with an empty box.
-        <form key={lineKey} onSubmit={submit} className="mt-3 flex flex-wrap gap-3">
+        <form key={lineKey} onSubmit={submit} className="mt-[0.6em] flex flex-wrap gap-[0.5em]">
           <input
             ref={box}
             type="text"
@@ -215,20 +228,20 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
             autoComplete="off"
             maxLength={600}
             disabled={!asking}
-            className="min-w-0 flex-1 rounded-xl border-2 border-white/20 bg-black/20 px-4 py-3 text-xl text-white placeholder:text-stone-400 focus-visible:outline-4 focus-visible:outline-sky-300 disabled:opacity-50"
+            className="min-w-0 flex-1 rounded-lg border-2 border-stone-500/50 bg-white/70 px-[0.6em] py-[0.35em] text-[0.95em] text-stone-900 placeholder:text-stone-500 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!asking}
-            className="cursor-pointer rounded-xl bg-sky-300 px-5 py-3 text-lg font-semibold text-sky-950 hover:bg-sky-200 focus-visible:outline-4 focus-visible:outline-white disabled:cursor-default disabled:opacity-50"
+            className="cursor-pointer rounded-lg bg-sky-700 px-[0.8em] py-[0.35em] text-[0.9em] font-semibold text-white hover:bg-sky-800 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:cursor-default disabled:opacity-50"
           >
             Answer
           </button>
         </form>
       )}
-      <p className="m-0 mt-2 text-sm text-stone-300">
+      <p className="m-0 mt-[0.4em] text-[0.7em] text-stone-600">
         {mic.error ? (
-          <span role="alert" className="font-bold text-amber-300">
+          <span role="alert" className="font-bold text-amber-800">
             {mic.error} Type your answer instead.
           </span>
         ) : voice && asking ? (
@@ -237,9 +250,7 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
           ) : (
             'The microphone opens when the question has been asked.'
           )
-        ) : (
-          'What you answer is transcribed and graded, and the words are saved on this laptop. The sound is not kept.'
-        )}
+        ) : null}
       </p>
     </div>
   )

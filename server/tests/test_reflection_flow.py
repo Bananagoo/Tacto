@@ -4,6 +4,7 @@ The lesson is the real one (lessons/circuits-101.yaml); the circuits are solved 
 only the grading is faked: an answer's text is the label it gets.
 """
 
+import time
 from pathlib import Path
 
 import pytest
@@ -197,6 +198,7 @@ def test_three_misses_state_the_idea_and_the_mat_finishes_it(step_id):
     state = session.say("partial")
     assert state.reflection_status == "exit"
     assert state.reflection_line == funnel_of(step_id).exit.line
+    session.look(CONFIRM_SECONDS)  # the idea is read before its goals count (review, 22 Nov)
     for action in EXIT[step_id]:
         assert session.look().step_id == step_id
         state = session.hold(action)
@@ -220,7 +222,7 @@ def test_the_other_bulb_means_not_the_one_touched_when_the_step_finished():
     session.reach("series")  # finished with a finger on bulb A
     for label in ("partial", "partial", "partial"):
         session.say(label)
-    assert session.hold(("series", 6.0, BULB_A), 2.0).step_id == "series"
+    assert session.hold(("series", 6.0, BULB_A), CONFIRM_SECONDS).step_id == "series"
     assert session.hold(("series", 6.0, BOTTOM)).step_id == "parallel"
 
 
@@ -304,6 +306,7 @@ def test_every_reflection_can_be_driven_through_every_path():
                 session.say("correct")
                 state = session.look(CONFIRM_SECONDS + 0.1)
             else:
+                session.look(CONFIRM_SECONDS)
                 for action in EXIT[step_id]:
                     state = session.hold(action)
             assert state.lesson_done or state.step_id != step_id, (step_id, misses)
@@ -580,3 +583,104 @@ def test_with_the_network_gone_mid_reflection_the_lesson_still_reaches_the_next_
     assert lesson.reflection_status == "exit"  # every failure counted as "partial"
     session.clock.t += 20.5  # nobody does the action either
     assert session.lab.state().lesson.step_id == "series"
+
+
+# ---------- found by the review of 22 Nov 2026 ----------
+
+
+def to_exit(session: Session, step_id: str):
+    session.reach(step_id)
+    for _ in range(3):
+        state = session.say("partial")
+    assert state.reflection_status == "exit"
+    return state
+
+
+def test_an_exit_goal_already_met_does_not_cut_the_stated_idea_short():
+    """Series: the finger is already on the other bulb when the third answer misses."""
+    session = Session()
+    session.reach("series")
+    for _ in range(2):
+        session.say("partial")
+    session.action = ("series", 6.0, BOTTOM)  # resting on the other bulb while answering
+    session.say("partial")
+    # The idea is on screen; half a second is not long enough to read it.
+    assert session.look(1.0).reflection_status == "exit"
+    assert session.look(CONFIRM_SECONDS).step_id == "parallel"
+
+
+def test_a_spoken_exit_line_is_heard_before_its_goals_count():
+    session = spoken_session()
+    session.reach("series")
+    for _ in range(2):
+        session.say("partial")
+    session.action = ("series", 6.0, BOTTOM)
+    state = session.say("partial")
+    assert session.look(CONFIRM_SECONDS + 2.0).reflection_status == "exit"  # still being said
+    session.runner.line_heard("series", state.reflection_line_id)
+    assert session.look(1.2).step_id == "parallel"
+
+
+def test_an_answer_names_the_line_it_answers_and_a_late_one_is_dropped():
+    session = Session()
+    first = session.reach("raise_voltage")
+    session.say("partial")  # the lab has moved on to the narrower question
+    late = session.runner.begin_answer(
+        "raise_voltage", "said during the first question", line_id=first.reflection_line_id
+    )
+    assert late is None
+    now = session.look()
+    assert now.reflection_status == "asking" and now.reflection_level == 1
+    assert session.runner.begin_answer("raise_voltage", "more", line_id=now.reflection_line_id)
+
+
+def test_the_answer_message_may_carry_the_line_it_answers():
+    message = AnswerReflection(step_id="series", text="harder", line_id=2)
+    assert message.line_id == 2 and AnswerReflection(step_id="series", text="x").line_id is None
+    session = LabSession()
+    session.lab.handle(AnswerReflection(step_id="raise_voltage", text="correct", line_id=99))
+    assert session.waiting == []  # not the line being asked: never graded
+
+
+def test_a_grader_that_hangs_is_given_up_on_and_the_answer_counts_as_partial(monkeypatch):
+    import threading
+
+    from tacto import lab as lab_module
+
+    monkeypatch.setattr(lab_module, "GRADE_DEADLINE_S", 0.1)
+    stuck = threading.Event()
+
+    def hangs(transcript, **_):
+        stuck.wait(30)
+        return Grade(label="correct")
+
+    records = []
+    session = LabSession(grader=hangs)
+    session.lab._ledger = records.append
+    session.answer("more current")
+    started = time.perf_counter()
+    session.grade_now()
+    assert time.perf_counter() - started < 2.0
+    stuck.set()
+    lesson = session.lab.state().lesson
+    assert (lesson.reflection_status, lesson.reflection_level) == ("asking", 1)
+    assert (records[0]["label"], records[0]["graded"]) == ("partial", False)
+
+
+def test_a_confirmation_that_could_not_be_played_still_stays_up_long_enough_to_read():
+    session = spoken_session()
+    session.reach("raise_voltage")
+    state = session.say("correct")
+    session.runner.line_heard("raise_voltage", state.reflection_line_id)  # failed at once
+    assert session.look(1.5).step_id == "raise_voltage"
+    assert session.look(CONFIRM_SECONDS).step_id == "series"
+
+
+def test_a_reflection_can_be_jumped_to_for_trying_the_voice_without_the_mat():
+    session = Session()
+    assert session.runner.jump_to_reflection("series") is True
+    state = session.look()
+    assert (state.step_id, state.step_done, state.reflection_status) == ("series", True, "asking")
+    assert state.reflection_line == funnel_of("series").levels[0].question
+    assert session.runner.jump_to_reflection("setup") is False  # no reflection there
+    assert session.runner.jump_to_reflection("nope") is False
