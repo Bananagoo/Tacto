@@ -1,4 +1,4 @@
-import { useRef, type FormEvent } from 'react'
+import { useEffect, useRef, type FormEvent } from 'react'
 import type { Lesson } from '../contract'
 import { useTacto } from '../useTacto'
 
@@ -21,6 +21,28 @@ export function Reflection({ lesson, onSkip }: { lesson: Lesson; onSkip: () => v
   const box = useRef<HTMLInputElement>(null)
   const status = lesson.reflectionStatus ?? 'asking'
   const asking = status === 'asking'
+
+  // Say each new line once. The server is told when it has been heard, or that it could
+  // not be played, so the lesson never waits on a sound that did not happen.
+  const { step_id: stepId, reflectionLineId: lineId, reflectionAudio: audioUrl } = lesson
+  useEffect(() => {
+    if (!audioUrl) return
+    const audio = new Audio(audioUrl)
+    let told = false
+    const heard = () => {
+      if (told) return
+      told = true
+      useTacto.getState().send({ type: 'reflection_heard', step_id: stepId, line_id: lineId })
+    }
+    audio.addEventListener('ended', heard)
+    audio.addEventListener('error', heard)
+    audio.play().catch(heard)
+    return () => {
+      // A newer line, or the reflection ending, cuts this one short without reporting it.
+      told = true
+      audio.pause()
+    }
+  }, [stepId, lineId, audioUrl])
 
   const submit = (event: FormEvent) => {
     event.preventDefault()

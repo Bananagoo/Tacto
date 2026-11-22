@@ -22,7 +22,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from tacto import grader
+from tacto import grader, tts
 from tacto.app import create_lab_app
 from tacto.lab import Lab
 from tacto.lesson import LessonRunner, load_lesson
@@ -91,11 +91,28 @@ warm_up_solver()
 source = CameraMatSource(mat, frames, hands=_hand_tracker(), focus=focus)
 source.start()
 
+lesson_file = load_lesson(LESSON_FILE)
+# Line -> where its speech is served. Built before the first learner arrives, and only
+# from lines in the lesson file: nothing is synthesised during a session (tts.py).
+spoken: dict[str, str] = {}
+if VOICE_ENABLED:
+    together = grader.together_client()
+    cached = tts.ensure_cached(
+        tts.lines_of(lesson_file),
+        tts.CACHE_DIR,
+        (lambda line: tts.synthesise(line, together)) if together is not None else None,
+    )
+    spoken = {line: tts.url_for(name) for line, name in cached.items()}
+    if together is not None:
+        together.close()
+
 lab = Lab(
     mat.grid,
     source,
     source_name=SOURCE,  # type: ignore[arg-type]
-    lesson=LessonRunner(load_lesson(LESSON_FILE), adaptive=VOICE_ENABLED),
+    lesson=LessonRunner(
+        lesson_file, adaptive=VOICE_ENABLED, audio_for=lambda line: spoken.get(line)
+    ),
     grader=grader.grade if VOICE_ENABLED else None,
 )
 print(f"main: adaptive reflections are {'on' if VOICE_ENABLED else 'off (set VOICE_ENABLED=1)'}")
@@ -105,6 +122,10 @@ app = create_lab_app(lab, source=SOURCE)
 if SOURCE == "camera":
     # The page's corner picture of the desk. It shares the camera the reader has open.
     app.include_router(preview_router(hub))
+
+
+if VOICE_ENABLED:
+    app.include_router(tts.voice_router())
 
 
 @app.get("/debug/reader")

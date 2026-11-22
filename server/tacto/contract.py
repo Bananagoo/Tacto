@@ -18,8 +18,9 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 # 2 (22 Nov 2026): touch.strength, piece.voltage, mode, lesson.reflection, and the browser's
 # set_mode, restart_lesson and continue_lesson messages. Nothing was removed or renamed.
-# 3 (22 Nov 2026): lesson.reflection_level, _status, _line, _line_id and _transcript, and the
-# browser's answer_reflection message. Nothing was removed or renamed.
+# 3 (22 Nov 2026): lesson.reflection_level, _status, _line, _line_id, _transcript and
+# _audio, and the browser's answer_reflection and reflection_heard messages. Nothing was
+# removed or renamed.
 CONTRACT_VERSION = 3
 
 Dot = tuple[int, int]
@@ -113,6 +114,9 @@ class LessonStep(BaseModel):
     # It starts again at 1 with each reflection, so tell lines apart by step_id and this.
     reflection_line_id: int = 0
     reflection_transcript: str | None = None  # the learner's last answer, as heard or typed
+    # Where to fetch `reflection_line` as speech, or None when it can only be shown. Play
+    # it once per line and send `reflection_heard` when it ends.
+    reflection_audio: str | None = None
 
 
 class State(BaseModel):
@@ -175,8 +179,17 @@ class AnswerReflection(BaseModel):
     text: str = Field(max_length=2000)
 
 
+class ReflectionHeard(BaseModel):
+    """The browser has finished playing a line's audio, or could not play it."""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["reflection_heard"] = "reflection_heard"
+    step_id: str
+    line_id: int = Field(ge=0)
+
+
 ClientMessage = Annotated[
-    SetVoltage | RestartLesson | SetMode | ContinueLesson | AnswerReflection,
+    SetVoltage | RestartLesson | SetMode | ContinueLesson | AnswerReflection | ReflectionHeard,
     Field(discriminator="type"),
 ]
 CLIENT_MESSAGE = TypeAdapter(ClientMessage)

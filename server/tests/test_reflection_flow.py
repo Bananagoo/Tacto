@@ -346,7 +346,7 @@ class Mat:
 class LabSession:
     """A lab in Lab mode at the first reflection, with grading run when the test says."""
 
-    def __init__(self, grader="default") -> None:
+    def __init__(self, grader="default", audio_for=None) -> None:
         self.clock, self.mat, self.asked, self.waiting = Clock(), Mat(), [], []
 
         def grade(transcript, *, funnel, level, circuit):
@@ -357,7 +357,7 @@ class LabSession:
             GRID,
             self.mat,
             source_name="replay",
-            lesson=LessonRunner(LESSON, now=self.clock, adaptive=True),
+            lesson=LessonRunner(LESSON, now=self.clock, adaptive=True, audio_for=audio_for),
             grader=grade if grader == "default" else grader,
             background=self.waiting.append,
             now=self.clock,
@@ -425,3 +425,86 @@ def test_the_answer_message_is_one_of_the_browsers_messages_and_is_bounded():
         AnswerReflection(step_id="series", text="x" * 2001)
     with pytest.raises(ValidationError):
         CLIENT_MESSAGE.validate_json('{"type": "answer_reflection", "step_id": "series"}')
+
+
+# ---------- the lab's voice ----------
+
+
+def spoken_session() -> Session:
+    """A session where every line has audio, named after its first word."""
+    session = Session()
+    session.runner = LessonRunner(
+        LESSON,
+        now=session.clock,
+        adaptive=True,
+        audio_for=lambda line: f"/voice/{line.split()[0].lower()}.wav",
+    )
+    return session
+
+
+def test_each_line_comes_with_its_audio_when_there_is_some():
+    session = spoken_session()
+    state = session.reach("raise_voltage")
+    assert state.reflection_audio == "/voice/why.wav"
+    assert session.say("partial").reflection_audio == "/voice/the.wav"
+    assert session.say("correct").reflection_audio == "/voice/yes..wav"
+
+
+def test_a_line_with_no_audio_is_shown_and_not_named():
+    session = Session()
+    session.runner = LessonRunner(
+        LESSON, now=session.clock, adaptive=True, audio_for=lambda line: None
+    )
+    state = session.reach("raise_voltage")
+    assert state.reflection_line is not None and state.reflection_audio is None
+    assert Session(adaptive=False).reach("raise_voltage").reflection_audio is None
+
+
+def test_a_spoken_confirmation_is_waited_for_then_the_lesson_moves_on():
+    from tacto.lesson import AFTER_HEARD_SECONDS, CONFIRM_MAX_SECONDS
+
+    session = spoken_session()
+    session.reach("raise_voltage")
+    state = session.say("correct")
+    # Longer than the silent pause: the line is still being said.
+    assert session.look(CONFIRM_SECONDS + 1.0).step_id == "raise_voltage"
+    session.runner.line_heard("raise_voltage", state.reflection_line_id)
+    assert session.look(AFTER_HEARD_SECONDS - 0.2).step_id == "raise_voltage"
+    assert session.look(0.3).step_id == "series"
+
+    # If the browser never says it finished, the lesson still moves on.
+    session = spoken_session()
+    session.reach("raise_voltage")
+    session.say("correct")
+    assert session.look(CONFIRM_MAX_SECONDS - 0.5).step_id == "raise_voltage"
+    assert session.look(1.0).step_id == "series"
+
+
+def test_hearing_an_earlier_line_or_another_steps_line_changes_nothing():
+    session = spoken_session()
+    first = session.reach("raise_voltage")
+    session.say("partial")
+    state = session.say("correct")
+    session.runner.line_heard("raise_voltage", first.reflection_line_id)
+    session.runner.line_heard("series", state.reflection_line_id)
+    assert session.look(CONFIRM_SECONDS + 1.0).step_id == "raise_voltage"
+
+
+def test_the_heard_message_reaches_the_lesson_through_the_lab():
+    from tacto.contract import ReflectionHeard
+
+    message = CLIENT_MESSAGE.validate_json(
+        '{"type": "reflection_heard", "step_id": "raise_voltage", "line_id": 2}'
+    )
+    assert isinstance(message, ReflectionHeard) and message.line_id == 2
+
+    session = LabSession(audio_for=lambda line: "/voice/x.wav")
+    session.answer("correct")
+    session.grade_now()
+    lesson = session.lab.state().lesson
+    assert lesson.reflection_status == "resolved"
+    session.clock.t += CONFIRM_SECONDS + 1.0
+    assert session.lab.state().lesson.step_id == "raise_voltage"
+    session.lab.handle(ReflectionHeard(step_id="raise_voltage", line_id=lesson.reflection_line_id))
+    session.clock.t += 1.0
+    assert session.lab.state().lesson.step_id == "series"

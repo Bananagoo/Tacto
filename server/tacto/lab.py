@@ -26,6 +26,7 @@ from tacto.contract import (
     Grid,
     LessonStep,
     Piece,
+    ReflectionHeard,
     RestartLesson,
     SetMode,
     Source,
@@ -100,6 +101,9 @@ class Lab:
             elif isinstance(message, ContinueLesson):
                 if self._mode == "lab" and self._lesson is not None:
                     self._lesson.continue_step(message.step_id)
+            elif isinstance(message, ReflectionHeard):
+                if self._mode == "lab" and self._lesson is not None:
+                    self._lesson.line_heard(message.step_id, message.line_id)
             elif isinstance(message, AnswerReflection):
                 if self._mode == "lab" and self._lesson is not None:
                     ticket = self._lesson.begin_answer(message.step_id, message.text)

@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "description": "The browser has finished playing a line's audio, or could not play it.",
+  "properties": {
+    "type": {
+      "const": "reflection_heard",
+      "default": "reflection_heard",
+      "title": "Type",
+      "type": "string"
+    },
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    },
+    "line_id": {
+      "minimum": 0,
+      "title": "Line Id",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "step_id",
+    "line_id"
+  ],
+  "title": "ReflectionHeard",
+  "type": "object"
+}

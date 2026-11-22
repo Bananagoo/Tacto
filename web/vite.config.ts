@@ -11,6 +11,7 @@ export default defineConfig({
     proxy: {
       '/ws': { target: 'ws://127.0.0.1:8000', ws: true },
       '/speech': { target: 'http://127.0.0.1:8000', ws: true },
+      '/voice': { target: 'http://127.0.0.1:8000' },
       '/api': { target: 'http://127.0.0.1:8000', rewrite: (p) => p.replace(/^\/api/, '') },
     },
   },

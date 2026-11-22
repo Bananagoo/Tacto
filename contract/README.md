@@ -71,6 +71,10 @@ The plan and its rules are in `docs/voice-reflections-plan.md`. While one is run
   included. It restarts at 1 with each reflection: key on `step_id` and this.
 - `reflection_level`: 0 for the open question, higher for narrower ones.
 - `reflection_transcript`: the learner's last answer.
+- `reflection_audio`: a path on the server to the line as speech, or null. Play it once
+  per `step_id` and `reflection_line_id`, then send `reflection_heard` with those two,
+  also if it could not be played. After a right answer the lesson waits for that before
+  moving on (12 s at most).
 - `reflection` is still the question being asked, and `continue_lesson` still moves on,
   now as a skip.
 

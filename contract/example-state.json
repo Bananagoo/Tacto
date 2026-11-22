@@ -142,6 +142,7 @@
     "reflection_status": null,
     "reflection_line": null,
     "reflection_line_id": 0,
-    "reflection_transcript": null
+    "reflection_transcript": null,
+    "reflection_audio": null
   }
 }

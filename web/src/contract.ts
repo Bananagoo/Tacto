@@ -2,8 +2,8 @@
 //
 // 1. The wire contract: a mirror of server/tacto/contract.py, which is the source of
 //    truth (JSON schema in contract/). `ServerState` is the one message the server sends;
-//    the page sends SetVoltage, SetMode, RestartLesson, ContinueLesson or
-//    AnswerReflection. Change both sides together.
+//    the page sends SetVoltage, SetMode, RestartLesson, ContinueLesson,
+//    AnswerReflection or ReflectionHeard. Change both sides together.
 //
 // 2. The page's own picture of that state (`State`, `Part`, `Wire`, `Probe`): the shapes
 //    the bench, the multimeter and the haptics were built on. `fromServer.ts` turns a
@@ -78,6 +78,8 @@ export interface ServerState {
     reflection_line: string | null
     reflection_line_id: number
     reflection_transcript: string | null
+    /** Where `reflection_line` can be fetched as speech, or null when it is only shown. */
+    reflection_audio: string | null
   }
 }
 
@@ -110,6 +112,13 @@ export interface AnswerReflection {
   type: 'answer_reflection'
   step_id: string
   text: string
+}
+
+/** A line's audio finished playing, or could not be played. */
+export interface ReflectionHeard {
+  type: 'reflection_heard'
+  step_id: string
+  line_id: number
 }
 
 // ---------- the page's picture of the state ----------
@@ -176,6 +185,8 @@ export interface Lesson {
   reflectionLineId: number
   /** ... and the learner's last answer. */
   reflectionTranscript: string | null
+  /** Where the line can be fetched as speech, or null when it is only shown. */
+  reflectionAudio: string | null
 }
 
 export interface State {
@@ -192,7 +203,13 @@ export interface State {
 }
 
 export type ClientMessage =
-  SetVoltage | RestartLesson | SetMode | ContinueLesson | AnswerReflection | ParkedClientMessage
+  | SetVoltage
+  | RestartLesson
+  | SetMode
+  | ContinueLesson
+  | AnswerReflection
+  | ReflectionHeard
+  | ParkedClientMessage
 
 // ---------- parked ----------
 // The tutor, the concept map and the voice are out of the product for now (CLAUDE.md,

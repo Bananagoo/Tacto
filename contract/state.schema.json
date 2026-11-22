@@ -162,6 +162,18 @@
           ],
           "default": null,
           "title": "Reflection Transcript"
+        },
+        "reflection_audio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reflection Audio"
         }
       },
       "title": "LessonStep",
@@ -407,7 +419,8 @@
         "reflection_status": null,
         "reflection_line": null,
         "reflection_line_id": 0,
-        "reflection_transcript": null
+        "reflection_transcript": null,
+        "reflection_audio": null
       }
     }
   },

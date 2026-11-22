@@ -79,6 +79,7 @@ export function fromServer(server: ServerState): State {
       reflectionLine: server.lesson.reflection_line ?? null,
       reflectionLineId: server.lesson.reflection_line_id ?? 0,
       reflectionTranscript: server.lesson.reflection_transcript ?? null,
+      reflectionAudio: server.lesson.reflection_audio ?? null,
     },
     // Parked: filled so the components kept in ui/ still have something to read.
     tutor: {

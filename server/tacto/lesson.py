@@ -40,6 +40,11 @@ SETTLE_SECONDS = 0.5
 # the next step's prompt replaces it.
 # TODO(Katie): tune once the lines are spoken; the longest confirmation takes about 5 s to say.
 CONFIRM_SECONDS = 3.0
+# When the confirmation is spoken the lesson waits for the browser to say it has finished,
+# then this much longer, so the next prompt does not land on the last word ...
+AFTER_HEARD_SECONDS = 0.6
+# ... and no longer than this if the browser never says so (the longest line is about 6 s).
+CONFIRM_MAX_SECONDS = 12.0
 # Two currents within this fraction of each other are "the same" (wires have a tiny resistance).
 SAME_CURRENT = 0.02
 
@@ -295,9 +300,12 @@ class LessonRunner:
         *,
         now: Callable[[], float] = time.monotonic,
         adaptive: bool = False,
+        audio_for: Callable[[str], str | None] | None = None,
     ) -> None:
         self._lesson = lesson
         self._now = now
+        # Where a line's speech can be fetched, or None for a line that is only shown.
+        self._audio_for = audio_for or (lambda line: None)
         # False: a reflection is one question on screen and Continue, whatever the lesson
         # file holds. True: a step with a funnel asks, takes answers and narrows.
         self._adaptive = adaptive
@@ -320,6 +328,7 @@ class LessonRunner:
         self._touched_when_done: str | None = None
         self._goal_since: float | None = None
         self._resolved_at: float | None = None
+        self._heard_at: float | None = None
         # Any answer still being graded belongs to a question that is no longer asked.
         self._attempt += 1
 
@@ -327,6 +336,16 @@ class LessonRunner:
         if line is not None:
             self._line = line
             self._line_id += 1
+            self._heard_at = None
+
+    def line_heard(self, step_id: str, line_id: int) -> None:
+        """The browser finished playing the line being said now. Others are ignored."""
+        if (
+            self._asking is not None
+            and self._lesson.steps[self._index].id == step_id
+            and line_id == self._line_id
+        ):
+            self._heard_at = self._now()
 
     def _advance(self) -> None:
         if self._index == len(self._lesson.steps) - 1:
@@ -428,6 +447,9 @@ class LessonRunner:
             reflection_line=self._line if asking else None,
             reflection_line_id=self._line_id if asking else 0,
             reflection_transcript=self._transcript if asking else None,
+            reflection_audio=(
+                self._audio_for(self._line) if asking and self._line is not None else None
+            ),
         )
 
     def _run_reflection(
@@ -463,8 +485,15 @@ class LessonRunner:
             self._resolved_at = now
         # A right answer's confirmation stays up a moment. The exit has already said its
         # piece and been acted on, or timed out: nothing to wait for.
-        if state.outcome == "correct" and now - self._resolved_at < CONFIRM_SECONDS:
-            return False
+        if state.outcome == "correct":
+            if self._heard_at is not None:
+                until = self._heard_at + AFTER_HEARD_SECONDS
+            elif self._line is not None and self._audio_for(self._line) is not None:
+                until = self._resolved_at + CONFIRM_MAX_SECONDS
+            else:
+                until = self._resolved_at + CONFIRM_SECONDS
+            if now < until:
+                return False
         self._advance()
         return True
 

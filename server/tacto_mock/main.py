@@ -20,6 +20,7 @@ from tacto.contract import (
     AnswerReflection,
     ContinueLesson,
     LessonStep,
+    ReflectionHeard,
     RestartLesson,
     SetMode,
 )
@@ -90,6 +91,8 @@ def create_mock_app(sample_path: Path = SAMPLE_PATH, *, state_hz: float = STATE_
                                 ),
                                 cursor,
                             )
+                    elif isinstance(message, ReflectionHeard):
+                        pass  # a replay has no lines to speak
                     elif isinstance(message, AnswerReflection):
                         print(f"mock: answer to {message.step_id!r} (a replay does not grade)")
                     else:
