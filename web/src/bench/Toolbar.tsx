@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import cameraUrl from '../assets/camera.png'
 import eraserUrl from '../assets/eraser.png'
 import markerUrl from '../assets/marker.png'
@@ -16,8 +17,8 @@ interface ToolbarProps {
   onClearMarker: () => void
   eraserRadius: number
   onEraserRadius: (radius: number) => void
-  /** Save a picture of the circuit. */
-  onScreenshot: () => void
+  /** Save a dated picture of the circuit to the gallery. Resolves once it is saved. */
+  onScreenshot: () => Promise<void>
 }
 
 /** Its width. The mat is drawn to the right of it, so no tool ever covers the circuit. */
@@ -44,6 +45,18 @@ export function Toolbar({
   onEraserRadius,
   onScreenshot,
 }: ToolbarProps) {
+  // "Saved" for a moment after a screenshot, "Could not save" if it failed. Words, not colour.
+  const [shotNote, setShotNote] = useState<'' | 'Saved' | 'Could not save'>('')
+  const takeShot = () => {
+    onScreenshot().then(
+      () => setShotNote('Saved'),
+      (error: unknown) => {
+        console.error('bench:', error)
+        setShotNote('Could not save')
+      },
+    )
+    setTimeout(() => setShotNote(''), 2500)
+  }
   return (
     <nav
       aria-label="Tools"
@@ -123,11 +136,11 @@ export function Toolbar({
       )}
       <button
         type="button"
-        onClick={onScreenshot}
+        onClick={takeShot}
         className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl border-4 border-stone-100/40 px-2 py-3 text-lg font-semibold text-stone-100 hover:border-stone-100 focus-visible:outline-4 focus-visible:outline-sky-300"
       >
         <img src={cameraUrl} alt="" className="h-20 object-contain" />
-        Screenshot
+        {shotNote || 'Screenshot'}
       </button>
     </nav>
   )

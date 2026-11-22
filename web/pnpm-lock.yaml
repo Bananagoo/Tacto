@@ -17,6 +17,9 @@ importers:
       '@ricky0123/vad-web':
         specifier: 0.0.31
         version: 0.0.31
+      idb-keyval:
+        specifier: ^6.3.0
+        version: 6.3.0
       motion:
         specifier: ^14.14.0
         version: 14.14.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -632,6 +635,9 @@ packages:
 
   guid-typescript@1.0.9:
     resolution: {integrity: sha512-Y8T4vYhEfwJOTbouREvG+3XDsjr8E3kIr7uf+JZ0BYloFsttiHU0WfvANVsR7TxNUJa/WpCnw/Ino/p+DeBhBQ==}
+
+  idb-keyval@6.3.0:
+    resolution: {integrity: sha512-um+2dgAWmYsu615EXpWVwSmapJhON0G43t3Ka/EVaohzPQXSMqKEqeDK/oIW3Ow+BXaF2PvSc+oBTFp793A5Ow==}
 
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
@@ -1249,6 +1255,8 @@ snapshots:
   graceful-fs@4.2.12: {}
 
   guid-typescript@1.0.9: {}
+
+  idb-keyval@6.3.0: {}
 
   jiti@2.7.0: {}
 

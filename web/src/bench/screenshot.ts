@@ -1,5 +1,5 @@
-// Saves a picture of the circuit on the mat to the learner's own device. Nothing is sent
-// anywhere: the picture is made in the page and handed to the browser as a download.
+// Makes a picture of the circuit on the mat. Nothing is sent anywhere: the picture is made in the
+// page, and `gallery/shots.ts` keeps it in this browser.
 
 // The mat's styles come from the page's CSS classes, which a loose copy of the drawing would
 // lose, so each element's look is written onto it before it is turned into a picture.
@@ -67,8 +67,8 @@ async function inlineImages(copy: SVGSVGElement): Promise<void> {
   )
 }
 
-/** Turn the mat's svg into a PNG and download it. Rejects if the browser cannot draw it. */
-export async function saveScreenshot(svg: SVGSVGElement): Promise<void> {
+/** Turn the mat's svg into a PNG picture. Rejects if the browser cannot draw it. */
+export async function screenshotBlob(svg: SVGSVGElement): Promise<Blob> {
   const copy = drawnCopy(svg)
   await inlineImages(copy)
   const url = URL.createObjectURL(
@@ -83,13 +83,8 @@ export async function saveScreenshot(svg: SVGSVGElement): Promise<void> {
       canvas.getContext('2d')?.drawImage(picture, 0, 0)
       URL.revokeObjectURL(url)
       canvas.toBlob((png) => {
-        if (!png) return reject(new Error('could not make the picture'))
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(png)
-        link.download = `tacto-circuit-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
-        link.click()
-        URL.revokeObjectURL(link.href)
-        resolve()
+        if (png) resolve(png)
+        else reject(new Error('could not make the picture'))
       }, 'image/png')
     }
     picture.onerror = () => {
