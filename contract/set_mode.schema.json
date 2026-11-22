@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "description": "Tinker preserves the circuit; entering Lab starts a fresh guided run at 3 V.",
+  "properties": {
+    "type": {
+      "const": "set_mode",
+      "default": "set_mode",
+      "title": "Type",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "tinker",
+        "lab"
+      ],
+      "title": "Mode",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "title": "SetMode",
+  "type": "object"
+}

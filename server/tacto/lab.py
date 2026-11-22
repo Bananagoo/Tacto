@@ -14,15 +14,19 @@ import math
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from threading import RLock
 from typing import Protocol, TypeVar
 
 from tacto.contract import (
     Circuit,
+    ClientMessage,
+    ContinueLesson,
     Dot,
     Grid,
     LessonStep,
     Piece,
-    SetVoltage,
+    RestartLesson,
+    SetMode,
     Source,
     State,
     Touch,
@@ -30,7 +34,8 @@ from tacto.contract import (
 from tacto.lesson import LessonRunner
 from tacto.pieces import Placed, solve_pieces, touch_for
 
-DEFAULT_VOLTS = 6.0
+# The wheel step raises this to 6 V, leaving room for the final parallel comparison.
+DEFAULT_VOLTS = 3.0
 # How far from a piece, in dot spacings, a fingertip still counts as on it.
 # TODO(vision owner): tune on the real mat; hand tracking jitters by a few millimetres.
 REACH_DOTS = 0.35
@@ -64,6 +69,8 @@ class Lab:
         now: Callable[[], float] = time.monotonic,
     ) -> None:
         self._grid = grid
+        self._lock = RLock()
+        self._mode = "tinker"
         self._source = source
         self._source_name: Source = source_name
         self._now = now
@@ -74,27 +81,52 @@ class Lab:
         self._solved_for: tuple[tuple[Placed, ...], float] | None = None
         self._solved: tuple[list[Piece], Circuit] = ([], Circuit())
 
-    def handle(self, message: SetVoltage) -> None:
-        self._volts = message.volts
+    def handle(self, message: ClientMessage) -> None:
+        # State is solved on a worker thread; a mode change/reset must be atomic with it.
+        with self._lock:
+            if isinstance(message, RestartLesson):
+                self.restart_lesson()
+            elif isinstance(message, SetMode):
+                if message.mode == "lab" and self._mode != "lab":
+                    self.restart_lesson()
+                self._mode = message.mode
+            elif isinstance(message, ContinueLesson):
+                if self._mode == "lab" and self._lesson is not None:
+                    self._lesson.continue_step(message.step_id)
+            else:
+                self._volts = message.volts
 
     def restart_lesson(self) -> None:
-        if self._lesson is not None:
-            self._lesson.restart()
+        with self._lock:
+            self._mode = "lab"
+            self._volts = DEFAULT_VOLTS
+            if self._lesson is not None:
+                self._lesson.restart()
 
     def state(self) -> State:
+        with self._lock:
+            return self._state()
+
+    def _state(self) -> State:
         view = self._source.view()
         now = self._now()
         pieces, circuit = self._solve(view.placed)
+        touch = self._touch(view, pieces)
         state = State(
             seq=self._seq,
             t=round(now - self._started, 3),
             source=self._source_name,
+            mode=self._mode,
             mat_visible=view.mat_visible,
             grid=self._grid,
             pieces=pieces,
             circuit=circuit,
-            touch=self._touch(view, pieces),
-            lesson=self._lesson.update(pieces, circuit) if self._lesson else LessonStep(),
+            touch=touch,
+            lesson=(
+                self._lesson.update(pieces, circuit, touch, mat_visible=view.mat_visible)
+                if self._lesson and self._mode == "lab"
+                else LessonStep()
+            ),
         )
         self._seq += 1
         return state

@@ -34,9 +34,9 @@ def test_seq_counts_and_time_comes_from_the_clock():
 
 
 def test_voltage_from_the_browser_changes_the_current():
-    """10 ohms: 6 V gives 0.6 A, 9 V gives 0.9 A."""
+    """10 ohms: 3 V gives 0.3 A, 9 V gives 0.9 A."""
     lab = Lab(GRID, FixedMat(MatView(tuple(loop(closed=True)))), source_name="manual")
-    assert lab.state().circuit.total_current == pytest.approx(0.6, abs=0.001)
+    assert lab.state().circuit.total_current == pytest.approx(0.3, abs=0.001)
     lab.handle(SetVoltage(volts=9))
     state = lab.state()
     assert state.circuit.voltage == 9
@@ -55,12 +55,12 @@ def test_the_circuit_is_solved_only_when_something_changes(monkeypatch):
     lab = Lab(GRID, mat, source_name="manual")
     for _ in range(5):
         lab.state()
-    assert calls == [6.0]
+    assert calls == [3.0]
     mat.current = MatView(tuple(loop(closed=False)))
     lab.state()
     lab.handle(SetVoltage(volts=7))
     lab.state()
-    assert calls == [6.0, 6.0, 7.0]
+    assert calls == [3.0, 3.0, 7.0]
 
 
 def test_a_finger_on_the_bulb_feels_its_current():
@@ -68,7 +68,7 @@ def test_a_finger_on_the_bulb_feels_its_current():
     view = MatView(tuple(loop(closed=True)), finger=(2.5 / 8, 1 / 5))
     touch = Lab(GRID, FixedMat(view), source_name="manual").state().touch
     assert touch.piece_id == BULB_A
-    assert touch.pulse_hz == pytest.approx(3.0, abs=0.01)
+    assert touch.pulse_hz == pytest.approx(1.5, abs=0.01)
 
 
 def test_a_finger_away_from_every_piece_touches_nothing():
@@ -95,7 +95,7 @@ def test_the_app_streams_states_and_takes_the_voltage():
     client = TestClient(create_lab_app(lab, source="manual", state_hz=200))
     assert client.get("/health").json() == {"ok": True, "source": "manual"}
     with client.websocket_connect("/ws") as ws:
-        assert State.model_validate_json(ws.receive_text()).circuit.voltage == 6.0
+        assert State.model_validate_json(ws.receive_text()).circuit.voltage == 3.0
         ws.send_text("nonsense")  # logged, not fatal
         ws.send_text('{"type":"set_voltage","volts":8.5}')
         for _ in range(50):
@@ -103,3 +103,23 @@ def test_the_app_streams_states_and_takes_the_voltage():
                 break
         else:
             pytest.fail("the voltage never reached the state")
+        ws.send_text('{"type":"set_mode","mode":"lab"}')
+        for _ in range(50):
+            state = State.model_validate_json(ws.receive_text())
+            if state.mode == "lab":
+                assert state.circuit.voltage == 3
+                break
+        else:
+            pytest.fail("Lab mode never reached the state")
+        ws.send_text('{"type":"set_voltage","volts":7}')
+        for _ in range(50):
+            if State.model_validate_json(ws.receive_text()).circuit.voltage == 7:
+                break
+        else:
+            pytest.fail("voltage never changed")
+        ws.send_text('{"type":"restart_lesson"}')
+        for _ in range(50):
+            if State.model_validate_json(ws.receive_text()).circuit.voltage == 3:
+                break
+        else:
+            pytest.fail("restart did not restore the voltage")

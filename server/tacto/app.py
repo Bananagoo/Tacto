@@ -1,4 +1,4 @@
-"""The lab's web app: one WebSocket that streams `State` and takes `SetVoltage`."""
+"""One WebSocket streams state and accepts voltage, mode and lesson controls."""
 
 from __future__ import annotations
 
@@ -7,8 +7,9 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
-from tacto.contract import SetVoltage
+from tacto.contract import CLIENT_MESSAGE
 from tacto.lab import Lab
+from tacto.speech import speech_router
 
 STATE_HZ = 15
 
@@ -16,6 +17,7 @@ STATE_HZ = 15
 def create_lab_app(lab: Lab, *, source: str, state_hz: float = STATE_HZ) -> FastAPI:
     """Build the app round a lab. `source` is reported by /health for the people running it."""
     app = FastAPI(title="Tacto")
+    app.include_router(speech_router())
 
     @app.get("/health")
     def health() -> dict:
@@ -37,7 +39,7 @@ def create_lab_app(lab: Lab, *, source: str, state_hz: float = STATE_HZ) -> Fast
             while True:
                 raw = await socket.receive_text()
                 try:
-                    lab.handle(SetVoltage.model_validate_json(raw))
+                    lab.handle(CLIENT_MESSAGE.validate_json(raw))
                 except ValidationError as err:
                     print(f"app: bad client message: {raw!r}: {err.errors()[0]['msg']}")
         except WebSocketDisconnect:

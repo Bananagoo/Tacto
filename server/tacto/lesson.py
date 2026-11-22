@@ -1,8 +1,8 @@
 """Lesson steps for the lab: a fixed sequence, each step finished by the circuit itself.
 
 A lesson is data (`lessons/<id>.yaml`): each step has a prompt to show and the
-circuit conditions that complete it. There are no predictions to score, no hints and
-no timers on the learner; a prompt may still ask "what do you expect?" as wording.
+circuit and touch conditions that complete it. Spoken reflections wait for Continue;
+answers are not recorded or scored and there are no timers on the learner.
 """
 
 from __future__ import annotations
@@ -16,7 +16,8 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from tacto.contract import Circuit, CircuitStatus, LessonStep, Piece
+from tacto.contract import MAX_VOLTS, Circuit, CircuitStatus, LessonStep, Piece, PieceType, Touch
+from tacto.sim.feel import MIN_CURRENT_AMPS
 
 Arrangement = Literal["single", "series", "parallel"]
 
@@ -35,13 +36,17 @@ class _Strict(BaseModel):
 
 
 class DoneWhen(_Strict):
-    """Conditions on the solved circuit. Every condition given must hold."""
+    """Conditions on the circuit and fingertip. Every condition given must hold."""
 
     status: CircuitStatus | None = None
     batteries: int | None = Field(None, ge=0)
     bulbs: int | None = Field(None, ge=0)
     lit_bulbs: int | None = Field(None, ge=0)
     arrangement: Arrangement | None = None
+    switch_closed: bool | None = None
+    min_voltage: float | None = Field(None, ge=0, le=MAX_VOLTS)
+    # A piece type, or any piece carrying current. Touch goals always require current.
+    touching: PieceType | Literal["current"] | None = None
 
     @model_validator(mode="after")
     def _has_a_condition(self) -> DoneWhen:
@@ -53,6 +58,7 @@ class DoneWhen(_Strict):
 class Step(_Strict):
     id: str
     prompt: str = Field(min_length=1)
+    reflection: str | None = Field(None, min_length=1)
     done_when: DoneWhen
     linger_seconds: float | None = Field(None, ge=0)  # overrides the lesson's
 
@@ -108,7 +114,12 @@ def arrangement_of(pieces: Sequence[Piece], circuit: Circuit) -> Arrangement | N
     return None
 
 
-def is_satisfied(done_when: DoneWhen, pieces: Sequence[Piece], circuit: Circuit) -> bool:
+def is_satisfied(
+    done_when: DoneWhen,
+    pieces: Sequence[Piece],
+    circuit: Circuit,
+    touch: Touch | None = None,
+) -> bool:
     """True when every condition the step gives holds. Conditions left out are not checked."""
     wanted_and_found = (
         (done_when.status, circuit.status),
@@ -117,7 +128,23 @@ def is_satisfied(done_when: DoneWhen, pieces: Sequence[Piece], circuit: Circuit)
         (done_when.lit_bulbs, len(_lit_bulbs(pieces))),
         (done_when.arrangement, arrangement_of(pieces, circuit)),
     )
-    return all(wanted is None or wanted == found for wanted, found in wanted_and_found)
+    if not all(wanted is None or wanted == found for wanted, found in wanted_and_found):
+        return False
+    if done_when.switch_closed is not None:
+        switches = [p for p in pieces if p.type == "switch"]
+        if not switches or any(p.closed is not done_when.switch_closed for p in switches):
+            return False
+    if done_when.min_voltage is not None and circuit.voltage < done_when.min_voltage:
+        return False
+    if done_when.touching is not None:
+        if touch is None or not touch.present:
+            return False
+        piece = next((p for p in pieces if p.id == touch.piece_id), None)
+        if piece is None or piece.shorted or abs(piece.current) < MIN_CURRENT_AMPS:
+            return False
+        if done_when.touching != "current" and piece.type != done_when.touching:
+            return False
+    return True
 
 
 def _lit_bulbs(pieces: Sequence[Piece]) -> list[Piece]:
@@ -128,8 +155,8 @@ class LessonRunner:
     """Walks one learner through a lesson's steps as the circuit changes.
 
     A step is done once its goal has held for `SETTLE_SECONDS`, and stays done even if
-    the learner then changes the mat. After the step's linger time the next step's
-    prompt appears. The last step, once done, ends the lesson.
+    the learner then changes the mat. After the linger time the next prompt appears,
+    except a reflection waits for Continue. The last reflection ends the lesson.
     """
 
     def __init__(self, lesson: Lesson, *, now: Callable[[], float] = time.monotonic) -> None:
@@ -141,24 +168,43 @@ class LessonRunner:
         self._index = 0
         self._met_since: float | None = None
         self._done_at: float | None = None
+        self._continued = False
 
-    def update(self, pieces: Sequence[Piece], circuit: Circuit) -> LessonStep:
+    def continue_step(self, step_id: str) -> None:
+        """Acknowledge a spoken reflection; late clicks cannot skip another step."""
+        step = self._lesson.steps[self._index]
+        if step.id != step_id or step.reflection is None or self._done_at is None:
+            return
+        if self._index == len(self._lesson.steps) - 1:
+            self._continued = True
+        else:
+            self._index += 1
+            self._met_since = self._done_at = None
+
+    def update(
+        self,
+        pieces: Sequence[Piece],
+        circuit: Circuit,
+        touch: Touch | None = None,
+        *,
+        mat_visible: bool = True,
+    ) -> LessonStep:
         """Take in the latest solved circuit and report where the lesson stands."""
         now = self._now()
         step = self._lesson.steps[self._index]
         last = self._index == len(self._lesson.steps) - 1
         if self._done_at is None:
-            if not is_satisfied(step.done_when, pieces, circuit):
+            if not mat_visible or not is_satisfied(step.done_when, pieces, circuit, touch):
                 self._met_since = None
             elif self._met_since is None:
                 self._met_since = now
             elif now - self._met_since >= SETTLE_SECONDS:
                 self._done_at = now
-        elif not last and now - self._done_at >= self._linger(step):
+        elif not last and step.reflection is None and now - self._done_at >= self._linger(step):
             self._index += 1
             self._met_since = self._done_at = None
             # The circuit that finished the last step may already meet the next goal.
-            return self.update(pieces, circuit)
+            return self.update(pieces, circuit, touch, mat_visible=mat_visible)
         return LessonStep(
             lesson_id=self._lesson.id,
             step_id=step.id,
@@ -166,7 +212,12 @@ class LessonRunner:
             step_count=len(self._lesson.steps),
             prompt=step.prompt,
             step_done=self._done_at is not None,
-            lesson_done=last and self._done_at is not None,
+            lesson_done=(
+                last and self._done_at is not None and (step.reflection is None or self._continued)
+            ),
+            reflection=step.reflection
+            if self._done_at is not None and not self._continued
+            else None,
         )
 
     def _linger(self, step: Step) -> float:

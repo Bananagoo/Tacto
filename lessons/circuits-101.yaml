@@ -1,40 +1,38 @@
-# Circuits 101 for the core lab: a fixed sequence of steps. Each step shows one prompt
-# and completes by itself when the circuit on the mat meets `done_when`.
-#
-# PLACEHOLDER WORDING for the lesson author to edit. Editing a prompt needs no code
-# change; run `make check-server` afterwards.
-#
-# done_when conditions (every one given must hold):
-#   status:      working | open | shorted
-#   batteries:   how many batteries are on the mat
-#   bulbs:       how many bulbs are on the mat
-#   lit_bulbs:   how many bulbs carry current
-#   arrangement: single | series | parallel   (how the lit bulbs are connected)
-#
-# Physics words are exact: the vibration in the mouse is current, the wheel is voltage.
+# A 90-second hands-on sequence within the three-minute pitch.
+# Prearrange the loop with a switch slot and an empty side branch. Start at 3 V.
+# Use each six-second success pause for the presenter's explanation (see README.md).
+# Every done_when condition must hold for half a second on a visible mat.
+# Vibration represents current; the wheel controls voltage.
 
 id: circuits-101
-title: Circuits 101
+title: Feel the current
 # How long a finished step stays on screen before the next prompt appears.
 linger_seconds: 6
 
 steps:
   - id: setup
-    prompt: "Lay out a battery, one bulb and wires in a loop, but leave one gap. What do you expect the bulb to do?"
-    done_when: { status: open, batteries: 1, bulbs: 1 }
+    prompt: "Place the open switch in the gap. Does the bulb light?"
+    done_when: { status: open, batteries: 1, bulbs: 1, switch_closed: false }
 
   - id: close_the_loop
-    prompt: "Close the gap with a wire. Rest a finger on any piece: the pulse in the mouse is the current."
-    done_when: { status: working, lit_bulbs: 1 }
+    prompt: "Swap in the closed switch. Watch the bulb."
+    done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, switch_closed: true }
+
+  - id: feel_current
+    prompt: "Rest a finger on the bulb card. Feel the pulse in the mouse."
+    done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, touching: bulb }
+
+  - id: raise_voltage
+    prompt: "Keep your finger there. Turn the wheel up to 6 V."
+    reflection: "Why did the pulse get faster when you raised the voltage?"
+    done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, touching: bulb, min_voltage: 6 }
 
   - id: series
-    prompt: "Swap one wire in the loop for a second bulb. What do you expect? Then feel the pulse before, between and after the bulbs."
-    done_when: { arrangement: series, lit_bulbs: 2 }
+    prompt: "Replace the bottom wire with a second bulb. Touch the first bulb again."
+    reflection: "Why did adding a second bulb make the pulse slower?"
+    done_when: { status: working, batteries: 1, bulbs: 2, arrangement: series, lit_bulbs: 2, touching: bulb }
 
   - id: parallel
-    prompt: "Move the second bulb onto its own branch beside the first. Compare the pulse on each branch with the wire next to the battery."
-    done_when: { arrangement: parallel, lit_bulbs: 2 }
-
-  - id: short
-    prompt: "Lay a wire straight across a bulb. Touch that wire, then touch the bulb."
-    done_when: { status: shorted }
+    prompt: "Move the second bulb to its own branch and restore the bottom wire. Touch a bulb, then the battery."
+    reflection: "Why is the pulse faster at the battery than at either bulb?"
+    done_when: { status: working, batteries: 1, bulbs: 2, arrangement: parallel, lit_bulbs: 2, touching: battery }

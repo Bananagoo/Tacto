@@ -6,12 +6,14 @@ import { fromServer } from './fromServer'
 interface Store {
   connected: boolean
   state: State | null
+  voltageInputEpoch: number
   send: (msg: ClientMessage) => void
 }
 
 export const useTacto = create<Store>(() => ({
   connected: false,
   state: null,
+  voltageInputEpoch: 0,
   send: () => {},
 }))
 
@@ -38,7 +40,13 @@ export function useTactoConnection(onHaptic: (pattern: HapticPattern) => void) {
       socket.onopen = () =>
         useTacto.setState({
           connected: true,
-          send: (msg) => socket?.readyState === WebSocket.OPEN && socket.send(JSON.stringify(msg)),
+          send: (msg) => {
+            if (socket?.readyState !== WebSocket.OPEN) return
+            // Forget the wheel's accumulated target when starting a new demonstration.
+            if (msg.type === 'restart_lesson' || (msg.type === 'set_mode' && msg.mode === 'lab'))
+              useTacto.setState((store) => ({ voltageInputEpoch: store.voltageInputEpoch + 1 }))
+            socket.send(JSON.stringify(msg))
+          },
         })
       socket.onmessage = (event) => {
         // The server sends one kind of message, the state. One-off haptic patterns are no

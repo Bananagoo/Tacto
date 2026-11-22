@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "description": "The learner has finished reflecting out loud. This does not score their answer.",
+  "properties": {
+    "type": {
+      "const": "continue_lesson",
+      "default": "continue_lesson",
+      "title": "Type",
+      "type": "string"
+    },
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "step_id"
+  ],
+  "title": "ContinueLesson",
+  "type": "object"
+}

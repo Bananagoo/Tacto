@@ -1,6 +1,6 @@
 # Tacto
 
-A paper electronics lab. Build a circuit from coloured card pieces on a printed dot-grid mat; a camera reads it; the same circuit runs live on screen. Touch a piece and the MX Master 4 mouse pulses with its current. Turn the scroll wheel to change the battery voltage. On-screen prompts walk through a short lesson.
+A paper electronics lab. Build a circuit from coloured card pieces on a printed dot-grid mat; a camera reads it; the same circuit runs live on screen. Touch a piece and the MX Master 4 mouse pulses with its current. Turn the scroll wheel to change the battery voltage. Tinker freely, or choose Lab for six guided steps and spoken reflection questions.
 
 Built at LauzHack 2026.
 
@@ -15,7 +15,7 @@ make dev         # the lab on the camera; or `make mock` for recorded states, no
 
 | Command | What you get |
 |---|---|
-| `make mock` | A server that replays a recorded 22-second run. No camera, mouse or solver needed |
+| `make mock` | A server that replays a recorded 90-second run (Continue advances reflections). No camera, mouse or solver needed |
 | `make dev` | The lab on the camera looking at the printed mat. A plain live view of its state is at `localhost:5173/devtools/#state` |
 | `make bench` | The camera bench at `localhost:5173/devtools/`: the camera's picture, the flattened mat, each segment's reading |
 | `make kit` | The printable mat, `kit/out/mat.pdf` |

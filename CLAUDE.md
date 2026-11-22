@@ -2,11 +2,13 @@
 
 Tacto is a paper electronics lab. A student builds a circuit from coloured card pieces on a printed dot-grid mat. A camera above the desk reads it. The same circuit appears live in an on-screen lab. The student interacts by touch and through the MX Master 4 mouse: a haptic pulse is current, the scroll wheel is voltage. On-screen prompts walk them through a fixed set of lesson steps.
 
-That is the whole product for now. This is a LauzHack 2026 project and the only thing that matters is a **3-minute live demo that a judge runs with their own hands**, on one macOS laptop, with Wi-Fi off. Prefer the simplest thing that works on stage.
+That is the whole product for now. This is a LauzHack 2026 project and the only thing that matters is a **3-minute live demo that a judge runs with their own hands**, on one macOS laptop. Wi-Fi is on at the demo (Katie, 22 Nov 2026), but only the spoken-answer transcription may need it. Prefer the simplest thing that works on stage.
 
 ## Parked: do not build, extend or wire in
 
-Voice tutor, speech-to-text, text-to-speech, voice detection, an agent loop, LLM hints and any Together or OpenRouter calls, zone score, learner model, concept map, lab report, freehand sketch reading, 3D parts. If a request touches one of these, say so and ask first. The code that existed for them is at the git tag `pre-pivot`.
+Not parked any more (Katie, 22 Nov 2026): speech-to-text for the lesson's spoken reflections. `server/tacto/speech.py` relays the learner's microphone to Together's transcription, only after they start it, and stores nothing. It transcribes; it does not judge or answer.
+
+Voice tutor, text-to-speech, an agent loop, LLM hints and any LLM call (Together, OpenRouter or other), zone score, learner model, concept map, lab report, freehand sketch reading, 3D parts. If a request touches one of these, say so and ask first. The code that existed for them is at the git tag `pre-pivot`.
 
 ## Read before you build
 
@@ -75,7 +77,7 @@ Tooling may import the product (`server/tacto/`); the product never imports tool
 
 1. **Reuse before build.** Before writing generic functionality or adding a dependency, check `docs/tech-stack.md`, then use the `reuse-first` skill and verify the package before relying on it.
 2. **The contract is `server/tacto/contract.py`.** Changes need Katie's sign-off. After a change run `make contract` and `make sample`, and tell the UI team.
-3. **The live loop runs with Wi-Fi off.** Camera → flatten → classify → solver → state → screen and haptics never touches the network.
+3. **The live loop runs without the network.** Camera → flatten → classify → solver → state → screen and haptics never touches it, so the lab keeps working if the Wi-Fi drops. The speech relay is the one thing that needs it, and the lesson must carry on without it.
 4. **Every piece runs without hardware.** One camera and one mouse are shared. Vision code must run from recorded frames; the UI must run from `make mock`.
 5. **Do not claim hardware works unless a person confirmed it.** You cannot feel the mouse or see the desk. Say what you ran and what still needs a human check.
 6. **Small steps, tests with each one, results before moving on.** Report accuracy and latency as numbers, not impressions.

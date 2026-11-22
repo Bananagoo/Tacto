@@ -1,7 +1,7 @@
 """The state contract: every message between the server and the lab UI.
 
-The server sends one `State` message about 15 times a second. The browser sends
-back one message, `SetVoltage`. Changes here need the vision owner's sign-off;
+The server sends one `State` message about 15 times a second. The browser controls
+voltage, mode, restart and reflection acknowledgement. Changes need the owner's sign-off;
 after any change run `make contract` to refresh `contract/`.
 
 The mat is a grid of dots. A Dot is [col, row], origin top-left. Every piece
@@ -12,11 +12,13 @@ the id stays the same while that piece stays where it is.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
-CONTRACT_VERSION = 1
+# 2 (22 Nov 2026): touch.strength, piece.voltage, mode, lesson.reflection, and the browser's
+# set_mode, restart_lesson and continue_lesson messages. Nothing was removed or renamed.
+CONTRACT_VERSION = 2
 
 Dot = tuple[int, int]
 
@@ -26,6 +28,7 @@ PieceType = Literal["wire", "battery", "bulb", "resistor", "switch"]
 # shorted: a loop through a battery with nothing in it to resist the current.
 CircuitStatus = Literal["working", "open", "shorted"]
 Source = Literal["camera", "replay", "manual"]
+Mode = Literal["tinker", "lab"]
 
 
 def segment_id(a: Dot, b: Dot) -> str:
@@ -90,8 +93,9 @@ class LessonStep(BaseModel):
     step_index: int = 0  # 0-based
     step_count: int = 0
     prompt: str = ""  # the text to show for this step
-    step_done: bool = False  # the circuit meets this step's goal right now
+    step_done: bool = False  # latched after the circuit and touch goal holds for half a second
     lesson_done: bool = False  # every step has been completed
+    reflection: str | None = None  # spoken question after the action; Continue advances it
 
 
 class State(BaseModel):
@@ -100,6 +104,7 @@ class State(BaseModel):
     seq: int = 0  # goes up by one with every message
     t: float  # seconds since the server started
     source: Source = "camera"
+    mode: Mode = "tinker"
     mat_visible: bool = True  # False while the camera cannot find the mat; pieces hold
     grid: Grid
     pieces: list[Piece] = []
@@ -118,3 +123,32 @@ class SetVoltage(BaseModel):
 
     type: Literal["set_voltage"] = "set_voltage"
     volts: float = Field(ge=0.0, le=MAX_VOLTS)
+
+
+class RestartLesson(BaseModel):
+    """Start again at step one and restore the demo's starting voltage."""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["restart_lesson"] = "restart_lesson"
+
+
+class SetMode(BaseModel):
+    """Tinker preserves the circuit; entering Lab starts a fresh guided run at 3 V."""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["set_mode"] = "set_mode"
+    mode: Mode
+
+
+class ContinueLesson(BaseModel):
+    """The learner has finished reflecting out loud. This does not score their answer."""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["continue_lesson"] = "continue_lesson"
+    step_id: str
+
+
+ClientMessage = Annotated[
+    SetVoltage | RestartLesson | SetMode | ContinueLesson, Field(discriminator="type")
+]
+CLIENT_MESSAGE = TypeAdapter(ClientMessage)

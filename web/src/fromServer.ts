@@ -47,6 +47,7 @@ export function fromServer(server: ServerState): State {
     type: 'state',
     t: server.t,
     source: server.source,
+    mode: server.mode ?? 'tinker',
     mat_visible: server.mat_visible,
     circuit: {
       // An empty mat is "open" to the server; the page has its own word for it.
@@ -67,11 +68,13 @@ export function fromServer(server: ServerState): State {
       buzz: server.touch.buzz,
     },
     lesson: {
+      step_id: server.lesson.step_id,
       step_index: server.lesson.step_index,
       step_count: server.lesson.step_count,
       prompt: server.lesson.prompt,
       step_done: server.lesson.step_done,
       lesson_done: server.lesson.lesson_done,
+      reflection: server.lesson.reflection ?? null,
     },
     // Parked: filled so the components kept in ui/ still have something to read.
     tutor: {

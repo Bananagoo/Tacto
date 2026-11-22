@@ -3,7 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from tacto.contract import Grid, Piece, SetVoltage, State, segment_id
+from tacto.contract import CLIENT_MESSAGE, Grid, Piece, RestartLesson, SetVoltage, State, segment_id
 from tacto.contract_export import CONTRACT_DIR, contract_files, example_state
 
 
@@ -52,6 +52,17 @@ def test_voltage_is_bounded():
         SetVoltage(volts=-1)
     with pytest.raises(ValidationError):
         SetVoltage(volts=12)
+
+
+def test_client_commands_are_discriminated_and_reject_invalid_modes():
+    assert isinstance(CLIENT_MESSAGE.validate_json('{"type":"restart_lesson"}'), RestartLesson)
+    assert CLIENT_MESSAGE.validate_json('{"type":"set_mode","mode":"lab"}').mode == "lab"
+    with pytest.raises(ValidationError):
+        CLIENT_MESSAGE.validate_json('{"type":"set_mode","mode":"unknown"}')
+    with pytest.raises(ValidationError):
+        CLIENT_MESSAGE.validate_json('{"type":"restart_lesson","volts":9}')
+    with pytest.raises(ValidationError):
+        CLIENT_MESSAGE.validate_json('{"type":"unknown"}')
 
 
 def test_committed_contract_files_are_up_to_date():

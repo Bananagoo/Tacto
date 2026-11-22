@@ -1,0 +1,14 @@
+{
+  "additionalProperties": false,
+  "description": "Start again at step one and restore the demo's starting voltage.",
+  "properties": {
+    "type": {
+      "const": "restart_lesson",
+      "default": "restart_lesson",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "title": "RestartLesson",
+  "type": "object"
+}

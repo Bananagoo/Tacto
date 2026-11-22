@@ -67,7 +67,7 @@ A switch's state and a battery's polarity it can see: open and closed switches a
 
 ## Lesson steps
 
-A lesson (`lessons/<id>.yaml`) is a fixed list of steps. Each has a prompt and a `done_when` (status, number of batteries, bulbs, lit bulbs, series or parallel). A step is done once its goal has held for half a second; it stays done; after `linger_seconds` the next prompt appears. There are no predictions to score, no hints and no timers on the learner.
+Tinker is open-ended. Entering Lab starts a fresh lesson at 3 V. Each YAML step has a prompt and circuit/touch goals (counts, arrangement, switch state, minimum voltage and a finger on a live piece). Goals must hold for half a second on a visible mat. Success stays latched; after `linger_seconds` the next step appears. An optional spoken reflection instead waits for Continue. The final reflection ends the lab. Answers are not recorded or scored. Restart clears lesson progress and restores 3 V; switching to Tinker preserves the circuit and voltage.
 
 ## Product and tooling
 

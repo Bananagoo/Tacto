@@ -90,6 +90,18 @@
           "default": false,
           "title": "Lesson Done",
           "type": "boolean"
+        },
+        "reflection": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reflection"
         }
       },
       "title": "LessonStep",
@@ -251,7 +263,7 @@
       "type": "string"
     },
     "version": {
-      "default": 1,
+      "default": 2,
       "title": "Version",
       "type": "integer"
     },
@@ -272,6 +284,15 @@
         "manual"
       ],
       "title": "Source",
+      "type": "string"
+    },
+    "mode": {
+      "default": "tinker",
+      "enum": [
+        "tinker",
+        "lab"
+      ],
+      "title": "Mode",
       "type": "string"
     },
     "mat_visible": {
@@ -320,7 +341,8 @@
         "step_count": 0,
         "prompt": "",
         "step_done": false,
-        "lesson_done": false
+        "lesson_done": false,
+        "reflection": null
       }
     }
   },

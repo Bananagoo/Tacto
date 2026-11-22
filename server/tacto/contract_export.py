@@ -11,9 +11,12 @@ from pathlib import Path
 
 from tacto.contract import (
     Circuit,
+    ContinueLesson,
     Grid,
     LessonStep,
     Piece,
+    RestartLesson,
+    SetMode,
     SetVoltage,
     State,
     Touch,
@@ -53,17 +56,19 @@ def example_state() -> State:
         seq=412,
         t=27.4,
         source="manual",
+        mode="lab",
         grid=Grid(cols=9, rows=6),
         pieces=pieces,
         circuit=Circuit(status="working", voltage=6.0, total_current=0.6),
         touch=Touch(present=True, x=0.31, y=0.2, piece_id="2,1-3,1", pulse_hz=3.0),
         lesson=LessonStep(
             lesson_id="circuits-101",
-            step_id="close_the_loop",
-            step_index=1,
-            step_count=5,
-            prompt="Close the loop so the bulb lights.",
+            step_id="raise_voltage",
+            step_index=3,
+            step_count=6,
+            prompt="Keep your finger there. Turn the wheel up to 6 V.",
             step_done=True,
+            reflection="Why did the pulse get faster when you raised the voltage?",
         ),
     )
 
@@ -77,8 +82,16 @@ def contract_files() -> dict[str, str]:
     return {
         "state.schema.json": dump(State.model_json_schema()),
         "set_voltage.schema.json": dump(SetVoltage.model_json_schema()),
+        "restart_lesson.schema.json": dump(RestartLesson.model_json_schema()),
+        "set_mode.schema.json": dump(SetMode.model_json_schema()),
+        "continue_lesson.schema.json": dump(ContinueLesson.model_json_schema()),
         "example-state.json": dump(example_state().model_dump(mode="json")),
         "example-set-voltage.json": dump(SetVoltage(volts=6.5).model_dump(mode="json")),
+        "example-restart-lesson.json": dump(RestartLesson().model_dump(mode="json")),
+        "example-set-mode.json": dump(SetMode(mode="lab").model_dump(mode="json")),
+        "example-continue-lesson.json": dump(
+            ContinueLesson(step_id="raise_voltage").model_dump(mode="json")
+        ),
     }
 
 
