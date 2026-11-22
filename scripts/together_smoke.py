@@ -56,7 +56,8 @@ def speak(client: httpx.Client) -> bytes:
     )
     response.raise_for_status()
     if not response.content.startswith(b"RIFF"):
-        raise RuntimeError(f"text to speech did not return a WAV file ({len(response.content)} bytes)")
+        size = len(response.content)
+        raise RuntimeError(f"text to speech did not return a WAV file ({size} bytes)")
     return response.content
 
 
