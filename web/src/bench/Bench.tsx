@@ -16,7 +16,6 @@ import { turnDial, type MeterMode } from './meterMode'
 import { tallyWheel } from '../input/wheel'
 import { PartView } from './PartView'
 import { VoltageTag } from './VoltageTag'
-import { Readout } from './Readout'
 import { readingAt, readingOf } from './readingAt'
 import { saveShot } from '../gallery/shots'
 import { screenshotBlob, SKIP_IN_SCREENSHOT } from './screenshot'
@@ -26,6 +25,8 @@ import { WireLine } from './WireLine'
 // Vision now sends only what the camera reads off the mat (22 Nov 2026), so the bench draws
 // it. Set to false to show an empty mat whatever the server sends.
 const DRAW_SERVER_CIRCUIT = true
+// After the thumb wheel turns the meter's dial, the rest of that flick is ignored for this long.
+const DIAL_QUIET_MS = 450
 
 /**
  * The mat as the camera reads it, drawn straight from the latest state. Nothing here knows
@@ -51,11 +52,21 @@ export function Bench({ children }: { children?: ReactNode }) {
   useEffect(() => {
     if (!probing) return
     let remainder = 0
+    let quietUntil = 0
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
+      // One setting per flick (Katie: it went too fast): after a turn, the rest of that flick
+      // is ignored, and a turn takes a full notch's worth of scroll.
+      if (event.timeStamp < quietUntil) {
+        remainder = 0
+        return
+      }
       const tally = tallyWheel(remainder, event.deltaX)
       remainder = tally.remainder
-      if (tally.steps !== 0) setMeterMode((mode) => turnDial(mode, Math.sign(tally.steps)))
+      if (tally.steps === 0) return
+      remainder = 0
+      quietUntil = event.timeStamp + DIAL_QUIET_MS
+      setMeterMode((mode) => turnDial(mode, Math.sign(tally.steps)))
     }
     window.addEventListener('wheel', onWheel, { passive: true })
     return () => window.removeEventListener('wheel', onWheel)
@@ -64,8 +75,8 @@ export function Bench({ children }: { children?: ReactNode }) {
   // The learner's fingertip on the paper mat, as the camera places it.
   const probe = useTacto((store) => store.state?.probe)
   const finger = connected && probe?.present ? matToPoint(probe.x, probe.y) : null
-  // The multimeter on screen wins while it is picked up; otherwise the readout follows the
-  // fingertip on the paper, which is also what the mouse is vibrating for.
+  // The pointer over the mat is the meter's probe while it is picked up; otherwise the
+  // reading follows the fingertip on the paper, which is what the mouse is vibrating for.
   const reading =
     probing && pointer
       ? readingAt(pointer, circuit, wireKeys)
@@ -224,15 +235,13 @@ export function Bench({ children }: { children?: ReactNode }) {
         connected={connected}
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
-      {/* The meter shows the reading on its own screen; put down, the corner box does. */}
-      {probing ? (
+      {/* Readings are shown only on the meter's own screen, while it is picked up. */}
+      {probing && (
         <BenchMeter
           reading={reading}
           mode={meterMode}
           onTurn={() => setMeterMode((mode) => turnDial(mode, 1))}
         />
-      ) : (
-        <Readout reading={reading} />
       )}
       <Toolbar
         tool={tool}
@@ -244,9 +253,7 @@ export function Bench({ children }: { children?: ReactNode }) {
         onEraserRadius={setEraserRadius}
         onScreenshot={takeScreenshot}
       />
-      {/* The camera picture lives in the bottom-right corner; while the meter stands there it
-          moves up to the top-right, where the corner reading would be. */}
-      <div className={probing ? '[&>*]:!top-4 [&>*]:!bottom-auto' : ''}>{children}</div>
+      {children}
     </figure>
   )
 }
