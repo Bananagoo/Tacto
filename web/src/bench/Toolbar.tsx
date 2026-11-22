@@ -19,8 +19,6 @@ interface ToolbarProps {
   onEraserRadius: (radius: number) => void
   /** Save a dated picture of the circuit to the gallery. Resolves once it is saved. */
   onScreenshot: () => Promise<void>
-  /** Leave the lab for the home page. */
-  onHome: () => void
 }
 
 /** Its width. The mat is drawn to the right of it, so no tool ever covers the circuit. */
@@ -46,7 +44,6 @@ export function Toolbar({
   eraserRadius,
   onEraserRadius,
   onScreenshot,
-  onHome,
 }: ToolbarProps) {
   // "Saved" for a moment after a screenshot, "Could not save" if it failed. Words, not colour.
   const [shotNote, setShotNote] = useState<'' | 'Saved' | 'Could not save'>('')
@@ -144,13 +141,6 @@ export function Toolbar({
       >
         <img src={cameraUrl} alt="" className="h-20 object-contain" />
         {shotNote || 'Screenshot'}
-      </button>
-      {/* At the bottom of the bar, apart from the tools: it leaves the lab, it is not a tool. */}
-      <button type="button" onClick={onHome} className={`${TOOL_BUTTON} ${PUT_DOWN} mt-auto`}>
-        <span className="text-5xl leading-none" aria-hidden="true">
-          ←
-        </span>
-        Home
       </button>
     </nav>
   )

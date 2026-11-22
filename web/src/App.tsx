@@ -17,11 +17,11 @@ export default function App({ onHome }: { onHome: () => void }) {
       <div className="flex min-h-full flex-col gap-4 p-4 lg:h-full lg:p-6">
         <LessonStrip />
         <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-rows-[minmax(0,1fr)]">
-          <Bench onHome={onHome}>
+          <Bench>
             <CameraCorner />
           </Bench>
         </main>
-        <StatusBar />
+        <StatusBar onHome={onHome} />
       </div>
     </HapticsProvider>
   )

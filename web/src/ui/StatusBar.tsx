@@ -1,12 +1,22 @@
 import { useHaptics } from '../haptics/useHaptics'
 import { useTacto } from '../useTacto'
 
-/** The instrument's switches: the mouse, and a warning when the server is away. */
-export function StatusBar() {
+/** Along the bottom: the way back home, the mouse, and a warning when the server is away. */
+export function StatusBar({ onHome }: { onHome: () => void }) {
   const connected = useTacto((store) => store.connected)
 
   return (
     <footer className="flex flex-wrap items-center justify-between gap-x-10 gap-y-3 rounded-3xl bg-white/5 px-8 py-4 text-2xl">
+      <button
+        type="button"
+        onClick={onHome}
+        className="flex cursor-pointer items-center gap-3 rounded-xl border-4 border-stone-100/40 px-5 py-2 text-xl font-semibold text-stone-100 hover:border-stone-100 focus-visible:outline-4 focus-visible:outline-sky-300"
+      >
+        <span className="text-3xl leading-none" aria-hidden="true">
+          ←
+        </span>
+        Home
+      </button>
       {/* Said only when something is wrong: a connection that is up needs no words. The mark and
           the words, not colour alone, carry it. */}
       {!connected && <span className="font-bold text-amber-300">○ Reconnecting…</span>}
