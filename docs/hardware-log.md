@@ -102,3 +102,20 @@ Format:
 - Measured: in 12 seconds with a hand in view but still, the tracker found the hand in 174 of 202 frames and the stable reading did not change once. The failure itself was not caught on camera.
 - Decision, from the three ways it can happen (all reproduced on rendered frames, none yet confirmed as the cause on the desk): the hand is now the whole shape round its joints plus the forearm running off the page, not 16 mm round each joint; what it covered stays covered for half a second after it is last seen; while a hand is about any change needs 8 agreeing frames, not 3; and a segment reads empty only where flat bare paper shows, so a sleeve holds what is under it.
 - Not tested: any of this with a real hand.
+
+## 2026-11-22, the short demo on the real mat, run by Katherine
+- Setup: `VOICE_ENABLED=1 make dev`, the three-step lesson, the starting layout checked piece by piece by script (12 of 12 pieces where intended, battery + end up, circuit open at 3 V).
+- Passed: the lesson run on the real mat ("its looking pretty good"); the thumb wheel turns the multimeter's dial ("the dial works now"); the current is felt again after the camera could see the mat ("ok it works").
+- Measured: the setup check from the page took 3.4 s; eight checks passed and "mat found" failed with a person's arms over the corners (all four corners in 33% of frames), as it should.
+- Not written down: how many full runs, and which steps were felt on the mouse.
+
+## 2026-11-22, brightness swinging, reported by Katherine, measured by script (Claude)
+- Failed: automatic brightness never stopped adjusting ("its messing up the detection"). Caught live: state adjusting, gain 34, paper 187, 2.4% of the page clipped, 43 unsure segments.
+- Decision: calibrate, then hold (`vision/brightness.py`); a clipping spot is closed in on and held below.
+- Passed after the change: settled at gain 6, paper 203 to 205, gain unchanged over 12 s, 12 pieces read, 0 unsure.
+
+## 2026-11-22, the mouse connecting by itself, measured by script (Claude) on Katherine's mouse
+- Passed: with no click, the lab page logged "mouse found on receiver slot 2"; the dev tools' connection test read the mouse's strength setting (30%); three play commands sent straight to the mouse were each acknowledged.
+- Failed first: a second browser tab holding the mouse left the lab tab without vibration. A hidden tab now lets go, and the lab retries every 2 s.
+- Not felt by Claude, who cannot feel the mouse: Katherine confirmed the vibration afterwards.
+

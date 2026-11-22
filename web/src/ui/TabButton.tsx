@@ -16,7 +16,6 @@ export function TabButton({
   title,
   pressed,
   label,
-  long,
   besidePicture,
   children,
 }: {
@@ -30,8 +29,6 @@ export function TabButton({
   pressed?: boolean
   /** The words for a screen reader, when the visible ones are not enough. */
   label?: string
-  /** Longer words ("Connect mouse"): written a size smaller to stay clear of the edges. */
-  long?: boolean
   /** The coloured tab has a picture at its left (Home's house): the words sit to its right. */
   besidePicture?: boolean
   children: ReactNode
@@ -59,7 +56,7 @@ export function TabButton({
         } group-active:scale-95`}
       />
       <span
-        className={`absolute inset-y-0 ${besidePicture ? 'left-[30%] right-[18%]' : 'left-[6%] right-[20%]'} flex items-center justify-center gap-1.5 pt-0.5 font-['Patrick_Hand'] ${long ? 'text-[1.05rem]' : 'text-[1.35rem]'} leading-none whitespace-nowrap text-[#1f2a14] transition-opacity ${
+        className={`absolute inset-y-0 ${besidePicture ? 'left-[30%] right-[18%]' : 'left-[6%] right-[20%]'} flex items-center justify-center gap-1.5 pt-0.5 font-['Patrick_Hand'] text-[1.35rem] leading-none whitespace-nowrap text-[#1f2a14] transition-opacity ${
           chosen ? '' : 'opacity-75 group-hover:opacity-100'
         } group-focus-visible:underline`}
       >

@@ -1,8 +1,8 @@
 # The lab, step by step
 
-> **Status: approved by Katie and built on 22 Nov 2026.** The lab runs this lesson (`lessons/circuits-101.yaml`). The full six-step lesson is kept as `lessons/circuits-101-full.yaml`. Not yet run on the real mat.
+> **Status: approved by Katie and built on 22 Nov 2026.** The lab runs this lesson (`lessons/circuits-101.yaml`). The full six-step lesson is kept as `lessons/circuits-101-full.yaml`. Run on the real mat by Katie on 22 Nov 2026.
 
-The current six-step lesson takes about three minutes on its own, and up to five if the learner struggles. The demo needs the key features shown in about **one minute of hands-on time**, inside a three-minute pitch.
+The full six-step lesson takes about three minutes on its own, and up to five if the learner struggles. The demo needs the key features shown in about **one minute of hands-on time**, inside a three-minute pitch.
 
 ## Contents
 
@@ -12,10 +12,10 @@ The current six-step lesson takes about three minutes on its own, and up to five
 4. [The three steps](#4-the-three-steps)
 5. [The one spoken question](#5-the-one-spoken-question)
 6. [Timing](#6-timing)
-7. [What changes from today](#7-what-changes-from-today)
+7. [What changed from the six-step lesson](#7-what-changed-from-the-six-step-lesson)
 8. [Reference: how a reflection runs](#8-reference-how-a-reflection-runs)
 9. [Reference: voice, mouse, and when things go wrong](#9-reference-voice-mouse-and-when-things-go-wrong)
-10. [Questions for you](#10-questions-for-you)
+10. [Possible next steps](#10-possible-next-steps)
 
 ---
 
@@ -130,9 +130,9 @@ Changes made (22 Nov 2026):
 1. **`lessons/circuits-101.yaml`:** the three steps, the shorter lines, `linger_seconds: 2.5`, exit `timeout_seconds: 12`.
 2. **The exit timer** starts once its line has been said (`server/tacto/lesson.py`).
 3. **The closing line** in the notebook (`web/src/ui/LessonStrip.tsx`).
-4. **The new spoken lines** are recorded (4 new; the exit line is now 6.8 s, was 9.4 s).
+4. **The spoken lines** are recorded in the `af_nova` voice, 3.0 to 6.4 s each.
 5. **Tests:** `server/tests/test_short_lesson.py` walks the three steps; the engine's own tests run on the full lesson.
-6. **Still to do: test on the real mat,** with Katie.
+6. **Run on the real mat** by Katie, 22 Nov 2026.
 
 ---
 
@@ -200,16 +200,15 @@ At 3 V every current halves. The LED is **dim** below about 0.42 A and **bright*
 |---|---|
 | A hand or arm over the mat | Pieces under it keep their last reading |
 | Corners covered, or the picture soft | The mat's position is held for up to 10 s; autofocus is kicked after 2 s |
-| The camera unplugged | The mat shows "not found" and holds its pieces. The lab must be restarted after replugging (today) |
+| The camera unplugged | The mat shows "not found" and holds its pieces. The lab must be restarted after replugging |
 | Grading slow or failing | After 4.5 s the answer counts as partial: one question narrower |
 | Network lost | Every answer counts as partial; the exit's time limit moves the lesson on |
 | No sound | The line is shown; the lesson waits 3 s instead of for the sound |
 
 ---
 
-## 10. Questions for you
+## 10. Possible next steps
 
-- [ ] **One spoken question, or two?** (Built with one.) A second one after step 3 (*"Why is the pulse faster at the battery than at either bulb?"*) shows the grading on a harder idea, for about 15 more seconds.
-- [ ] **Drop series entirely,** or keep it as a spare the presenter can run in Tinker mode if asked?
-- [ ] **Starting voltage 3 V?** (Built at 3 V.) It makes step 2's change bigger; starting at 6 V would skip the wheel.
-- [ ] **Reconnect the camera automatically** after an unplug, so a bumped cable at the demo needs no restart?
+- **A second spoken question** after step 3 (*"Why is the pulse faster at the battery than at either bulb?"*), about 15 more seconds.
+- **Series as a spare:** it is in the full lesson (`lessons/circuits-101-full.yaml`) and can be built freely in Tinker.
+- **Reconnect the camera automatically** after an unplug, so a bumped cable needs no restart.

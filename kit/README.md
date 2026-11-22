@@ -1,6 +1,6 @@
 # The mat
 
-The printable mat: a grid of dots between four corner markers. The card pieces are cut by hand from coloured card and carry no markers, so the mat is the only thing printed.
+The printable mat: a grid of dots between four corner markers, with seven reference colour squares along its top edge. The pieces are printed in flat colours and carry no markers.
 
 **The mat must be printed from this script**, not drawn separately: the camera reader measures against the same geometry the script prints from.
 
@@ -23,7 +23,7 @@ rows: 6            # dots down
 dot_pitch_mm: 28   # centre to centre; a piece spans one gap, so this is the piece length
 ```
 
-The grid must fit between the corner markers: `(cols - 1) * dot_pitch_mm` at most 231 mm and `(rows - 1) * dot_pitch_mm` at most 144 mm. `make kit` says so if it does not. These values are placeholders until the kit owner decides them.
+The grid must fit between the corner markers: `(cols - 1) * dot_pitch_mm` at most 231 mm and `(rows - 1) * dot_pitch_mm` at most 144 mm. `make kit` says so if it does not.
 
 ## Print
 
@@ -33,8 +33,19 @@ The grid must fit between the corner markers: `(cols - 1) * dot_pitch_mm` at mos
 
 ## Pieces
 
-Each piece is a strip of card as long as one dot gap, one colour per type. Proposed colours, not final: wire black, battery red, bulb yellow, resistor blue, switch green. Avoid skin tones and white. If the battery card has a marked positive end, tell the vision owner how it is marked.
+The pieces are printed and cut out: `kit/printed/components-v3.pdf`. Each is as long as one dot gap and one flat colour, which is how the camera tells them apart (`kit/pieces.yaml`):
+
+| Piece | Colour |
+|---|---|
+| Wire | blue |
+| Bulb | yellow |
+| Resistor (22 Ω) | magenta |
+| Switch, closed | green |
+| Switch, open | cyan |
+| Battery | red at its positive end, black at the other |
+
+The mat carries a square of each colour along its top edge. The camera reads those squares in every frame, so the pieces are matched to the colours as they look under the room's light. Keep the squares uncovered, and tape pieces down from underneath or with matte tape: shiny tape glares.
 
 ## Camera
 
-Mount the camera straight above the mat so the paper fills most of the picture and all four corners are visible. White paper against a dark desk washes out under the camera's auto-exposure when the paper is small in the frame.
+The camera can sit behind the laptop and look across the desk at an angle: the four corner markers flatten the page. All four corners must be in view. Before a demo, run the setup check (`README.md`).

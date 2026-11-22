@@ -12,6 +12,7 @@ them. Changes need the vision owner's sign-off.
 | `restart_lesson.schema.json` | Restart Lab at step one and 3 V |
 | `continue_lesson.schema.json` | Acknowledge a reflection with its `step_id`, or skip the rest of one |
 | `answer_reflection.schema.json` | The learner's answer to the question being asked, as text |
+| `reflection_heard.schema.json` | The browser has finished playing a spoken line |
 | `example-state.json` | One state: a bulb on a closed loop at 6 V, a finger on the bulb |
 | `example-set-voltage.json` | One browser message |
 | `sample-states.jsonl` | About 90 seconds: switches, touch, voltage 3 → 6 V, series, parallel and spoken reflections; no short |
@@ -36,6 +37,8 @@ but recorded circuit numbers do not react to the wheel.
 - `current` is in amps, positive from `a` to `b`. A battery's `a` is its positive
   end, so its own current reads negative; use `circuit.total_current` for the size.
 - `brightness` (bulbs only) runs 0 to 1. `closed` is set on switches only.
+- `resistance` is in ohms, for the multimeter: 10 for a bulb, 22 for a resistor, 0 for a
+  wire and a closed switch, null for a battery and an open switch (the meter shows OL).
 - `circuit.status` is `working`, `open` or `shorted`. When shorted,
   `circuit.shorted_path` lists the piece ids round the loop, and each has `shorted: true`.
 - `touch` is the fingertip. `x`, `y` run 0 to 1 from the first dot column/row to the

@@ -30,7 +30,7 @@ stability                                  vision/stable.py
 MatView: placed pieces + fingertip         lab.py (the seam: camera or recorded frames)
   ▼
 Lab                                        lab.py
-  │  pieces.py   pieces → solver → pieces with current, brightness, shorted
+  │  pieces.py   pieces → solver → pieces with current, voltage, resistance, brightness, shorted
   │  sim/        graph analysis (open, short), ngspice, current → pulse rate and strength
   │  lesson.py   which step, whether the circuit completes it
   ▼
@@ -41,7 +41,9 @@ lab UI and mouse haptics                   web/src/ (UI team)
   └── set_voltage ─────────────────────────▶ Lab
 ```
 
-The fingertip comes from MediaPipe Hand Landmarker on the same frame (`vision/hands.py`, `vision/live.py`) and is mapped onto the mat through the same homography (`flatten.frame_point_to_mat`). The hand's landmarks, padded, will also be the mask for "segments under a hand keep their value".
+The fingertip comes from MediaPipe Hand Landmarker on the same frame (`vision/hands.py`) and is mapped onto the mat through the same homography (`flatten.frame_point_to_mat`), then steadied by a One Euro filter (`vision/fingertip.py`). The hand's joints and forearm, padded, are also the mask: segments under a hand keep their reading.
+
+The camera itself is steered from the same thread: manual exposure (`vision/exposure.py`), gain calibrated on the paper and then held (`vision/brightness.py`), and autofocus restarted when the markers go soft (`vision/focus.py`).
 
 ## The mat model
 
@@ -67,7 +69,7 @@ A switch's state and a battery's polarity it can see: open and closed switches a
 
 ## Lesson steps
 
-Tinker is open-ended. Entering Lab starts a fresh lesson at 3 V. Each YAML step has a prompt and circuit/touch goals (counts, arrangement, switch state, minimum voltage and a finger on a live piece). Goals must hold for half a second on a visible mat. Success stays latched; after `linger_seconds` the next step appears. An optional spoken reflection instead waits for Continue. The final reflection ends the lab. Answers are not recorded or scored. Restart clears lesson progress and restores 3 V; switching to Tinker preserves the circuit and voltage.
+Tinker is open-ended. Entering Lab starts a fresh lesson at 3 V. Each YAML step has a prompt and circuit/touch goals (counts, arrangement, switch state, minimum voltage and a finger on a live piece). Goals must hold for half a second on a visible mat. Success stays latched; after `linger_seconds` the next step appears. An optional spoken reflection instead waits for an answer or Continue. With `VOICE_ENABLED=1` the answer is transcribed and graded into one of four labels, and code picks the next prewritten line (`funnel.py`, `docs/voice-reflections-plan.md`); only the words and the grade are kept, on the laptop. Restart clears lesson progress and restores 3 V; switching to Tinker preserves the circuit and voltage.
 
 ## Product and tooling
 
@@ -77,18 +79,17 @@ Tinker is open-ended. Entering Lab starts a fresh lesson at 3 V. Each YAML step 
 | Web | `web/src/` (UI team) | `web/devtools/` |
 | Run | `make dev` | `make mock`, `make bench` |
 
-Tooling may import the product; the product never imports tooling (`server/tests/test_boundaries.py`). The fallbacks if the camera misbehaves at the demo are recorded frames (`make dev TACTO_SOURCE=replay`) and the recorded states (`make mock`). The hand-set mat was removed on 22 Nov 2026.
+Tooling may import the product; the product never imports tooling (`server/tests/test_boundaries.py`). The fallbacks if the camera misbehaves at the demo are recorded frames (`make dev TACTO_SOURCE=replay`) and the recorded states (`make mock`).
 
 ## Measured so far
 
 | What | Number |
 |---|---|
-| Pieces changing to state message, lab only (measured on the hand-set mat, since removed) | median 47 ms, worst 86 ms over 30 changes |
+| Pieces changing to state message, lab only (solve and send, without the camera) | median 47 ms, worst 86 ms over 30 changes |
 | `set_voltage` to state message | 69 ms |
 | First solve after startup | 365 ms (done at startup) |
 | Later solves | about 1 ms |
 | MediaPipe hand tracking | about 26 ms a frame at 1080p |
-
 | Flatten one 1080p frame | median 3.7 ms |
 | Cut and classify all 93 segments | median 7.2 ms |
 | Colour baseline on rendered images | 20 of 20 random layouts right in each of 10 views (blur, dim, noise, tilt, half turn) |

@@ -18,16 +18,17 @@ Twenty different layouts read correctly under venue lighting with a hand moving 
 | 6 | Graph and solver: open, short, DC current per piece, hand-worked tests | Done (`sim/`) |
 | 7 | Fingertip to the nearest piece; current to pulse rate and strength | Done (`lab.py`, `sim/feel.py`). Felt on the mouse by a person |
 | 8 | The lab on the camera: `make dev`, 15 state messages a second | Done. `make dev TACTO_SOURCE=replay` runs recorded frames |
-| 9 | Lesson: Tinker and Lab modes; the three-step demo lesson (`docs/lab-flow.md`) | Done. Not yet run start to finish on the real mat |
+| 9 | Lesson: Tinker and Lab modes; the three-step demo lesson (`docs/lab-flow.md`) | Done. Run on the real mat by Katie on 22 Nov |
 | 10 | Voice reflections (`docs/voice-reflections-plan.md`) | Done, behind `VOICE_ENABLED=1`. Grader 108 of 111; 10 of 10 synthesised spoken answers. Ten answers into a real microphone: not yet done |
 | 11 | Setup check: one button that calibrates and checks camera, mat, focus, brightness, colours, speed and voice | Done (`setup_check.py`, `web/devtools/setup/`). 3.4 s on the real camera |
+| 12 | The multimeter: a meter on the bench reading amps, volts or ohms under the pointer or the fingertip; the thumb wheel turns its dial | Done (`web/src/bench/BenchMeter.tsx`; `piece.resistance` in the contract) |
+| 13 | The mouse connects by itself; the fingertip is steadied (One Euro filter) | Done (`web/src/haptics/HapticsContext.tsx`, `vision/fingertip.py`) |
 
 ## Still to measure on the hardware
 
 - Twenty layouts on the real mat under venue lighting, with a moving hand.
 - The delay from a piece moving to the state changing (estimated 0.2 s).
 - Ten spoken answers into a real microphone.
-- The demo lesson start to finish on the real mat, at the venue.
 
 ## Parked
 

@@ -6,7 +6,7 @@ Status key: **verified** = confirmed by running it on the demo laptop or by test
 
 ## Shape
 
-One Python server and one browser page on one macOS laptop, one WebSocket between them, Wi-Fi off.
+One Python server and one browser page on one macOS laptop, one WebSocket between them. The live loop needs no network; only the optional spoken reflections do.
 
 ```
 LogiInsight camera ──colour frames──> server (Python) ──state, 15 a second──> lab UI (Chrome)
@@ -28,7 +28,7 @@ LogiInsight camera ──colour frames──> server (Python) ──state, 15 a 
 | Server and transport | FastAPI + uvicorn, one WebSocket, pydantic v2 models as the contract; JSON schema exported to `contract/` | FastAPI, pydantic | **verified** by tests and a live run |
 | Lesson and mat content | YAML files in `lessons/` and `kit/mats/`, validated by pydantic | PyYAML | **verified** by tests |
 | Printable mat | Script renders the A4 page (dots, corner markers, 50 mm check bar) to PDF from the mat file, so the print matches the reader's geometry | `cv2.aruco.generateImageMarker`, Pillow | **verified** by tests. **test**: printed and measured |
-| Lab UI | Vite + React + TypeScript, Tailwind, zustand, `motion`; Space Grotesk font from `@fontsource-variable/space-grotesk` (bundled, no network) | — | Owned by the UI team; font checked by eye |
+| Lab UI | Vite + React + TypeScript, Tailwind, zustand, `motion`; Space Grotesk and Patrick Hand fonts, bundled (no network) | — | Owned by the UI team; font checked by eye |
 | Gallery | `idb-keyval` (a small IndexedDB wrapper): the camera tool keeps dated PNGs of the circuit in the browser, and the gallery page (the sticky note on the launch page) lists them. Nothing leaves the machine | Raw IndexedDB; plain downloads | — | run in Chrome 22 Nov 2026: save, list newest first, cut with the eraser, delete |
 | Haptics | WebHID to the MX Master 4 through the Logi Bolt receiver: a preset tick looped at `pulse_hz`, a hard preset looped fast for the short buzz | [mx-master-4-webhid](https://github.com/mario-gutierrez/mx-master-4-webhid) (MIT); function numbers from the Solaar project | **verified** 21 Nov: speed and strength sliders both felt on the real mouse. Owned by the UI team |
 | Voice reflections (optional, `VOICE_ENABLED=1`) | The lab says prewritten lines, hears a spoken answer and grades it into a fixed label; code decides what comes next. Plan and rules: `docs/voice-reflections-plan.md`. Model names live in `server/tacto/voice_models.py` only | Together AI over HTTP with `httpx`: `hexgrad/Kokoro-82M` (speech, cached on disk), `openai/whisper-large-v3` (transcription), `Qwen/Qwen3.5-9B` (grading, JSON schema). In the browser, [@ricky0123/vad-web](https://www.npmjs.com/package/@ricky0123/vad-web) 0.0.31 (ISC, Silero voice detection on `onnxruntime-web`), its files served locally by `web/vite.config.ts` | **verified** 22 Nov against the real service: grader 108 of 111 fixture answers, no wrong answer graded right; 10 of 10 spoken clips transcribed and graded, median 0.85 s to the next line; speech cache makes no calls on a second start. **test**: the microphone, the detector and the sound in a browser, by a person |
@@ -49,7 +49,7 @@ Measured on the demo laptop on 21 Nov 2026 (`docs/hardware-log.md`) unless marke
 4. **Do not leave the camera streaming between tests.** Logitech's docs warn it can overheat; the on-camera face AI makes this worse and we do not use it.
 5. **Hand tracking is MediaPipe, not the Logi Hands Tracker app.** Per Logitech's docs, not confirmed on this laptop: the Hands Tracker app needs the near-infrared stream, publishes thumb and index tips on `ws://127.0.0.1:8765`, needs a four-touch calibration, and requires the colour stream opened as raw NV12 or YUY2 (not MJPG) so the infrared stream keeps its frame rate. None of that applies while we use MediaPipe on the colour stream.
 6. **Haptics are preset waveforms, not a continuous motor.** The mouse reports 15 presets (0–14). There is no custom waveform. Strength (0–100) can be set over WebHID; it is stored on the mouse, so set it once, not per tick. "Current" is a short tick repeated at a rate the server sends.
-7. **The mouse is driven through the Logi Bolt USB receiver** (046d:c548). WebHID needs Chrome or Edge and one click to connect.
+7. **The mouse is driven through the Logi Bolt USB receiver** (046d:c548). WebHID needs Chrome or Edge. The browser must be allowed the mouse once (Dev tools, Haptics); after that the lab connects by itself at start and whenever the mouse comes back.
 8. **Everything is localhost-only.** The whole demo runs on the laptop that has the camera and the mouse.
 
 ## Not using
