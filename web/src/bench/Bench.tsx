@@ -4,7 +4,7 @@ import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
 import { matToPoint, placeKeys, VIEW_HEIGHT, VIEW_WIDTH, type Point } from './grid'
 import {
-  ERASER_RADIUS,
+  DEFAULT_ERASER_RADIUS,
   MARKER_COLORS,
   MARKER_WIDTH,
   strokePath,
@@ -55,6 +55,7 @@ export function Bench({ children }: { children?: ReactNode }) {
   // The marker: lines drawn over the mat for fun. They never reach the server or the solver.
   const [strokes, setStrokes] = useState<Stroke[]>([])
   const [markerColor, setMarkerColor] = useState<string>(MARKER_COLORS[0].value)
+  const [eraserRadius, setEraserRadius] = useState(DEFAULT_ERASER_RADIUS)
   const inking = useRef(false)
 
   // Clicking the tool in hand puts it down; clicking another swaps to it.
@@ -82,8 +83,8 @@ export function Bench({ children }: { children?: ReactNode }) {
   // The eraser takes away every line it touches, whole. Cheap: a few lines, a few points each.
   const erase = (spot: Point) =>
     setStrokes((all) =>
-      all.some((stroke) => strokeTouches(stroke, spot))
-        ? all.filter((stroke) => !strokeTouches(stroke, spot))
+      all.some((stroke) => strokeTouches(stroke, spot, eraserRadius))
+        ? all.filter((stroke) => !strokeTouches(stroke, spot, eraserRadius))
         : all,
     )
 
@@ -177,7 +178,7 @@ export function Bench({ children }: { children?: ReactNode }) {
           <circle
             cx={pointer.x}
             cy={pointer.y}
-            r={ERASER_RADIUS}
+            r={eraserRadius}
             className="fill-white/20 stroke-white"
             strokeWidth={4}
             pointerEvents="none"
@@ -197,6 +198,8 @@ export function Bench({ children }: { children?: ReactNode }) {
         markerColor={markerColor}
         onMarkerColor={setMarkerColor}
         onClearMarker={() => setStrokes([])}
+        eraserRadius={eraserRadius}
+        onEraserRadius={setEraserRadius}
         onScreenshot={takeScreenshot}
       />
       {children}

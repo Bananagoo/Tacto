@@ -25,8 +25,13 @@ export function strokePath(points: readonly Point[]): string {
   return [`M ${first.x} ${first.y}`, ...lines].join(' ')
 }
 
-/** How close, in SVG units, the eraser must come to a line to take it away. */
-export const ERASER_RADIUS = 30
+/** How close, in SVG units, the eraser must come to a line to take it away: three sizes. */
+export const ERASER_SIZES = [
+  { name: 'Small', radius: 15 },
+  { name: 'Medium', radius: 30 },
+  { name: 'Large', radius: 60 },
+] as const
+export const DEFAULT_ERASER_RADIUS: number = ERASER_SIZES[1].radius
 
 function distanceToSegment(spot: Point, a: Point, b: Point): number {
   const dx = b.x - a.x
@@ -40,7 +45,7 @@ function distanceToSegment(spot: Point, a: Point, b: Point): number {
 }
 
 /** Whether the eraser at `spot` touches this line anywhere along it. */
-export function strokeTouches(stroke: Stroke, spot: Point, radius = ERASER_RADIUS): boolean {
+export function strokeTouches(stroke: Stroke, spot: Point, radius: number): boolean {
   const { points } = stroke
   if (points.length === 1) return distanceToSegment(spot, points[0], points[0]) <= radius
   return points.slice(1).some((point, i) => distanceToSegment(spot, points[i], point) <= radius)

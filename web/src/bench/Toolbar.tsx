@@ -2,7 +2,7 @@ import cameraUrl from '../assets/camera.png'
 import eraserUrl from '../assets/eraser.png'
 import markerUrl from '../assets/marker.png'
 import multimeterUrl from '../assets/Multimeter.png'
-import { MARKER_COLORS } from './markers'
+import { ERASER_SIZES, MARKER_COLORS } from './markers'
 
 /** What the pointer is doing over the mat: nothing, reading as the multimeter, drawing, or erasing. */
 export type Tool = 'none' | 'multimeter' | 'marker' | 'eraser'
@@ -14,6 +14,8 @@ interface ToolbarProps {
   markerColor: string
   onMarkerColor: (color: string) => void
   onClearMarker: () => void
+  eraserRadius: number
+  onEraserRadius: (radius: number) => void
   /** Save a picture of the circuit. */
   onScreenshot: () => void
 }
@@ -38,6 +40,8 @@ export function Toolbar({
   markerColor,
   onMarkerColor,
   onClearMarker,
+  eraserRadius,
+  onEraserRadius,
   onScreenshot,
 }: ToolbarProps) {
   return (
@@ -72,6 +76,24 @@ export function Toolbar({
         <img src={eraserUrl} alt="" className="h-16 object-contain" />
         Eraser
       </button>
+      {tool === 'eraser' && (
+        <div className="flex items-end justify-center gap-3 rounded-xl bg-white/10 p-3">
+          {ERASER_SIZES.map((size) => (
+            <button
+              key={size.name}
+              type="button"
+              aria-label={`${size.name} eraser`}
+              aria-pressed={eraserRadius === size.radius}
+              onClick={() => onEraserRadius(size.radius)}
+              // Three rings in three sizes, as big as the eraser's reach; a thick ring marks the chosen one.
+              style={{ width: size.radius * 0.75 + 8, height: size.radius * 0.75 + 8 }}
+              className={`cursor-pointer rounded-full border-4 border-stone-100 focus-visible:outline-4 focus-visible:outline-sky-300 ${
+                eraserRadius === size.radius ? 'bg-amber-300' : 'bg-transparent'
+              }`}
+            />
+          ))}
+        </div>
+      )}
       {tool === 'marker' && (
         <div className="flex flex-col items-center gap-3 rounded-xl bg-white/10 p-3">
           <div className="grid grid-cols-2 gap-3">
