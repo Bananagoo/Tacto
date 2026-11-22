@@ -2,14 +2,14 @@
 
 > **Status: proposal for the short demo, waiting for Katie's approval.** Nothing in the lab has changed yet. Once this is approved, the lesson file (`lessons/circuits-101.yaml`) and the few timings named below are changed to match, and the run is tested on the real mat.
 
-The current six-step lesson takes about three minutes on its own, and up to five if the learner struggles. The demo needs every feature we built shown in about **90 seconds of hands-on time**, inside a three-minute pitch.
+The current six-step lesson takes about three minutes on its own, and up to five if the learner struggles. The demo needs the key features shown in about **one minute of hands-on time**, inside a three-minute pitch.
 
 ## Contents
 
 1. [What the demo has to show](#1-what-the-demo-has-to-show)
 2. [The short lab at a glance](#2-the-short-lab-at-a-glance)
 3. [Before the judge sits down](#3-before-the-judge-sits-down)
-4. [The four steps](#4-the-four-steps)
+4. [The three steps](#4-the-three-steps)
 5. [The one spoken question](#5-the-one-spoken-question)
 6. [Timing](#6-timing)
 7. [What changes from today](#7-what-changes-from-today)
@@ -29,10 +29,12 @@ The current six-step lesson takes about three minutes on its own, and up to five
 | The scroll wheel **is the voltage**: faster and stronger pulse, brighter LED, volts tag on the battery | Step 2 |
 | The lab asks out loud, hears the answer, grades it, and narrows the question if it misses | After step 2 |
 | Parallel branches: currents add at the battery, the strongest pulse in the demo | Step 3 |
-| A short circuit: a hard buzz, the path in orange, a warning banner | Step 4 |
 | The notebook, the handwriting, the voice | Throughout |
 
-Two bulbs in **series** is left out: it shows the same idea as step 2 (less current, slower pulse) and costs 30 seconds and a second spoken question.
+Left out, to save time:
+
+- **Two bulbs in series:** it shows the same idea as step 2 (less current, slower pulse) and costs 30 seconds and a second spoken question.
+- **A short circuit:** cut by Katie on 22 Nov ("I don't need to show that"). The lab still detects and buzzes on a short if one happens.
 
 ---
 
@@ -43,8 +45,7 @@ flowchart LR
     S1["1 · Close it<br/>swap in the closed switch"] --> S2["2 · Feel it<br/>finger on the bulb,<br/>wheel up to 6 V"]
     S2 --> Q["Spoken question<br/>why did it get faster?"]
     Q --> S3["3 · Branch it<br/>second bulb on its<br/>own branch, touch<br/>the battery"]
-    S3 --> S4["4 · Short it<br/>wire across a bulb"]
-    S4 --> E["Lesson complete"]
+    S3 --> E["Lesson complete"]
 ```
 
 ---
@@ -55,12 +56,12 @@ The presenter lays this out on the mat, so the judge only ever changes one thing
 
 - **A loop:** battery, one bulb and wires, with the **open (cyan) switch already in it**.
 - **An empty side branch** beside the bulb: two wires with a gap where the second bulb goes.
-- **Within reach:** the closed (green) switch, the second bulb, one spare wire.
+- **Within reach:** the closed (green) switch and the second bulb.
 - **Mouse connected,** lab opened from the circuit board, then **Lab** pressed: the lesson starts at step 1 and **3 V**.
 
 ---
 
-## 4. The four steps
+## 4. The three steps
 
 Each step is finished when its goal has held for half a second, then shows **✓ Done**. Steps without a question move on after **2.5 s** (was 6 s).
 
@@ -70,11 +71,8 @@ Each step is finished when its goal has held for half a second, then shows **✓
 | 2 | *Rest a finger on the bulb. Turn the wheel up to 6 V.* | Finger on the bulb, 6 V or more | The pulse speeds up and strengthens, the LED turns bright, the tag counts up to 6.0 V |
 | | *(spoken question, section 5)* | | |
 | 3 | *Put the second bulb on its own branch. Touch the battery.* | Two bulbs lit in parallel, finger on the battery | The fastest, strongest pulse of the demo (1.2 A) |
-| 4 | *Lay a wire straight across a bulb.* | The circuit is shorted | A hard continuous buzz, the short path in orange, "Short circuit" across the mat |
 
-After step 4: **✓ Lesson complete** with *"Same battery, different paths, and a difference you can feel."*
-
-> **Why the short is last:** it is the most dramatic moment, and it needs no question after it. Taking the wire away again leaves the mat as it was at step 3.
+After step 3: **✓ Lesson complete** with *"Same battery, different paths, and a difference you can feel."*
 
 ---
 
@@ -106,11 +104,10 @@ The series and parallel questions stay in the lesson file but are not used.
 | Step 2 | 12 s | 12 s |
 | Spoken question | 10 s | 20 s |
 | Step 3 | 20 s | 20 s |
-| Step 4 | 8 s | 8 s |
-| Pauses between steps | 8 s | 8 s |
-| **Total hands-on** | **about 65 s** | **about 75 s** |
+| Pauses between steps | 5 s | 5 s |
+| **Total hands-on** | **about 55 s** | **about 65 s** |
 
-Worst case (three misses and the exit): about 100 s.
+Worst case (three misses and the exit): about 90 s.
 
 ---
 
@@ -118,22 +115,21 @@ Worst case (three misses and the exit): about 100 s.
 
 | | Today | Short demo |
 |---|---|---|
-| Steps | 6 | 4 |
+| Steps | 6 | 3 |
 | Starting layout | Loop with a gap | Loop with the open switch already in |
 | Spoken questions | 3 (steps 4, 5, 6) | 1 (step 2) |
 | Series step | Yes | Dropped |
-| Short circuit | Not in the lesson | Final step |
 | Pause after a step | 6 s | 2.5 s |
 | Exit time limit | 20 s from the start of the exit | 12 s from when its line has been said |
 | Closing line | *Same two bulbs, different connections…* | *Same battery, different paths…* |
 
 Changes to make once approved:
 
-1. **`lessons/circuits-101.yaml`:** the four steps, the shorter lines, `linger_seconds: 2.5`, exit `timeout_seconds: 12`.
+1. **`lessons/circuits-101.yaml`:** the three steps, the shorter lines, `linger_seconds: 2.5`, exit `timeout_seconds: 12`.
 2. **The exit timer** starts once its line has been said (a small change in `server/tacto/lesson.py`).
 3. **The closing line** in the notebook (`web/src/ui/LessonStrip.tsx`).
 4. **Record the new spoken lines** (automatic on the next start, about 5 seconds).
-5. **Tests** that walk the lesson are updated to the four steps.
+5. **Tests** that walk the lesson are updated to the three steps.
 6. **Test on the real mat,** with you.
 
 ---
@@ -210,7 +206,6 @@ At 3 V every current halves. The LED is **dim** below about 0.42 A and **bright*
 
 ## 10. Questions for you
 
-- [ ] **Keep the short circuit as the finale?** It is the most striking moment, but it adds a step.
 - [ ] **One spoken question, or two?** A second one after step 3 (*"Why is the pulse faster at the battery than at either bulb?"*) shows the grading on a harder idea, for about 15 more seconds.
 - [ ] **Drop series entirely,** or keep it as a spare the presenter can run in Tinker mode if asked?
 - [ ] **Starting voltage 3 V?** It makes step 2's change bigger; starting at 6 V would skip the wheel.
