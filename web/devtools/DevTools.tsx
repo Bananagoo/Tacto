@@ -1,14 +1,12 @@
 // Tooling for the people building Tacto, at /devtools/. Not part of the product:
 // nothing under src/ may import from this folder (server/tests/test_boundaries.py).
-// The camera and haptics pages need `make bench`; the live state page needs `make dev` or
-// `make mock`.
+// The setup check needs `make dev`; the camera bench needs `make bench`.
 
 import { useEffect, useState } from 'react'
 import CameraPanel from './camera/CameraPanel'
 import HapticTestPage from './haptics/HapticTestPage'
 import SetupCheck from './setup/SetupCheck'
 import logoUrl from '../src/assets/Logo.png'
-import StatePanel from './state/StatePanel'
 
 const TOOLS = [
   // Before a demo: finds the camera brightness for the room and checks it will all work.
@@ -25,13 +23,6 @@ const TOOLS = [
     ),
   },
   { hash: '#haptics', label: 'Haptics', needs: '', render: () => <HapticTestPage /> },
-  // The live state message drawn plainly. Works with make dev and make mock.
-  {
-    hash: '#state',
-    label: 'Live state',
-    needs: 'make dev or make mock',
-    render: () => <StatePanel />,
-  },
 ]
 
 export default function DevTools() {

@@ -4,18 +4,24 @@ from pathlib import Path
 
 import pytest
 
-from tacto.contract import Touch
+from tacto.contract import Touch, segment_id
 from tacto.grader import Grade  # noqa: F401  (the funnel's labels are the grader's)
 from tacto.lesson import CONFIRM_SECONDS, LessonRunner, is_satisfied, load_lesson
-from tacto.pieces import solve_pieces
-from tacto_mock.scenario import BATTERY, BULB_A, branch, loop
+from tacto.pieces import Placed, solve_pieces
+from tacto_mock.scenario import BATTERY, BULB_A, loop
 
 LESSON = load_lesson(Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml")
 
-# The starting layout: the loop with the open switch in it, and an empty side branch.
-START = loop(closed=False) + [p for p in branch("bulb") if p.type == "wire"]
-CLOSED = loop(closed=True) + [p for p in branch("bulb") if p.type == "wire"]
-PARALLEL = loop(closed=True) + branch("bulb")
+# The starting layout: the loop with the open switch in it, and a side branch with a gap for
+# the second bulb. One branch wire is a resistor (Katie, 22 Nov 2026), so the second bulb
+# glows dimmer than the first and the meter has a resistor to read.
+SIDE = [Placed("resistor", (2, 1), (2, 2)), Placed("wire", (3, 2), (3, 1))]
+SECOND_BULB = Placed("bulb", (2, 2), (3, 2))
+START = loop(closed=False) + SIDE
+CLOSED = loop(closed=True) + SIDE
+PARALLEL = CLOSED + [SECOND_BULB]
+RESISTOR = segment_id((2, 1), (2, 2))
+BULB_B = segment_id((2, 2), (3, 2))
 
 
 def seen(placed, volts, piece_id=None):
@@ -112,3 +118,22 @@ def test_a_spoken_exit_line_gets_its_full_twelve_seconds_after_it_ends():
     assert runner.update(*seen(CLOSED, 6.0, BULB_A)).step_id == "raise_voltage"
     clock.t += 1.0
     assert runner.update(*seen(CLOSED, 6.0, BULB_A)).step_id == "parallel"
+
+
+def test_the_resistor_in_the_branch_leaves_steps_one_and_two_alone_and_dims_the_second_bulb():
+    # Hand-worked, at 6 V. Before step 3 the branch is open: one bulb, 10 ohms, 0.6 A. After,
+    # the second branch is bulb + resistor, 20 ohms, 0.3 A; the battery carries 0.6 + 0.3.
+    pieces, circuit = solve_pieces(CLOSED, 6.0)
+    by_id = {piece.id: piece for piece in pieces}
+    assert by_id[BULB_A].current == pytest.approx(0.6, abs=1e-3)
+    assert by_id[RESISTOR].current == pytest.approx(0.0, abs=1e-3)
+
+    pieces, circuit = solve_pieces(PARALLEL, 6.0)
+    by_id = {piece.id: piece for piece in pieces}
+    # 0.899: the wires' own 0.001 ohm each, eight of them shared, take a little.
+    assert circuit.total_current == pytest.approx(0.9, abs=2e-3)
+    assert abs(by_id[BULB_A].current) == pytest.approx(0.6, abs=1e-3)
+    assert abs(by_id[BULB_B].current) == pytest.approx(0.3, abs=1e-3)
+    assert abs(by_id[RESISTOR].current) == pytest.approx(0.3, abs=1e-3)
+    assert abs(by_id[RESISTOR].voltage) == pytest.approx(3.0, abs=1e-2)
+    assert by_id[BULB_B].brightness < by_id[BULB_A].brightness
