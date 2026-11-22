@@ -24,7 +24,6 @@ from tacto.contract import (
     RestartLesson,
     SetMode,
 )
-from tacto.speech import speech_router
 
 from .sample import SAMPLE_PATH
 
@@ -36,7 +35,6 @@ def create_mock_app(sample_path: Path = SAMPLE_PATH, *, state_hz: float = STATE_
     if not recorded:
         raise RuntimeError(f"{sample_path} holds no states. Run: make sample")
     app = FastAPI(title="Tacto mock")
-    app.include_router(speech_router())
 
     @app.get("/health")
     def health() -> dict:

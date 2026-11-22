@@ -9,7 +9,6 @@ from pydantic import ValidationError
 
 from tacto.contract import CLIENT_MESSAGE
 from tacto.lab import Lab
-from tacto.speech import speech_router
 
 STATE_HZ = 15
 
@@ -17,7 +16,6 @@ STATE_HZ = 15
 def create_lab_app(lab: Lab, *, source: str, state_hz: float = STATE_HZ) -> FastAPI:
     """Build the app round a lab. `source` is reported by /health for the people running it."""
     app = FastAPI(title="Tacto")
-    app.include_router(speech_router())
 
     @app.get("/health")
     def health() -> dict:
