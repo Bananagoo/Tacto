@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import notebookUrl from '../assets/Notebook.png'
 import { useTacto } from '../useTacto'
 import { Reflection } from './Reflection'
 
@@ -116,70 +117,96 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
   return (
     <>
       {mode === 'lab' && (
+        // The lesson is written on a notebook page (assets/Notebook.png). The picture keeps its
+        // shape: on a wide screen it is as tall as the mat beside it, and its type grows and
+        // shrinks with it (cqw: a share of the notebook's width), so the page reads the same
+        // on the laptop and on the projector.
         <section
           aria-label="Lesson"
-          className={`shrink-0 rounded-3xl border-2 px-6 py-4 transition-colors lg:w-[26rem] lg:overflow-y-auto ${
-            done ? 'border-emerald-400/60 bg-emerald-400/10' : 'border-white/10 bg-white/5'
-          }`}
+          className="@container relative aspect-[1010/1517] w-full max-w-md shrink-0 self-center lg:h-full lg:w-auto lg:max-w-none"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div role="status" aria-atomic="true" className="min-w-0 flex-1 basis-full">
-              <p className="m-0 mb-2 text-lg font-semibold text-stone-300">
-                {ready
-                  ? `Step ${lesson.step_index + 1} of ${lesson.step_count}`
-                  : 'Feel the current'}
-                {done && (
-                  <span className="ml-4 text-emerald-300">
-                    {lesson.lesson_done ? '✓ Lesson complete' : '✓ Done'}
-                  </span>
-                )}
-              </p>
-              <p className="m-0 text-2xl leading-snug font-semibold xl:text-3xl">
-                {ready
-                  ? lesson.lesson_done
-                    ? 'Same two bulbs, different connections—and a difference you can feel.'
-                    : lesson.prompt
-                  : connected
-                    ? 'Waiting for the lesson…'
-                    : 'Connecting to the lab…'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={restartLesson}
-              disabled={!connected}
-              aria-keyshortcuts="R"
-              title="Restart at step 1 and 3 V. Put the pieces back in the starting layout."
-              className="cursor-pointer rounded-xl bg-white/15 px-4 py-3 text-lg font-semibold hover:bg-white/25 focus-visible:outline-4 focus-visible:outline-sky-300 disabled:cursor-default disabled:opacity-40"
-            >
-              Restart <kbd className="ml-2 rounded bg-black/20 px-2 py-1 text-sm">R</kbd>
-            </button>
-          </div>
-          {ready && lesson.reflection && lesson.reflectionStatus && (
-            <Reflection lesson={lesson} onSkip={continueLesson} />
-          )}
-          {ready && lesson.reflection && !lesson.reflectionStatus && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-white/15 pt-4">
-              <div role="status" className="min-w-0 flex-1 basis-full">
-                <p className="m-0 text-sm font-semibold tracking-wide text-emerald-300 uppercase">
-                  Explain out loud
+          <img
+            src={notebookUrl}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full select-none"
+          />
+          {/* The writable part of the page: right of the red margin, below the rings. */}
+          <div
+            className="absolute overflow-y-auto text-stone-800"
+            style={{
+              left: '23%',
+              right: '13%',
+              top: '12%',
+              bottom: '10%',
+              fontSize: 'clamp(11px, 4.4cqw, 26px)',
+            }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div role="status" aria-atomic="true" className="min-w-0 flex-1 basis-full">
+                <p className="m-0 mb-2 text-[0.85em] font-semibold text-stone-600">
+                  {ready
+                    ? `Step ${lesson.step_index + 1} of ${lesson.step_count}`
+                    : 'Feel the current'}
+                  {done && (
+                    <span className="ml-3 text-emerald-700">
+                      {lesson.lesson_done ? '✓ Lesson complete' : '✓ Done'}
+                    </span>
+                  )}
                 </p>
-                <p className="m-0 mt-1 text-xl font-semibold lg:text-2xl">{lesson.reflection}</p>
-                <p className="m-0 mt-1 text-sm text-stone-300">
-                  Take your time, then continue. Your voice is not being recorded.
+                <p className="m-0 text-[1.3em] leading-snug font-semibold">
+                  {ready
+                    ? lesson.lesson_done
+                      ? 'Same two bulbs, different connections—and a difference you can feel.'
+                      : lesson.prompt
+                    : connected
+                      ? 'Waiting for the lesson…'
+                      : 'Connecting to the lab…'}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={continueLesson}
-                aria-keyshortcuts="Enter"
-                className="cursor-pointer rounded-xl bg-emerald-300 px-5 py-3 text-lg font-semibold text-emerald-950 hover:bg-emerald-200 focus-visible:outline-4 focus-visible:outline-white"
+                onClick={restartLesson}
+                disabled={!connected}
+                aria-keyshortcuts="R"
+                title="Restart at step 1 and 3 V. Put the pieces back in the starting layout."
+                className="cursor-pointer rounded-lg bg-stone-900/10 px-[0.7em] py-[0.35em] text-[0.85em] font-semibold hover:bg-stone-900/20 focus-visible:outline-4 focus-visible:outline-sky-600 disabled:cursor-default disabled:opacity-40"
               >
-                {lesson.step_index === lesson.step_count - 1 ? 'Finish lab' : 'Continue'}
-                <kbd className="ml-2 rounded bg-black/20 px-2 py-1 text-sm">Enter</kbd>
+                Restart{' '}
+                <kbd className="ml-2 rounded bg-stone-900/10 px-[0.4em] py-[0.1em] text-[0.8em]">
+                  R
+                </kbd>
               </button>
             </div>
-          )}
+            {ready && lesson.reflection && lesson.reflectionStatus && (
+              <Reflection lesson={lesson} onSkip={continueLesson} />
+            )}
+            {ready && lesson.reflection && !lesson.reflectionStatus && (
+              <div className="mt-[0.8em] flex flex-wrap items-center justify-between gap-[0.6em] border-t border-stone-500/40 pt-[0.8em]">
+                <div role="status" className="min-w-0 flex-1 basis-full">
+                  <p className="m-0 text-[0.75em] font-semibold tracking-wide text-emerald-700 uppercase">
+                    Explain out loud
+                  </p>
+                  <p className="m-0 mt-1 text-[1.1em] font-semibold">{lesson.reflection}</p>
+                  <p className="m-0 mt-1 text-[0.75em] text-stone-600">
+                    Take your time, then continue. Your voice is not being recorded.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={continueLesson}
+                  aria-keyshortcuts="Enter"
+                  className="cursor-pointer rounded-lg bg-emerald-700 px-[0.8em] py-[0.4em] text-[0.9em] font-semibold text-white hover:bg-emerald-800 focus-visible:outline-4 focus-visible:outline-white"
+                >
+                  {lesson.step_index === lesson.step_count - 1 ? 'Finish lab' : 'Continue'}
+                  <kbd className="ml-2 rounded bg-stone-900/10 px-[0.4em] py-[0.1em] text-[0.8em]">
+                    Enter
+                  </kbd>
+                </button>
+              </div>
+            )}
+          </div>
         </section>
       )}
     </>
