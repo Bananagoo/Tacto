@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import type { Part, Wire } from '../contract'
 import { useTacto } from '../useTacto'
 import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
@@ -20,6 +21,7 @@ import { readingAt, readingOf } from './readingAt'
 import { saveShot } from '../gallery/shots'
 import { screenshotBlob, SKIP_IN_SCREENSHOT } from './screenshot'
 import { Toolbar, type Tool } from './Toolbar'
+import { useLingering } from './useLingering'
 import { WireLine } from './WireLine'
 
 // Vision now sends only what the camera reads off the mat (22 Nov 2026), so the bench draws
@@ -27,6 +29,9 @@ import { WireLine } from './WireLine'
 const DRAW_SERVER_CIRCUIT = true
 // After the thumb wheel turns the meter's dial, the rest of that flick is ignored for this long.
 const DIAL_QUIET_MS = 450
+
+const partKey = (part: Part) => `${part.id}:${part.kind}:${part.closed}`
+const wireKey = (wire: Wire) => wire.id
 
 /**
  * The mat as the camera reads it, drawn straight from the latest state. Nothing here knows
@@ -42,6 +47,8 @@ export function Bench({ children }: { children?: ReactNode }) {
   const wireKeys = placeKeys(wires)
   const parts = circuit?.parts ?? []
   const short = connected && circuit?.status === 'short'
+  const goneParts = useLingering(parts, partKey)
+  const goneWires = useLingering(wires, wireKey)
   // The multimeter is the mouse's pointer: where it is on the mat, and what it reads there.
   const svgRef = useRef<SVGSVGElement>(null)
   const [tool, setTool] = useState<Tool>('none')
@@ -171,17 +178,33 @@ export function Bench({ children }: { children?: ReactNode }) {
         aria-label="The circuit on the mat"
       >
         <DotGrid />
+        {/* Pieces fade in when the camera first reads them and fade out when lifted, instead
+            of blinking. Only what was really read is drawn: nothing follows the hand. */}
+        {goneWires.map(({ key, item: wire }) => (
+          <g key={`gone-${key}`} className="piece-out">
+            <WireLine
+              aCol={wire.a[0]}
+              aRow={wire.a[1]}
+              bCol={wire.b[0]}
+              bRow={wire.b[1]}
+              current={0}
+              overloaded={false}
+              touched={false}
+            />
+          </g>
+        ))}
         {wires.map((wire, index) => (
-          <WireLine
-            key={wireKeys[index]}
-            aCol={wire.a[0]}
-            aRow={wire.a[1]}
-            bCol={wire.b[0]}
-            bRow={wire.b[1]}
-            current={wire.current}
-            overloaded={wire.overloaded}
-            touched={reading?.wireKey === wireKeys[index]}
-          />
+          <g key={wireKeys[index]} className="piece-in">
+            <WireLine
+              aCol={wire.a[0]}
+              aRow={wire.a[1]}
+              bCol={wire.b[0]}
+              bRow={wire.b[1]}
+              current={wire.current}
+              overloaded={wire.overloaded}
+              touched={reading?.wireKey === wireKeys[index]}
+            />
+          </g>
         ))}
         {parts
           .filter((part) => part.kind === 'battery')
@@ -192,8 +215,17 @@ export function Bench({ children }: { children?: ReactNode }) {
               volts={circuit?.source_voltage ?? 0}
             />
           ))}
+        {goneParts.map(({ key, item: part }) => (
+          <g key={`gone-${key}`} className="piece-out">
+            <PartView part={part} />
+          </g>
+        ))}
         {parts.map((part) => (
-          <PartView key={part.id} part={part} />
+          // Keyed by what the piece is as well as where: swapping the open switch for the
+          // closed one is one piece leaving and another arriving.
+          <g key={partKey(part)} className="piece-in">
+            <PartView part={part} />
+          </g>
         ))}
         {strokes.map((stroke, index) => (
           <path
