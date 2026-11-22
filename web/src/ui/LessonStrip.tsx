@@ -89,10 +89,10 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 font-['Patrick_Hand']">
         <div className="flex items-center gap-5">
           {/* Back to the opening page (Root.tsx shows it whenever the address is not #lab).
-              Always its pink tab with the house: a way out, not a mode to choose. */}
+              Its pink tab with the house, dimmed like the others until pointed at. */}
           <TabButton
             art={tabHome}
-            chosen
+            chosen={false}
             besidePicture
             title="Back to the opening page"
             label="Home"

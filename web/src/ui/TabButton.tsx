@@ -1,14 +1,12 @@
 import type { ReactNode } from 'react'
-import tabPlain from '../assets/TabPlain.png'
 
 // The tab pictures are all 357 x 112: a hand-drawn arrow, its point the right-hand 18%. The
 // words sit in the flat part, clear of the point.
 const TAB_ASPECT = 357 / 112
 
 /**
- * A top-bar button drawn as a paper tab. Not chosen, it is the plain see-through tab; chosen,
- * it is its own coloured one. Pointing at a plain tab shows a hint of its colour, so the room
- * can see it will change. The words are in the notebook's handwriting.
+ * A top-bar button drawn as a paper tab in its own colour: dimmed until it is the one open,
+ * full colour when open or under the pointer. The words are in the notebook's handwriting.
  */
 export function TabButton({
   art,
@@ -49,25 +47,20 @@ export function TabButton({
       style={{ aspectRatio: TAB_ASPECT }}
       className="group relative h-12 shrink-0 cursor-pointer select-none focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
     >
-      <img
-        src={tabPlain}
-        alt=""
-        draggable={false}
-        className={`absolute inset-0 h-full w-full transition-opacity duration-200 ${chosen ? 'opacity-0' : 'opacity-100'}`}
-      />
+      {/* Its own colour always; dimmed until it is the one open, full under the pointer. */}
       <img
         src={art}
         alt=""
         draggable={false}
-        className={`absolute inset-0 h-full w-full transition-[opacity,transform] duration-200 motion-reduce:transition-none ${
+        className={`absolute inset-0 h-full w-full transition-[opacity,filter,transform] duration-200 motion-reduce:transition-none ${
           chosen
             ? 'opacity-100'
-            : 'opacity-0 group-hover:opacity-45 group-focus-visible:opacity-70 group-disabled:opacity-0'
+            : 'opacity-55 saturate-75 group-hover:opacity-100 group-hover:saturate-100 group-focus-visible:opacity-100 group-disabled:opacity-55'
         } group-active:scale-95`}
       />
       <span
-        className={`absolute inset-y-0 ${besidePicture ? 'left-[30%] right-[18%]' : 'left-[6%] right-[20%]'} flex items-center justify-center gap-1.5 pt-0.5 font-['Patrick_Hand'] ${long ? 'text-[1.05rem]' : 'text-[1.35rem]'} leading-none whitespace-nowrap transition-colors ${
-          chosen ? 'text-[#1f2a14]' : 'text-stone-100'
+        className={`absolute inset-y-0 ${besidePicture ? 'left-[30%] right-[18%]' : 'left-[6%] right-[20%]'} flex items-center justify-center gap-1.5 pt-0.5 font-['Patrick_Hand'] ${long ? 'text-[1.05rem]' : 'text-[1.35rem]'} leading-none whitespace-nowrap text-[#1f2a14] transition-opacity ${
+          chosen ? '' : 'opacity-75 group-hover:opacity-100'
         } group-focus-visible:underline`}
       >
         {children}
