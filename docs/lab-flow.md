@@ -67,12 +67,12 @@ Each step is finished when its goal has held for half a second, then shows **✓
 
 | # | Notebook says | Finished when | The judge sees and feels |
 |---|---|---|---|
-| 1 | *Swap the open switch for the closed one.* | Circuit working, the bulb lit, the switch closed | The bulb lights on screen (dim, 0.3 A) and the battery lights up |
-| 2 | *Rest a finger on the bulb. Turn the wheel up to 6 V.* | Finger on the bulb, 6 V or more | The pulse speeds up and strengthens, the LED turns bright, the tag counts up to 6.0 V |
+| 1 | *Close the circuit: swap in the green switch.* | Circuit working, the bulb lit, the switch closed | The bulb lights on screen (dim, 0.3 A) and the battery lights up |
+| 2 | *Touch the bulb to feel the pulse, then scroll up to 6 V.* | Finger on the bulb, 6 V or more | The pulse speeds up and strengthens, the LED turns bright, the tag counts up to 6.0 V |
 | | *(spoken question, section 5)* | | |
-| 3 | *Put the second bulb on its own branch. Touch the battery.* | Two bulbs lit in parallel, finger on the battery | The fastest, strongest pulse of the demo (1.2 A) |
+| 3 | *Drop the second bulb into the gap, then touch the battery.* | Two bulbs lit in parallel, finger on the battery | The fastest, strongest pulse of the demo (1.2 A) |
 
-After step 3: **✓ Lesson complete** with *"Same battery, different paths, and a difference you can feel."*
+After step 3: **✓ Lesson complete** with *"Lab complete! Turning up the voltage pushed more current through the bulb. Adding a second bulb on its own branch meant the battery had to carry the current for both at once, which is why it pulsed the strongest."*
 
 ---
 
@@ -82,11 +82,11 @@ Only step 2 has a reflection. It keeps the full funnel, so the adaptive part can
 
 | | Line |
 |---|---|
-| Opens with | *Why did the pulse get faster when you raised the voltage?* |
-| After a miss | *The pulse is the current through the bulb. What does the voltage do to that current?* |
-| After a second miss | *More current, or less?* |
-| Right answer | *Yes. More voltage pushes more current, and the pulse is that current.* |
-| After three misses | *More voltage pushes more current, and the pulse is that current. Turn the wheel down and feel it slow, then back up to 6.* |
+| Opens with | *Why did the pulse speed up when you turned up the voltage?* |
+| After a miss | *Here's a hint: the pulse is the current. What does more voltage do to the current?* |
+| After a second miss | *So does more voltage mean more current, or less?* |
+| Right answer | *Exactly. More voltage pushes more current through the bulb, and that's what you feel.* |
+| After three misses | *More voltage pushes more current, and the pulse is the current. Scroll down and feel it slow, then back up to 6.* |
 
 - The narrower questions and both closing lines are **shortened** from today's (each 1 to 3 seconds quicker to say).
 - The exit still asks for 3 V then 6 V, so step 3 runs at the right current.
@@ -123,7 +123,7 @@ Worst case (three misses and the exit): about 90 s.
 | Series step | Yes | Dropped |
 | Pause after a step | 6 s | 2.5 s |
 | Exit time limit | 20 s from the start of the exit | 12 s from when its line has been said |
-| Closing line | *Same two bulbs, different connections…* | *Same battery, different paths…* |
+| Closing line | *Same two bulbs, different connections…* | *Lab complete! Turning up the voltage pushed more current…* |
 
 Changes made (22 Nov 2026):
 

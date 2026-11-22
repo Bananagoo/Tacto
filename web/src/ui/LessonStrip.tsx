@@ -202,10 +202,14 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
                 {/* While a question is up the step is already done, so its instruction gives
                     way to the question and the page never needs more than its 11 lines. */}
                 {!(ready && lesson.reflection) && (
-                  <p className="m-0 text-[1.25em] font-semibold">
+                  <p
+                    // The closing words are longer than any instruction: written smaller so
+                    // they fit the page's 11 lines (about 8 of them).
+                    className={`m-0 font-semibold ${ready && lesson.lesson_done ? 'text-[1em]' : 'text-[1.25em]'}`}
+                  >
                     {ready
                       ? lesson.lesson_done
-                        ? 'Same battery, different paths, and a difference you can feel.'
+                        ? 'Lab complete! Turning up the voltage pushed more current through the bulb. Adding a second bulb on its own branch meant the battery had to carry the current for both at once, which is why it pulsed the strongest.'
                         : lesson.prompt
                       : connected
                         ? 'Waiting for the lesson…'
@@ -221,7 +225,7 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               <div className="mt-[var(--line)]">
                 <div role="status">
                   <p className="m-0 text-[0.75em] font-semibold tracking-wide text-emerald-700 uppercase">
-                    Explain out loud
+                    Your turn
                   </p>
                   <p className="m-0 text-[1.1em] font-semibold">{lesson.reflection}</p>
                   <p className="m-0 text-[0.75em] text-stone-600">

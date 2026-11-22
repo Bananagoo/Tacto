@@ -4,7 +4,7 @@ import { useTacto } from '../useTacto'
 import { useAnswerMic } from '../voice/useAnswerMic'
 
 const HEADING = {
-  asking: 'Explain it',
+  asking: 'Your turn',
   listening: 'Listening…',
   thinking: 'Thinking…',
   resolved: '✓ That is it',

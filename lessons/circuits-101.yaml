@@ -16,38 +16,38 @@ linger_seconds: 2.5
 
 steps:
   - id: close_the_loop
-    prompt: "Swap the open switch for the closed one."
+    prompt: "Close the circuit: swap in the green switch."
     done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, switch_closed: true }
 
   - id: raise_voltage
-    prompt: "Rest a finger on the bulb. Turn the wheel up to 6 V."
+    prompt: "Touch the bulb to feel the pulse, then scroll up to 6 V."
     done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, touching: bulb, min_voltage: 6 }
     reflection:
       target_idea: "A higher voltage pushes more current through the bulb, and the pulse is the current."
-      confirmation: "Yes. More voltage pushes more current, and the pulse is that current."
+      confirmation: "Exactly. More voltage pushes more current through the bulb, and that's what you feel."
       misconceptions:
         - tag: pulse_is_voltage
           description: "Thinks the pulse is the voltage itself, not the current it drives."
         - tag: brightness_only
           description: "Describes the bulb getting brighter with no mention of current."
       levels:
-        - question: "Why did the pulse get faster when you raised the voltage?"
+        - question: "Why did the pulse speed up when you turned up the voltage?"
           correct_examples:
             - "more voltage pushes more current through the bulb"
             - "the battery pushes harder so more flows and the pulse is the flow"
             - "higher voltage means more current and thats what i feel"
-        - question: "The pulse is the current through the bulb. What does the voltage do to that current?"
+        - question: "Here's a hint: the pulse is the current. What does more voltage do to the current?"
           correct_examples:
             - "it makes it bigger"
             - "more voltage more current"
             - "it pushes more of it through"
-        - question: "More current, or less?"
+        - question: "So does more voltage mean more current, or less?"
           correct_examples:
             - "more"
             - "more current"
             - "it pushes more"
       exit:
-        line: "More voltage pushes more current, and the pulse is that current. Turn the wheel down and feel it slow, then back up to 6."
+        line: "More voltage pushes more current, and the pulse is the current. Scroll down and feel it slow, then back up to 6."
         then:
           - { touching: bulb, max_voltage: 3 }
           - { touching: bulb, min_voltage: 6 }
@@ -55,5 +55,5 @@ steps:
         timeout_seconds: 12
 
   - id: parallel
-    prompt: "Put the second bulb on its own branch. Touch the battery."
+    prompt: "Drop the second bulb into the gap, then touch the battery."
     done_when: { status: working, batteries: 1, bulbs: 2, arrangement: parallel, lit_bulbs: 2, touching: battery }
