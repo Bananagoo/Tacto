@@ -67,7 +67,7 @@ export function Launch({
             </h1>
           </div>
           <p className="m-0 -rotate-1 font-['Patrick_Hand'] text-[13cqh] leading-none text-[#6b4a2b]">
-            build it · feel it · explain it
+            science within reach
           </p>
         </div>
         {/* The circuit board grows under the pointer and opens the bench to build freely. */}
