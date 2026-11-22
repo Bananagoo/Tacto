@@ -82,7 +82,7 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
   if (part === 'panel' && mode !== 'lab') return null
   if (part === 'bar')
     return (
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 font-['Patrick_Hand']">
         <div className="flex items-center gap-3">
           {/* Back to the opening page (Root.tsx shows it whenever the address is not #lab). */}
           <button

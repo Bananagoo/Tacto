@@ -9,7 +9,7 @@ export function StatusBar() {
   const connected = useTacto((store) => store.connected)
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-base">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-lg">
       {/* Said only when something is wrong: a connection that is up needs no words. The mark and
           the words, not colour alone, carry it. */}
       {!connected && <span className="font-bold text-amber-300">○ Reconnecting…</span>}
