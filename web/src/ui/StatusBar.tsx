@@ -1,17 +1,18 @@
 import { useHaptics } from '../haptics/useHaptics'
 import { useTacto } from '../useTacto'
 
-/** The instrument's readouts and switches: the server and the mouse. */
+/** The instrument's switches: the mouse, and a warning when the server is away. */
 export function StatusBar() {
   const connected = useTacto((store) => store.connected)
 
   return (
     <footer className="flex flex-wrap items-center justify-between gap-x-10 gap-y-3 rounded-3xl bg-white/5 px-8 py-4 text-2xl">
-      {/* A filled or hollow mark and the words: the state is not carried by colour. */}
-      <span className={connected ? 'text-stone-100' : 'font-bold text-amber-300'}>
-        {connected ? '● Connected' : '○ Reconnecting…'}
-      </span>
-      <MouseStatus />
+      {/* Said only when something is wrong: a connection that is up needs no words. The mark and
+          the words, not colour alone, carry it. */}
+      {!connected && <span className="font-bold text-amber-300">○ Reconnecting…</span>}
+      <div className="ml-auto">
+        <MouseStatus />
+      </div>
     </footer>
   )
 }

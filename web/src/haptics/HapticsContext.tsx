@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { DRIVERS, type HapticsDriver } from './driver'
+import { DRIVERS, PICKER_CLOSED, type HapticsDriver } from './driver'
 import { HapticsContext, type Haptics } from './useHaptics'
 
 /**
@@ -30,7 +30,9 @@ export function HapticsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       // The console driver stays in use, so the lesson carries on without the mouse.
       mouse.close()
-      setMouseError(error instanceof Error ? error.message : String(error))
+      const words = error instanceof Error ? error.message : String(error)
+      // Closing the picker is a change of mind, not an error: say nothing.
+      if (words !== PICKER_CLOSED) setMouseError(words)
     } finally {
       connectingRef.current = false
       setConnecting(false)
