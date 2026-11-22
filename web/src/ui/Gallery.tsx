@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { deleteShot, downloadShot, listShots, whenTaken, type Shot } from '../gallery/shots'
 
 const BUTTON =
-  'cursor-pointer rounded-xl border-4 border-[#1f2a14] px-5 py-2 text-xl font-semibold text-[#1f2a14] hover:bg-[#1f2a14] hover:text-[#dcefb0] focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-sky-600'
+  'cursor-pointer rounded-xl border-4 border-[#1f2a14] px-5 py-1 text-2xl text-[#1f2a14] hover:bg-[#1f2a14] hover:text-[#dcefb0] focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-sky-600'
 
 export function Gallery({ onBack }: { onBack: () => void }) {
   const [shots, setShots] = useState<Shot[] | null>(null)
@@ -39,19 +39,19 @@ export function Gallery({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-[#dcefb0] p-8 text-[#1f2a14]">
+    <div className="h-full overflow-y-auto bg-[#dcefb0] p-8 font-['Patrick_Hand'] text-[#1f2a14]">
       <header className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-6">
         <button type="button" onClick={onBack} className={`${BUTTON} justify-self-start`}>
           ← Back
         </button>
-        <h1 className="m-0 text-center text-5xl font-bold tracking-tight">Gallery</h1>
+        <h1 className="m-0 text-center text-7xl leading-none">Gallery</h1>
       </header>
 
       <main className="mx-auto mt-8 max-w-6xl">
-        {error && <p className="text-2xl font-semibold text-red-800">{error}</p>}
-        {shots === null && !error && <p className="text-2xl">Opening the gallery…</p>}
+        {error && <p className="text-3xl text-red-800">{error}</p>}
+        {shots === null && !error && <p className="text-3xl">Opening the gallery…</p>}
         {shots?.length === 0 && (
-          <p className="text-2xl">
+          <p className="text-3xl">
             Nothing in the gallery yet. Open the lab and press the camera tool to keep a picture of
             your circuit.
           </p>
@@ -67,7 +67,7 @@ export function Gallery({ onBack }: { onBack: () => void }) {
               >
                 <img src={urls[shot.id]} alt="" className="w-full rounded-xl" />
               </button>
-              <p className="m-0 text-xl font-semibold">{whenTaken(shot.takenAt)}</p>
+              <p className="m-0 text-3xl">{whenTaken(shot.takenAt)}</p>
               <div className="flex gap-3">
                 <button type="button" onClick={() => downloadShot(shot)} className={BUTTON}>
                   Download
@@ -94,7 +94,7 @@ export function Gallery({ onBack }: { onBack: () => void }) {
             className="max-h-[80vh] max-w-full rounded-xl"
             onClick={(event) => event.stopPropagation()}
           />
-          <p className="m-0 text-2xl font-semibold text-white">{whenTaken(viewing.takenAt)}</p>
+          <p className="m-0 text-3xl text-white">{whenTaken(viewing.takenAt)}</p>
           <button type="button" onClick={() => setViewing(null)} className={`${BUTTON} bg-white`}>
             Close
           </button>

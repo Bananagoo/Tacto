@@ -51,7 +51,7 @@ export function Launch({
           className="absolute -translate-x-1/2 -translate-y-1/2"
           style={{ left: `${TITLE.centreX}%`, top: `${TITLE.centreY}%` }}
         >
-          <h1 className="m-0 text-center text-[clamp(2rem,6vw,5rem)] font-bold tracking-tight text-[#1f2a14]">
+          <h1 className="m-0 text-center font-['Patrick_Hand'] text-[clamp(2.4rem,7.5vw,6.2rem)] leading-none text-[#1f2a14]">
             Tacto
           </h1>
           <img
@@ -111,7 +111,7 @@ export function Launch({
             className="w-full transition-transform duration-200 ease-out select-none group-hover:scale-110 group-hover:-rotate-3 group-focus-visible:scale-110 motion-reduce:transition-none"
           />
           {/* Written on the note, tilted with it. */}
-          <span className="pointer-events-none absolute top-[53%] left-[50%] w-[62%] -translate-x-1/2 -translate-y-1/2 rotate-[15deg] text-center text-[clamp(0.8rem,2vw,2rem)] leading-tight font-bold text-[#1f2a14]">
+          <span className="pointer-events-none absolute top-[53%] left-[50%] w-[62%] -translate-x-1/2 -translate-y-1/2 rotate-[15deg] text-center font-['Patrick_Hand'] text-[clamp(1rem,2.6vw,2.6rem)] leading-tight text-[#1f2a14]">
             Gallery
           </span>
         </button>
