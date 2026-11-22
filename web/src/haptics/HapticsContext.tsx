@@ -69,11 +69,26 @@ export function HapticsProvider({ children }: { children: ReactNode }) {
         connectingRef.current = false
       }
     }
-    void reconnect()
-    const stop = onMousePlugged(() => void reconnect())
+    // Only one tab can hold the mouse, so a hidden tab lets go of it and takes it back when it
+    // is in front again: a second lab tab (or the dev tools) never leaves the lab without it.
+    const onVisibility = () => {
+      if (document.hidden) {
+        const current = driverRef.current
+        if (current.name === 'webhid') {
+          current.close()
+          setDriver(DRIVERS.console)
+        }
+      } else void reconnect()
+    }
+    if (!document.hidden) void reconnect()
+    const stop = onMousePlugged(() => {
+      if (!document.hidden) void reconnect()
+    })
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
       stopped = true
       stop()
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 

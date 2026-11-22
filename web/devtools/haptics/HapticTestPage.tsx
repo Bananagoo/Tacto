@@ -96,6 +96,48 @@ function MouseConnection() {
   )
 }
 
+/** Does the thumb wheel reach the browser? It turns the multimeter's dial in the lab. */
+function ThumbWheel() {
+  const [seen, setSeen] = useState({ sideways: 0, upDown: 0, last: '' })
+  useEffect(() => {
+    const onWheel = (event: WheelEvent) =>
+      setSeen((before) =>
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? {
+              ...before,
+              sideways: before.sideways + 1,
+              last: `sideways ${event.deltaX > 0 ? 'right' : 'left'} (${event.deltaX.toFixed(0)})`,
+            }
+          : {
+              ...before,
+              upDown: before.upDown + 1,
+              last: `up/down (${event.deltaY.toFixed(0)})`,
+            },
+      )
+    window.addEventListener('wheel', onWheel, { passive: true })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [])
+  return (
+    <section className="flex flex-col gap-2 rounded-3xl bg-white/5 p-6">
+      <h2 className="m-0 font-['Patrick_Hand'] text-3xl text-stone-100">Thumb wheel</h2>
+      <p className="m-0 text-stone-300">
+        Roll the thumb wheel on the side of the mouse. It turns the multimeter's dial in the lab;
+        the main wheel is the voltage.
+      </p>
+      <p
+        className={`m-0 text-lg ${seen.sideways ? 'text-emerald-300' : 'text-amber-200'}`}
+        role="status"
+      >
+        {seen.sideways
+          ? `✓ Thumb wheel seen (${seen.sideways} events). Last: ${seen.last}`
+          : seen.upDown
+            ? `! Only up/down scrolling seen (last: ${seen.last}). If that was the thumb wheel, Logi Options+ has it set to something else: set it to horizontal scroll.`
+            : 'Waiting for the thumb wheel…'}
+      </p>
+    </section>
+  )
+}
+
 export default function HapticTestPage() {
   const [driverName, setDriverName] = useState<DriverName>('console')
   const driver = useMemo(() => DRIVERS[driverName](), [driverName])
@@ -140,6 +182,7 @@ export default function HapticTestPage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
       <MouseConnection />
+      <ThumbWheel />
       <h1 className="m-0 mt-4 font-['Patrick_Hand'] text-3xl font-normal">Waveform test</h1>
       <select
         className="rounded bg-white/10 px-2 py-1"

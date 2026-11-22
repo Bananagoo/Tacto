@@ -1,8 +1,11 @@
 import multimeterUrl from '../assets/Multimeter.png'
+import { METER_MODES, type MeterMode } from './meterMode'
 import type { Reading } from './readingAt'
 
-/** What the meter's dial is set to: amps, volts or ohms. */
-export type MeterMode = 'A' | 'V' | 'Ω'
+// The dial's centre and radius, as shares of the mirrored picture's width.
+const DIAL = { left: 37.6, top: 55.8, radius: 19.5 }
+// Where each setting is written round the dial, in degrees from straight up.
+const DIAL_ANGLES: Record<MeterMode, number> = { A: -48, V: 0, Ω: 48 }
 
 // Where the drawing's screen is, as shares of the mirrored picture (608 x 842): its centre,
 // its size, and its tilt. Measured off Multimeter.png; mirrored, the screen leans clockwise.
@@ -22,7 +25,16 @@ function shown(reading: Reading | null, mode: MeterMode): string {
  * mouse pointer over the mat, or else the fingertip on the paper) shows on its own screen, in
  * the unit its dial is set to. Every number is the server's.
  */
-export function BenchMeter({ reading, mode }: { reading: Reading | null; mode: MeterMode }) {
+export function BenchMeter({
+  reading,
+  mode,
+  onTurn,
+}: {
+  reading: Reading | null
+  mode: MeterMode
+  /** Turn the dial one setting on: a click on the dial (the thumb wheel is handled by Bench). */
+  onTurn: () => void
+}) {
   const value = shown(reading, mode)
   return (
     <div
@@ -47,6 +59,40 @@ export function BenchMeter({ reading, mode }: { reading: Reading | null; mode: M
         </span>
         {value !== 'SHORT' && <span className="text-[30cqh] leading-none">{mode}</span>}
       </div>
+      {/* The settings written round the dial; the one it is turned to is large and red. */}
+      {METER_MODES.map((setting) => {
+        const radians = (DIAL_ANGLES[setting] * Math.PI) / 180
+        const chosen = setting === mode
+        return (
+          <span
+            key={setting}
+            className={`absolute -translate-x-1/2 -translate-y-1/2 font-['Patrick_Hand'] leading-none transition-all duration-200 ${
+              chosen
+                ? 'text-[clamp(1rem,2.2vw,1.9rem)] font-bold text-red-600'
+                : 'text-[clamp(0.8rem,1.5vw,1.3rem)] text-stone-200/80'
+            }`}
+            style={{
+              left: `${DIAL.left + Math.sin(radians) * DIAL.radius * 1.32}%`,
+              top: `${DIAL.top - Math.cos(radians) * DIAL.radius * 1.32 * (608 / 842)}%`,
+            }}
+          >
+            {setting}
+          </span>
+        )
+      })}
+      <button
+        type="button"
+        onClick={onTurn}
+        title="Turn the dial (or use the thumb wheel)"
+        aria-label={`Dial set to ${mode === 'A' ? 'amps' : mode === 'V' ? 'volts' : 'ohms'}: turn it`}
+        className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-yellow-300"
+        style={{
+          left: `${DIAL.left}%`,
+          top: `${DIAL.top}%`,
+          width: `${DIAL.radius * 2}%`,
+          aspectRatio: '1',
+        }}
+      />
     </div>
   )
 }

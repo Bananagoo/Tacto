@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { useTacto } from '../useTacto'
 import { BenchNotice } from './BenchNotice'
 import { DotGrid } from './DotGrid'
@@ -11,7 +11,9 @@ import {
   eraseFromStroke,
   type Stroke,
 } from './markers'
-import { BenchMeter, type MeterMode } from './BenchMeter'
+import { BenchMeter } from './BenchMeter'
+import { turnDial, type MeterMode } from './meterMode'
+import { tallyWheel } from '../input/wheel'
 import { PartView } from './PartView'
 import { VoltageTag } from './VoltageTag'
 import { Readout } from './Readout'
@@ -43,7 +45,21 @@ export function Bench({ children }: { children?: ReactNode }) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [tool, setTool] = useState<Tool>('none')
   const probing = tool === 'multimeter'
-  const [meterMode] = useState<MeterMode>('A')
+  const [meterMode, setMeterMode] = useState<MeterMode>('A')
+  // The thumb wheel (sideways scroll) turns the meter's dial, one setting per notch's worth.
+  // The main wheel is the voltage (useVoltageWheel), which reads only the up-and-down scroll.
+  useEffect(() => {
+    if (!probing) return
+    let remainder = 0
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
+      const tally = tallyWheel(remainder, event.deltaX)
+      remainder = tally.remainder
+      if (tally.steps !== 0) setMeterMode((mode) => turnDial(mode, Math.sign(tally.steps)))
+    }
+    window.addEventListener('wheel', onWheel, { passive: true })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [probing])
   const [pointer, setPointer] = useState<Point | null>(null)
   // The learner's fingertip on the paper mat, as the camera places it.
   const probe = useTacto((store) => store.state?.probe)
@@ -209,7 +225,15 @@ export function Bench({ children }: { children?: ReactNode }) {
         status={circuit?.status ?? (serverCircuit ? 'empty' : undefined)}
       />
       {/* The meter shows the reading on its own screen; put down, the corner box does. */}
-      {probing ? <BenchMeter reading={reading} mode={meterMode} /> : <Readout reading={reading} />}
+      {probing ? (
+        <BenchMeter
+          reading={reading}
+          mode={meterMode}
+          onTurn={() => setMeterMode((mode) => turnDial(mode, 1))}
+        />
+      ) : (
+        <Readout reading={reading} />
+      )}
       <Toolbar
         tool={tool}
         onPick={pickTool}
