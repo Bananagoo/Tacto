@@ -1,8 +1,9 @@
-// The first screen: a drawn workbench with a circuit board on the mat. Clicking the board
-// opens the lab, and clicking the sticky note on the wall opens the gallery. Nothing here
+// The first screen: a drawn workbench with a circuit board on the mat. Clicking the board or
+// the play button opens the lab, and clicking the sticky note on the wall opens the gallery. Nothing here
 // talks to the server.
 
 import pcb from '../assets/Pcb.png'
+import playButton from '../assets/PlayButton.png'
 import stickyNote from '../assets/StickyNote.png'
 import workspace from '../assets/WorkspaceNoStickyNote.png'
 
@@ -10,6 +11,11 @@ import workspace from '../assets/WorkspaceNoStickyNote.png'
 // stays on the blue desk mat at any window size. If the picture changes, update both.
 const SCENE_ASPECT = 3593 / 1620
 const BOARD = { centreX: 52.5, centreY: 81.5, width: 27 } // percent of the scene
+// The play button, just above the circuit board it opens: same centre, so they read as a pair.
+const PLAY = { centreX: BOARD.centreX, centreY: 59, width: 13 } // percent of the scene
+// The name sits just above the play button, on the same centre line. The middle of the wall is
+// left free for the logo.
+const TITLE = { centreX: PLAY.centreX, centreY: 42 } // percent of the scene
 // Where the sticky note hung in the picture before it was taken out and made a button. It is the
 // note's own picture put back in the same place.
 const NOTE = { centreX: 81.75, centreY: 21.7, width: 15.1 } // percent of the scene
@@ -40,7 +46,10 @@ export function Launch({
           draggable={false}
         />
 
-        <h1 className="absolute top-[6%] left-1/2 -translate-x-1/2 text-center text-[clamp(2rem,6vw,5rem)] font-bold tracking-tight text-[#1f2a14]">
+        <h1
+          className="absolute m-0 -translate-x-1/2 -translate-y-1/2 text-center text-[clamp(2rem,6vw,5rem)] font-bold tracking-tight text-[#1f2a14]"
+          style={{ left: `${TITLE.centreX}%`, top: `${TITLE.centreY}%` }}
+        >
           Tacto
         </h1>
 
@@ -60,6 +69,25 @@ export function Launch({
             alt=""
             draggable={false}
             className="w-full transition-transform duration-200 ease-out select-none group-hover:scale-110 group-focus-visible:scale-110 motion-reduce:transition-none"
+          />
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label="Play: open the circuit lab"
+          className="group absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-xl focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-yellow-300"
+          style={{
+            left: `${PLAY.centreX}%`,
+            top: `${PLAY.centreY}%`,
+            width: `${PLAY.width}%`,
+          }}
+        >
+          <img
+            src={playButton}
+            alt=""
+            draggable={false}
+            className="w-full transition-transform duration-200 ease-out select-none group-hover:scale-110 group-focus-visible:scale-110 group-active:scale-95 motion-reduce:transition-none"
           />
         </button>
 
