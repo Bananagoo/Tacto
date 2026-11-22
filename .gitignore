@@ -35,3 +35,6 @@ server/data/
 # One file per session of graded spoken answers; never committed
 server/data/
 server/voice_cache/
+
+# Private study notes for the presenter; not part of the submission
+docs/technical-deep-dive.md
