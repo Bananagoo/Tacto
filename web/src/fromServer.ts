@@ -34,6 +34,7 @@ function toWire(piece: ServerPiece): Wire {
     b: piece.b,
     current: piece.current,
     overloaded: piece.shorted,
+    resistance: piece.resistance ?? 0,
   }
 }
 

@@ -147,4 +147,9 @@ def test_the_meter_gets_ohms_for_bulbs_and_resistors_and_they_fit_ohms_law():
         assert piece.resistance == 10.0
         assert abs(piece.voltage) == pytest.approx(abs(piece.current) * 10.0, abs=1e-2)
     assert by_id[BATTERY].resistance is None
-    assert all(p.resistance is None for p in pieces if p.type in ("wire", "switch"))
+    # Like a real meter (22 Nov 2026): a wire and a closed switch read 0 ohms; an open switch
+    # has no number (the meter shows OL, open line).
+    assert all(p.resistance == 0.0 for p in pieces if p.type == "wire")
+    assert all(p.resistance == 0.0 for p in pieces if p.type == "switch")  # closed here
+    opened, _ = solve_pieces(START, 6.0)
+    assert next(p for p in opened if p.type == "switch").resistance is None

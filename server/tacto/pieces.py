@@ -41,8 +41,16 @@ class Placed:
         return self.type == "wire" or (self.type == "switch" and self.closed)
 
 
-# What the meter shows as ohms: the solver's own values, so V = I x R always adds up.
-OHMS: dict[str, float] = {"bulb": BULB_OHMS, "resistor": RESISTOR_OHMS}
+# What the meter shows as ohms: the solver's own values, so V = I x R always adds up. A wire
+# and a closed switch read 0, as on a real meter (the solver's 0.001 is a numerical stand-in).
+OHMS: dict[str, float] = {"bulb": BULB_OHMS, "resistor": RESISTOR_OHMS, "wire": 0.0}
+
+
+def _ohms(p: Placed) -> float | None:
+    """The meter's ohms for a piece; None for a battery and an open switch (the meter: OL)."""
+    if p.type == "switch":
+        return 0.0 if p.closed else None
+    return OHMS.get(p.type)
 
 
 def solve_pieces(placed: Sequence[Placed], volts: float) -> tuple[list[Piece], Circuit]:
@@ -72,7 +80,7 @@ def solve_pieces(placed: Sequence[Placed], volts: float) -> tuple[list[Piece], C
                 current=_tidy(part.current if part else wire.current if wire else 0.0),
                 voltage=_tidy(part.voltage) if part else 0.0,
                 brightness=_tidy(part.brightness) if part and p.type == "bulb" else None,
-                resistance=OHMS.get(p.type),
+                resistance=_ohms(p),
                 shorted=(wire is not None and wire.overloaded)
                 or (status == "shorted" and p.id == battery_id),
             )

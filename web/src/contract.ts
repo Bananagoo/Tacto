@@ -32,7 +32,7 @@ export interface ServerPiece {
   voltage: number
   /** Bulbs only, 0 to 1. */
   brightness: number | null
-  /** Ohms; bulbs and resistors only. */
+  /** Ohms: 0 for a wire and a closed switch; null for a battery and an open switch. */
   resistance: number | null
   /** On the shorted path. */
   shorted: boolean
@@ -154,6 +154,8 @@ export interface Wire {
   b: Dot
   current: number
   overloaded: boolean
+  /** Ohms: 0, a plain wire. */
+  resistance: number
 }
 
 export interface Circuit {

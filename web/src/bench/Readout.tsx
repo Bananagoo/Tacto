@@ -27,7 +27,7 @@ export function Readout({ reading }: { reading: Reading | null }) {
       </dd>
       <dt className={short ? 'invisible' : ''}>Ω</dt>
       <dd className={`m-0 min-w-[4ch] text-right ${short ? 'invisible' : ''}`}>
-        {reading?.ohms != null ? reading.ohms.toFixed(0) : '--'}
+        {reading?.ohms === 'OL' ? 'OL' : reading?.ohms != null ? reading.ohms.toFixed(0) : '--'}
       </dd>
       {short && <dd className="absolute inset-0 m-0 flex items-center justify-center">SHORT</dd>}
     </dl>

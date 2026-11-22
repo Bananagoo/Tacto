@@ -263,7 +263,7 @@
         "resistance": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0.0,
+              "minimum": 0.0,
               "type": "number"
             },
             {

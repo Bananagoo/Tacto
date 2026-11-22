@@ -21,7 +21,8 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 # 3 (22 Nov 2026): lesson.reflection_level, _status, _line, _line_id, _transcript and
 # _audio, and the browser's answer_reflection and reflection_heard messages. Nothing was
 # removed or renamed.
-# 4 (22 Nov 2026): piece.resistance, for the meter's ohms. Nothing was removed or renamed.
+# 4 (22 Nov 2026): piece.resistance, for the meter's ohms (0 for a wire and a closed switch,
+# null for a battery and an open switch). Nothing was removed or renamed.
 CONTRACT_VERSION = 4
 
 Dot = tuple[int, int]
@@ -62,7 +63,7 @@ class Piece(BaseModel):
     current: float = 0.0  # amps, signed: positive flows a -> b
     voltage: float = 0.0  # volts across the piece; 0 for a wire and for a closed switch
     brightness: float | None = Field(None, ge=0.0, le=1.0)  # bulbs only; 1 is full
-    resistance: float | None = Field(None, gt=0.0)  # ohms; bulbs and resistors only
+    resistance: float | None = Field(None, ge=0.0)  # ohms; null: battery, open switch
     shorted: bool = False  # this piece is on the shorted path
 
     @model_validator(mode="after")

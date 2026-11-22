@@ -1,4 +1,4 @@
-import type { Circuit } from '../contract'
+import type { Circuit, Part } from '../contract'
 import { dotToPoint, type Point } from './grid'
 
 /** How close, in SVG units (a dot pitch is 100), the pointer must be to read a part or a wire. */
@@ -11,12 +11,18 @@ export interface Reading {
   current: number
   /** Volts across it: a part's drop, and about nothing for a plain wire. */
   volts: number
-  /** Ohms, for a bulb or a resistor; null for anything else. */
-  ohms: number | null
+  /** Ohms; 'OL' (open line) for an open switch; null for a battery or nothing. */
+  ohms: number | 'OL' | null
   /** The wire's place key, as `placeKeys` names it, so the bench can light it. Null for a part. */
   wireKey: string | null
   /** The wire is on the shorted path. */
   short: boolean
+}
+
+/** What the meter reads as ohms on a part: an open switch is an open line. */
+function ohmsOf(part: Part): number | 'OL' | null {
+  if (part.kind === 'switch' && part.closed !== true) return 'OL'
+  return part.resistance
 }
 
 function distanceToSegment(p: Point, a: Point, b: Point): number {
@@ -49,7 +55,7 @@ export function readingAt(
         reading: {
           current: part.current,
           volts: part.voltage,
-          ohms: part.resistance,
+          ohms: ohmsOf(part),
           wireKey: null,
           short: false,
         },
@@ -66,7 +72,7 @@ export function readingAt(
         reading: {
           current: wire.current,
           volts: 0,
-          ohms: null,
+          ohms: wire.resistance,
           wireKey: wireKeys[index] ?? null,
           short: wire.overloaded,
         },
@@ -91,7 +97,7 @@ export function readingOf(
     return {
       current: part.current,
       volts: part.voltage,
-      ohms: part.resistance,
+      ohms: ohmsOf(part),
       wireKey: null,
       short: false,
     }
@@ -102,7 +108,7 @@ export function readingOf(
   return {
     current: wire.current,
     volts: 0,
-    ohms: null,
+    ohms: wire.resistance,
     wireKey: wireKeys[index] ?? null,
     short: wire.overloaded,
   }
