@@ -22,7 +22,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from tacto import grader, tts
+from tacto import grader, listen, tts
+from tacto.answers import AnswerLedger
 from tacto.app import create_lab_app
 from tacto.lab import Lab
 from tacto.lesson import LessonRunner, load_lesson
@@ -114,6 +115,7 @@ lab = Lab(
         lesson_file, adaptive=VOICE_ENABLED, audio_for=lambda line: spoken.get(line)
     ),
     grader=grader.grade if VOICE_ENABLED else None,
+    ledger=AnswerLedger() if VOICE_ENABLED else None,
 )
 print(f"main: adaptive reflections are {'on' if VOICE_ENABLED else 'off (set VOICE_ENABLED=1)'}")
 app = create_lab_app(lab, source=SOURCE)
@@ -126,6 +128,14 @@ if SOURCE == "camera":
 
 if VOICE_ENABLED:
     app.include_router(tts.voice_router())
+    # One client for the life of the server: spoken answers arrive one at a time.
+    listening = grader.together_client()
+    app.include_router(
+        listen.answer_router(
+            lab,
+            (lambda wav: listen.transcribe(wav, listening)) if listening is not None else None,
+        )
+    )
 
 
 @app.get("/debug/reader")

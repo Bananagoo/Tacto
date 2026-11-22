@@ -68,3 +68,20 @@ A reflection asks at most three graded questions and cannot loop. The wording of
 | 2 | Done 22 Nov. `server/tacto/funnel.py`, 26 tests in `server/tests/test_funnel.py`, including every sequence of six labels |
 | 3 | Done 22 Nov. `server/tacto/grader.py`. `scripts/grade_fixtures.py` on `lessons/circuits-101.grading.yaml`: 108 of 111 right (97%), no incorrect answer graded correct, 11 of 11 misconception tags, median 0.34 s an answer |
 | 4 | Done 22 Nov. Wired into `lesson.py` and `lab.py` behind `VOICE_ENABLED`; `web/src/ui/Reflection.tsx` has the text box. 37 tests in `server/tests/test_reflection_flow.py` drive every path of all three reflections. With the real grader on a stand-in mat: 0.3 to 0.45 s an answer |
+| 5 | Done 22 Nov. `server/tacto/tts.py`, cache in `server/voice_cache/` (not committed). Against the real service: 15 calls on a first start, none on a second, all 15 found with no synthesiser. Playback in a browser not yet checked by a person |
+| 6 | Server side done 22 Nov: `server/tacto/listen.py` takes a WAV clip, transcribes it and hands it on like a typed answer. `scripts/speak_answers.py` against the real service: 10 of 10 synthesised spoken answers transcribed and graded, all 10 labels as expected, end of speech to the next line median 0.85 s, slowest 1.38 s. Browser side built (`web/src/voice/useAnswerMic.ts`): Silero detection, half duplex, 15 s limit. **Not yet done by a person:** ten answers into a real microphone |
+| 7 | Done 22 Nov, same caveat. An unreadable clip is an empty answer, which repeats the question; the text box is always there; holding Space is push-to-talk; the panel says when it is listening and thinking. `server/tacto/answers.py` keeps one record per graded answer in memory and in `server/data/answers-<start>.jsonl` (not committed). The network check is a test: grading fails from mid-reflection on, every answer counts as partial, and the lesson reaches the next step by the exit's 20 s limit with no restart |
+
+## What a person still has to try
+
+1. `VOICE_ENABLED=1 make dev`, click **Lab**, work to step 4 and finish it.
+2. The question should be heard. Type an answer first, to see the exchange without a microphone.
+3. Click **Answer by voice**, allow the microphone, and answer the next question out loud. The panel should say it is listening, then thinking, then show what it heard.
+4. Hold Space and speak, then let go: push-to-talk.
+5. Say something wrong three times and do what the lab then asks on the mat.
+
+## Still to decide
+
+- `server/tacto/speech.py`, the earlier streaming relay, is no longer used by the page. It is still mounted. Remove it, or keep it for live captions.
+- Wording of every line and of the example answers in `lessons/circuits-101.yaml` is a draft.
+

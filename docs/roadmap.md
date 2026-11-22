@@ -24,7 +24,7 @@ Twenty different layouts read correctly under venue lighting with a hand moving 
 | 10 | The lab on the camera: `make dev` | Runs (`tacto/main.py`): 15 state messages a second from the real camera, 22 Nov. `GET /debug/reader` shows what the reader sees and the milliseconds per step. `make dev TACTO_SOURCE=replay` runs recorded frames |
 | 11 | Feel the current: tick rate and vibration strength both proportional to the current through the touched piece | Server done (`sim/feel.py`, `touch.strength` in the state). The live state page (`/devtools/#state`) plays it on the mouse through the UI team's driver. Not felt by a person yet; the three tuning numbers are first guesses |
 | 12 | Lesson workflow: Tinker and Lab modes, a six-step lesson with finger, switch and voltage goals, spoken reflections with Continue, Restart | Built (`lesson.py`, `lab.py`, `web/src/ui/LessonStrip.tsx`), tested on rendered circuits. Not run on the real mat yet |
-| 13 | Speech-to-text relay for the reflections (`speech.py`, Together) | Server side built and tested against a fake provider. No page uses it yet; never run against the real service by these tests |
+| 13 | Voice reflections (`docs/voice-reflections-plan.md`): the lab asks aloud, hears the answer, grades it and narrows the question | All seven phases built, behind `VOICE_ENABLED=1`. Checked against the real service by script; the microphone and the sound in a browser are not yet tried by a person. The earlier streaming relay (`speech.py`) is superseded and still mounted |
 
 Removed on 22 Nov: the hand-set mat (`make manual`). The UI team builds against `make mock`; the demo fallbacks are recorded frames and the recorded states.
 

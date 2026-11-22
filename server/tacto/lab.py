@@ -69,6 +69,7 @@ class Lab:
         source_name: Source,
         lesson: LessonRunner | None = None,
         grader: Callable[..., object] | None = None,
+        ledger: Callable[[dict], None] | None = None,
         background: Callable[[Callable[[], None]], None] | None = None,
         now: Callable[[], float] = time.monotonic,
     ) -> None:
@@ -77,6 +78,8 @@ class Lab:
         # Grades a learner's answer: `tacto.grader.grade`, or a stand-in. It may take
         # seconds and use the network, so it never runs on the thread that sends states.
         self._grader = grader
+        # Told about every graded answer (`tacto.answers.AnswerLedger`), or nothing.
+        self._ledger = ledger
         self._background = background or _in_a_thread
         self._mode = "tinker"
         self._source = source
@@ -116,18 +119,38 @@ class Lab:
     def _grade(self, ticket: AnswerTicket, circuit: str) -> None:
         """Grade one answer and hand the label to the lesson. Runs off the state thread.
         An answer that cannot be graded counts as partial: more help, never less."""
-        label = "partial"
+        label, misconception, was_graded = "partial", None, False
+        started = time.perf_counter()
         if self._grader is not None:
             try:
                 graded = self._grader(
                     ticket.transcript, funnel=ticket.funnel, level=ticket.level, circuit=circuit
                 )
                 label = str(graded.label)  # type: ignore[attr-defined]
+                misconception = getattr(graded, "misconception", None)
+                was_graded = True
             except Exception as error:  # noqa: BLE001 - a grader must not take the lab down
                 print(f"lab: an answer could not be graded and counted as partial: {error!r}")
+        grade_ms = round((time.perf_counter() - started) * 1000)
         with self._lock:
             if self._lesson is not None:
                 self._lesson.finish_answer(ticket, label)
+        if self._ledger is not None:
+            try:
+                self._ledger(
+                    {
+                        "step": ticket.step_id,
+                        "level": ticket.level,
+                        "question": ticket.funnel.levels[ticket.level].question,
+                        "transcript": ticket.transcript,
+                        "label": label,
+                        "misconception": misconception,
+                        "graded": was_graded,
+                        "grade_ms": grade_ms,
+                    }
+                )
+            except Exception as error:  # noqa: BLE001 - nor must the record of it
+                print(f"lab: an answer was not written to the ledger: {error!r}")
 
     def restart_lesson(self) -> None:
         with self._lock:

@@ -508,3 +508,75 @@ def test_the_heard_message_reaches_the_lesson_through_the_lab():
     session.lab.handle(ReflectionHeard(step_id="raise_voltage", line_id=lesson.reflection_line_id))
     session.clock.t += 1.0
     assert session.lab.state().lesson.step_id == "series"
+
+
+# ---------- the ledger, and losing the network ----------
+
+
+def test_every_graded_answer_is_written_down_once():
+    records = []
+    session = LabSession(
+        grader=lambda transcript, **_: Grade(
+            label="incorrect" if "used up" in transcript else "correct",
+            misconception="pulse_is_voltage" if "used up" in transcript else None,
+        )
+    )
+    session.lab._ledger = records.append
+    session.answer("the current gets used up")
+    session.grade_now()
+    session.answer("more voltage more current")
+    session.grade_now()
+    assert [(r["step"], r["level"], r["label"], r["misconception"]) for r in records] == [
+        ("raise_voltage", 0, "incorrect", "pulse_is_voltage"),
+        ("raise_voltage", 1, "correct", None),
+    ]
+    first = records[0]
+    assert first["question"] == "Why did the pulse get faster when you raised the voltage?"
+    assert first["transcript"] == "the current gets used up"
+    assert first["grade_ms"] >= 0 and first["graded"] is True
+
+
+def test_an_answer_that_could_not_be_graded_is_written_down_as_such():
+    def offline(transcript, **_):
+        raise ConnectionError("no network")
+
+    records = []
+    session = LabSession(grader=offline)
+    session.lab._ledger = records.append
+    session.answer("more current")
+    session.grade_now()
+    assert (records[0]["label"], records[0]["graded"]) == ("partial", False)
+
+
+def test_a_broken_ledger_does_not_stop_the_lesson():
+    def full_disk(record):
+        raise OSError("disk full")
+
+    session = LabSession()
+    session.lab._ledger = full_disk
+    session.answer("correct")
+    session.grade_now()
+    assert session.lab.state().lesson.reflection_status == "resolved"
+
+
+def test_with_the_network_gone_mid_reflection_the_lesson_still_reaches_the_next_step():
+    """The plan's last check: no grading works any more, and nobody restarts anything."""
+    working = [True]
+
+    def grade(transcript, **_):
+        if not working[0]:
+            raise ConnectionError("network is down")
+        return Grade(label="partial")
+
+    session = LabSession(grader=grade)
+    session.answer("because theres more voltage")
+    session.grade_now()
+    assert session.lab.state().lesson.reflection_level == 1
+    working[0] = False  # the network drops here
+    for _ in range(2):
+        session.answer("i think its the current")
+        session.grade_now()
+    lesson = session.lab.state().lesson
+    assert lesson.reflection_status == "exit"  # every failure counted as "partial"
+    session.clock.t += 20.5  # nobody does the action either
+    assert session.lab.state().lesson.step_id == "series"

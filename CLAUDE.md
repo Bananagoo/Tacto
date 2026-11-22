@@ -38,6 +38,7 @@ Run from the repo root.
 | `make camera-tool` | Build `uvc-util` into `server/vendor/` (macOS, needs the network once). `make setup` runs it. Without it the camera stays on auto-exposure |
 | `make mock` | Replay the recorded sample on `ws://localhost:8000/ws`. No camera, mouse or solver needed |
 | `make bench` | The camera bench with the web dev tools, at `localhost:5173/devtools/`. Uses port 8000, like `make dev`: run one or the other |
+| `VOICE_ENABLED=1 make dev` | `make dev` with spoken reflections. Needs `TOGETHER_API_KEY` and the network |
 | `make dev` | The lab on the camera, with the web UI. `localhost:8000/debug/reader` shows what the reader sees. `make dev TACTO_SOURCE=replay` runs recorded frames instead |
 | `make check` | `make check-server` and `make check-web`: format, lint, type-check, tests. Must pass before every commit |
 | `make contract` / `make sample` | Regenerate `contract/` after a contract change |
@@ -53,6 +54,7 @@ Run from the repo root.
 | `server/tacto/pieces.py` | Pieces on segments to the solver and back |
 | `server/tacto/sim/` | Graph analysis (open, short), the ngspice solver, current to pulse rate |
 | `server/tacto/lesson.py`, `lessons/` | Lesson steps as data; each completes from the circuit |
+| `server/tacto/funnel.py`, `grader.py`, `tts.py`, `listen.py`, `answers.py`, `voice_models.py` | Voice reflections, on only with `VOICE_ENABLED=1`: the funnel's rules, the answer grader, the cached speech, the spoken-answer endpoint, the answer ledger, and the one file of model names |
 | `server/tacto/mat.py`, `kit/mats/` | The mat: grid size and dot spacing as data |
 | `server/tacto/vision/` | The camera reader. `source.py` runs it: `tracker.py` (find and hold the mat), `focus.py`, `classify.py` (read each segment against the mat's colour squares), `stable.py`, `hands.py`. Also `exposure.py` and the printable mat |
 | `server/tacto_mock/`, `server/tacto_bench/` | Tooling: the replay mock, the camera bench |
