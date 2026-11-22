@@ -22,14 +22,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from tacto import grader, listen, tts
+from tacto import grader, listen, setup_check, tts
 from tacto.answers import AnswerLedger
 from tacto.app import create_lab_app
 from tacto.lab import Lab
 from tacto.lesson import LessonRunner, load_lesson
 from tacto.mat import load_default_mat
 from tacto.pieces import warm_up_solver
-from tacto.vision import camera, hands
+from tacto.vision import camera, exposure, hands
+from tacto.vision.brightness import AutoGain
 from tacto.vision.focus import FocusKeeper
 from tacto.vision.frames import FolderFrames, FramesOnAClock
 from tacto.vision.preview import preview_router
@@ -77,6 +78,15 @@ if SOURCE == "camera":
     except camera.CameraUnavailable as error:
         raise SystemExit(f"main: {error}") from error
     focus: FocusKeeper | None = FocusKeeper()
+    # Steer the gain from the paper's brightness, unless AUTO_BRIGHTNESS=0.
+    brightness: AutoGain | None = (
+        AutoGain(
+            lambda gain: exposure.apply(exposure.Exposure(manual=True, gain=gain)),
+            start_gain=exposure.wanted().gain,
+        )
+        if os.getenv("AUTO_BRIGHTNESS", "1").strip() != "0"
+        else None
+    )
 elif SOURCE == "replay":
     folder = FIXTURES / mat.id
     if not folder.is_dir() or not any(folder.iterdir()):
@@ -85,11 +95,12 @@ elif SOURCE == "replay":
         )
     frames = FramesOnAClock(FolderFrames(folder))
     focus = None
+    brightness = None
 else:
     raise SystemExit(f"main: TACTO_SOURCE={SOURCE!r} is not one of: camera, replay")
 
 warm_up_solver()
-source = CameraMatSource(mat, frames, hands=_hand_tracker(), focus=focus)
+source = CameraMatSource(mat, frames, hands=_hand_tracker(), focus=focus, brightness=brightness)
 source.start()
 
 lesson_file = load_lesson(LESSON_FILE)
@@ -145,6 +156,32 @@ if VOICE_ENABLED:
             (lambda wav: listen.transcribe(wav, listening)) if listening is not None else None,
         )
     )
+
+
+def _voice_state() -> dict:
+    """For the setup check: is the voice layer ready? One quick call to Together if so."""
+    if not VOICE_ENABLED:
+        return {"enabled": False}
+    lines = tts.lines_of(lesson_file)
+    state = {
+        "enabled": True,
+        "key": _together is not None,
+        "lines": len(lines),
+        "lines_cached": len(spoken),
+        "reachable": False,
+    }
+    if _together is not None:
+        try:
+            state["reachable"] = _together.get("/models", timeout=3.0).status_code == 200
+        except Exception:  # noqa: BLE001 - a check, not the lab: any failure is "not reachable"
+            pass
+    return state
+
+
+@app.get("/setup/check")
+async def check_setup() -> dict:
+    """The pre-demo check behind /devtools/#setup. Takes about 3 to 8 seconds."""
+    return await setup_check.run(source.report, _voice_state)
 
 
 @app.get("/debug/reflect")

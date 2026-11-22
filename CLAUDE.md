@@ -39,6 +39,7 @@ Run from the repo root.
 | `make mock` | Replay the recorded sample on `ws://localhost:8000/ws`. No camera, mouse or solver needed |
 | `make bench` | The camera bench with the web dev tools, at `localhost:5173/devtools/`. Uses port 8000, like `make dev`: run one or the other |
 | `VOICE_ENABLED=1 make dev` | `make dev` with spoken reflections. Needs `TOGETHER_API_KEY` and the network |
+| Setup check | Before a demo, with `make dev` running: open `localhost:5173/devtools/#setup` and press the button. Sets the camera brightness for the room and checks camera, mat, focus, colours, speed and voice in about 5 s |
 | `make dev` | The lab on the camera, with the web UI. `localhost:8000/debug/reader` shows what the reader sees. `make dev TACTO_SOURCE=replay` runs recorded frames instead |
 | `make check` | `make check-server` and `make check-web`: format, lint, type-check, tests. Must pass before every commit |
 | `make contract` / `make sample` | Regenerate `contract/` after a contract change |

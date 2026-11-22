@@ -6,9 +6,13 @@
 import { useEffect, useState } from 'react'
 import CameraPanel from './camera/CameraPanel'
 import HapticTestPage from './haptics/HapticTestPage'
+import SetupCheck from './setup/SetupCheck'
 import StatePanel from './state/StatePanel'
 
 const TOOLS = [
+  // Before a demo: finds the camera brightness for the room and checks it will all work.
+  // Needs make dev.
+  { hash: '#setup', label: 'Setup check', render: () => <SetupCheck /> },
   {
     hash: '#camera',
     label: 'Camera',

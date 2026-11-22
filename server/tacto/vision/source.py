@@ -23,7 +23,8 @@ import numpy as np
 from ..lab import MatView
 from ..mat import Mat
 from ..pieces import Placed
-from .classify import MatReader, PieceColours, load_colours, to_placed
+from .brightness import AutoGain, paper_level
+from .classify import MatReader, PieceColours, closest_colours, load_colours, to_placed
 from .flatten import frame_point_to_mat
 from .focus import FocusKeeper
 from .hands import INDEX_TIP
@@ -83,6 +84,7 @@ class CameraMatSource:
         colours: PieceColours | None = None,
         hands: HandFinder | None = None,
         focus: FocusKeeper | None = None,
+        brightness: AutoGain | None = None,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._mat = mat
@@ -93,7 +95,10 @@ class CameraMatSource:
         self._stable = StableReadings()
         self._hands = hands
         self._focus = focus
+        # Steers the camera's gain to keep the paper near a set brightness (brightness.py).
+        self._brightness = brightness
         self._clock = clock
+        self._unsure = 0
         self._lock = threading.Lock()
         self._view = MatView(mat_visible=False)
         self._placed: tuple[Placed, ...] = ()
@@ -125,6 +130,9 @@ class CameraMatSource:
                     for name, row in zip(REFERENCE_SQUARES, self._reader.palette.lab, strict=True)
                 },
                 "focus_kicks": self._focus.kicks if self._focus else 0,
+                "brightness": self._brightness_report(),
+                "closest_colours": self._closest_colours(),
+                "unsure_segments": self._unsure,
                 "pieces": len(self._view.placed),
                 "finger": self._view.finger,
                 "stage_ms": {stage: round(ms, 1) for stage, ms in self._timings_ms.items()},
@@ -184,7 +192,10 @@ class CameraMatSource:
                     self._covered_until[segment] = now + HAND_LINGER_S
                 lap("hand")
             self._covered_until = {s: t for s, t in self._covered_until.items() if t >= now}
+            if self._brightness is not None:
+                self._brightness.saw(*paper_level(flattened.image))
             readings = self._reader.read(flattened)
+            self._unsure = sum(reading.piece == "unsure" for reading in readings.values())
             lap("read")
             stable = self._stable.update(
                 readings,
@@ -206,6 +217,21 @@ class CameraMatSource:
             for stage, ms in timings.items():
                 old = self._timings_ms.get(stage, ms)
                 self._timings_ms[stage] = TIMING_SMOOTHING * old + (1 - TIMING_SMOOTHING) * ms
+
+    def _brightness_report(self) -> dict:
+        auto = self._brightness
+        if auto is None:
+            return {"state": "off"}
+        return {
+            "state": auto.state,
+            "gain": auto.gain,
+            "paper": None if auto.paper is None else round(auto.paper, 1),
+            "clipped": None if auto.clipped is None else round(auto.clipped, 3),
+        }
+
+    def _closest_colours(self) -> dict:
+        first, second, degrees = closest_colours(self._reader.palette)
+        return {"pair": [first, second], "degrees": round(degrees, 1)}
 
     def _locate(
         self, hands: list[dict], frame_to_page: np.ndarray

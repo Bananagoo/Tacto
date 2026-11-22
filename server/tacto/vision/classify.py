@@ -371,3 +371,23 @@ def to_placed(readings: dict[str, Reading], mat: Mat) -> tuple[Placed, ...]:
         else:
             placed.append(Placed(reading.piece, a, b))
     return tuple(placed)
+
+
+def closest_colours(palette: Palette) -> tuple[str, str, float]:
+    """The two piece colours nearest in hue, as the camera sees them now, and how many
+    degrees apart they are. The closer, the likelier the reader confuses those two pieces.
+    Black is left out: it is told by darkness, not hue."""
+    hues = {
+        name: float(np.degrees(np.arctan2(row[2], row[1])))
+        for name, row in zip(_NAMES, palette.lab, strict=True)
+        if name != "battery_negative"
+    }
+    best = ("", "", 360.0)
+    names = list(hues)
+    for i, first in enumerate(names):
+        for second in names[i + 1 :]:
+            gap = abs(hues[first] - hues[second]) % 360
+            gap = min(gap, 360 - gap)
+            if gap < best[2]:
+                best = (first, second, gap)
+    return best

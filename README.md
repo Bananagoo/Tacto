@@ -17,6 +17,7 @@ make dev         # the lab on the camera; or `make mock` for recorded states, no
 |---|---|
 | `make mock` | A server that replays a recorded 90-second run (Continue advances reflections). No camera, mouse or solver needed |
 | `make dev` | The lab on the camera looking at the printed mat. A plain live view of its state is at `localhost:5173/devtools/#state` |
+| Setup check | Before a demo: with `make dev` running, open `localhost:5173/devtools/#setup` and press **Run the check** |
 | `VOICE_ENABLED=1 make dev` | The same, with spoken reflections: the lab asks its questions aloud, hears the answer and narrows the question if it misses. Needs `TOGETHER_API_KEY` in `.env` and the network; see `docs/voice-reflections-plan.md` |
 | `make bench` | The camera bench at `localhost:5173/devtools/`: the camera's picture, the flattened mat, each segment's reading |
 | `make kit` | The printable mat, `kit/out/mat.pdf` |

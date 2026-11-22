@@ -115,7 +115,8 @@ flowchart LR
 
 ### 3.1 Exposure and focus
 
-- **Exposure is set to manual** (`vision/exposure.py`). On auto, the camera exposes for the dark background, the white paper clips and the markers vanish. Manual at gain 0 fixed it: from 0 to 2 markers read, to all 4.
+- **Exposure is set to manual** (`vision/exposure.py`). On auto, the camera exposes for the dark background, the white paper clips and the markers vanish. Manual fixed it: from 0 to 2 markers read, to all 4.
+- **Automatic brightness, metered on the paper** (`vision/brightness.py`): every frame the paper's brightness is measured on the flattened mat, and the camera's gain is stepped to keep it near 200 of 255, never letting it clip. So the room's light, not the desk it was tuned on, sets the exposure. It is a small state machine: waiting, adjusting, settled, too dark, too bright.
 - **Focus cannot be locked**: this camera has no focus distance, and turning autofocus off parks the lens out of focus. Instead a **focus kicker** watches for frames where no corner can be read and restarts autofocus (off, one second, on). That is a small state machine; see [section 10](#10-all-the-state-machines).
 
 ### 3.2 Finding the mat
@@ -299,6 +300,7 @@ Tacto is built from small, explicit **state machines**. Each has a handful of st
 | **Reflection status** (what the screen shows) | `lesson.py` | asking, thinking, resolved, exit (listening from the browser) | Answers in flight, the funnel |
 | **Mat tracker** | `vision/tracker.py` | lost → found (4 corners) → held (some corners) → held blind → lost | Which corner markers are seen, and where |
 | **Segment smoother** | `vision/stable.py` | each segment: current reading, candidate + count | Readings per frame, the hand mask |
+| **Automatic brightness** | `vision/brightness.py` | waiting → adjusting → settled (or too dark / too bright at its limits) | The paper's brightness each frame |
 | **Focus kicker** | `vision/focus.py` | fine → blind (counting) → autofocus off → back on → waiting | Whether any corner is readable |
 | **Microphone** | `web/src/voice/useAnswerMic.ts` | off → starting → listening → hearing → sending → off (or failed) | The lab finishing its line, the voice detector, Space |
 | **Mode** | `server/tacto/lab.py` | tinker ↔ lab | The browser's `set_mode` |
@@ -437,3 +439,4 @@ Measure twenty layouts on the real mat under venue lighting; reconnect the camer
 | `make mock` | Recorded states, no hardware |
 | `make bench` | The camera bench: picture, flattened mat, readings, exposure |
 | `make check` | Every test, lint and build |
+| `localhost:5173/devtools/#setup` | The setup check before a demo (with `make dev`) |
