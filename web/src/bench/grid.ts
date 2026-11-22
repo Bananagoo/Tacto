@@ -10,8 +10,9 @@ export const GRID_ROWS = 6
 /** SVG units between neighbouring dots. Every size in the bench is chosen against this. */
 export const DOT_PITCH = 100
 
-// Room around the outer dots, so a part on an edge row is not clipped.
-const MARGIN = 80
+// Room around the outer dots, so a part on an edge row is not clipped. The LED's dome stands
+// about 120 above its wire, so the top margin has to be at least that.
+const MARGIN = 130
 
 export const VIEW_WIDTH = (GRID_COLS - 1) * DOT_PITCH + 2 * MARGIN
 export const VIEW_HEIGHT = (GRID_ROWS - 1) * DOT_PITCH + 2 * MARGIN

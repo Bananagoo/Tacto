@@ -4,10 +4,10 @@ import ledOffUrl from '../../assets/LedOff.png'
 import { Leads } from './Leads'
 
 // The LED is drawn this wide (a dot pitch is 100), with its legs bent out to the two sides. Its
-// dome then stands about 75 above the wire, which fits the margin round the mat's top row. Where the
+// dome then stands about 120 above the wire, which fits the margin round the mat's top row (grid.ts). Where the
 // dots are closer than this it shrinks to fit, so the leg tips always reach them; where they are
 // further apart a plain lead joins each dot to a leg tip.
-const MAX_WIDTH = 100
+const MAX_WIDTH = 160
 // The box is a little taller than any picture, and each picture sits at its bottom, so the three
 // line up when one swaps for another.
 const BOX_HEIGHT_PER_WIDTH = 0.8
