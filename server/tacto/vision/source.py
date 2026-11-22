@@ -25,6 +25,7 @@ from ..mat import Mat
 from ..pieces import Placed
 from .brightness import AutoGain, paper_level
 from .classify import MatReader, PieceColours, closest_colours, load_colours, to_placed
+from .fingertip import FingertipSmoother
 from .flatten import frame_point_to_mat
 from .focus import FocusKeeper
 from .hands import INDEX_TIP
@@ -102,6 +103,8 @@ class CameraMatSource:
         # The last confirmed look at the mat, for the setup check's live view.
         self._last_look: tuple[np.ndarray, dict] | None = None
         self._last_frame: np.ndarray | None = None
+        # Steadies the fingertip, which the hand tracker shakes a little every frame.
+        self._fingertip = FingertipSmoother()
         self._lock = threading.Lock()
         self._view = MatView(mat_visible=False)
         self._placed: tuple[Placed, ...] = ()
@@ -191,6 +194,7 @@ class CameraMatSource:
             if self._hands is not None and frame.ndim == 3 and frame.shape[2] == 3:
                 hands = self._hands.hands(frame, round(now * 1000))
                 finger, under_hand = self._locate(hands, flattened.frame_to_page)
+                finger = self._fingertip.smooth(finger, now)
                 for segment in under_hand:
                     self._covered_until[segment] = now + HAND_LINGER_S
                 lap("hand")

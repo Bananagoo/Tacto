@@ -214,6 +214,8 @@ export function Bench({ children }: { children?: ReactNode }) {
             className="fill-white/20 stroke-white"
             strokeWidth={5}
             pointerEvents="none"
+            // Glides between the server's 15 positions a second instead of jumping.
+            style={{ transition: 'cx 90ms linear, cy 90ms linear' }}
             aria-label="The fingertip on the mat"
           />
         )}
