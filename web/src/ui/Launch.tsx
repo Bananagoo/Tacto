@@ -6,14 +6,14 @@
 import logo from '../assets/Logo.png'
 import pcb from '../assets/Pcb.png'
 import stickyNote from '../assets/StickyNote.png'
-import workspace from '../assets/WorkspaceNoStickyNote.png'
+import workspace from '../assets/HomeBackground.png'
 
-// Workspace.png is 3593 x 1620. The board is placed in percentages of that picture so it
+// HomeBackground.png is 3593 x 1620. The board is placed in percentages of that picture so it
 // stays on the blue desk mat at any window size. If the picture changes, update both.
 const SCENE_ASPECT = 3593 / 1620
 const BOARD = { centreX: 52.5, centreY: 81.5, width: 27 } // percent of the scene
-// The word "Tacto" is centred over the circuit board; the small logo sits beside the word.
-const TITLE = { centreX: BOARD.centreX, centreY: 10 } // percent of the scene
+// The clipboard's paper on the wall (percent of the scene): "Tacto" is written on it.
+const PAPER = { centreX: 51.4, centreY: 29.8, width: 26.5, height: 22.5 }
 // Where the sticky note hung in the picture before it was taken out and made a button. It is the
 // note's own picture put back in the same place.
 const NOTE = { centreX: 81.75, centreY: 21.7, width: 15.1 } // percent of the scene
@@ -44,20 +44,31 @@ export function Launch({
           draggable={false}
         />
 
-        {/* The word is centred over the board; the small logo hangs off its left. */}
+        {/* Written on the clipboard's paper: the logo and the name, and what it is, sized
+            with the scene (container units) so it stays on the paper at any window size. */}
         <div
-          className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: `${TITLE.centreX}%`, top: `${TITLE.centreY}%` }}
+          className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center gap-[6%] [container-type:size]"
+          style={{
+            left: `${PAPER.centreX}%`,
+            top: `${PAPER.centreY}%`,
+            width: `${PAPER.width}%`,
+            height: `${PAPER.height}%`,
+          }}
         >
-          <h1 className="m-0 text-center font-['Patrick_Hand'] text-[clamp(2.4rem,7.5vw,6.2rem)] leading-none text-[#1f2a14]">
-            Tacto
-          </h1>
-          <img
-            src={logo}
-            alt="Tacto logo"
-            draggable={false}
-            className="absolute top-1/2 right-full mr-[clamp(0.5rem,1.2vw,1.2rem)] h-[clamp(2.5rem,6.5vw,5.5rem)] w-auto -translate-y-1/2 select-none"
-          />
+          <div className="flex items-center gap-[4cqw]">
+            <img
+              src={logo}
+              alt="Tacto logo"
+              draggable={false}
+              className="h-[34cqh] w-auto -rotate-3 select-none"
+            />
+            <h1 className="m-0 font-['Patrick_Hand'] text-[42cqh] leading-none text-[#1f2a14]">
+              Tacto
+            </h1>
+          </div>
+          <p className="m-0 -rotate-1 font-['Patrick_Hand'] text-[13cqh] leading-none text-[#6b4a2b]">
+            build it · feel it · explain it
+          </p>
         </div>
         {/* The circuit board grows under the pointer and opens the bench to build freely. */}
         <button
@@ -107,7 +118,7 @@ export function Launch({
           the corner, so a judge's eye goes to the workbench. */}
       <a
         href="/devtools/#setup"
-        title="Dev tools: the setup check, the live state, the camera bench"
+        title="Dev tools: the setup check, the camera bench, the haptics test"
         className="absolute right-4 bottom-4 z-10 flex items-center gap-2 rounded-full bg-[#1f2a14]/75 px-4 py-2 font-['Patrick_Hand'] text-lg text-[#f4f1e6] shadow-md backdrop-blur-sm transition hover:bg-[#1f2a14] focus-visible:outline-4 focus-visible:outline-yellow-300"
       >
         <svg
