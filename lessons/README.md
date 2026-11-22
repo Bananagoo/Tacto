@@ -90,3 +90,34 @@ make check-server
 ```
 
 A file with a mistake fails with a message that names the file and the field. To try the lesson: `make dev`, build on the mat, and watch `localhost:5173/devtools/#state`.
+
+## A reflection as a funnel
+
+A step's `reflection` can be one question, as above, or a funnel: an open question, a narrower one, a choice between two, and then the lab states the idea and asks for an action on the mat. A learner who answers the first question well never hears the others. Every line the lab says is written here, so the wording can be edited without touching code. The plan behind it is `docs/voice-reflections-plan.md`.
+
+```yaml
+reflection:
+  target_idea: "Two bulbs in a row resist more, so the same battery drives less current."
+  confirmation: "Yes. Two bulbs in a row resist more, so the same battery pushes less current."
+  misconceptions:                # wrong ideas worth naming; tags are lower_case_words
+    - tag: current_used_up
+      description: "Thinks the first bulb uses some of the current up."
+  levels:                        # one to three, from open to narrow
+    - question: "Why did adding a second bulb make the pulse slower?"
+      correct_examples:          # two to five right answers, said as a learner would
+        - "theres more resistance now so less current gets through"
+        - "two bulbs are harder to push through so the current drops"
+      confirmation: "Exactly."   # optional; the funnel's is used when left out
+  exit:
+    line: "Two bulbs in a row resist more. Touch the other bulb: the pulse is the same there."
+    then:                        # goals to meet one after another
+      - { touching: bulb, different_piece: true }
+    timeout_seconds: 20          # optional; the lesson moves on after this regardless
+```
+
+An exit goal takes every `done_when` condition, plus:
+
+| Condition | Meaning |
+|---|---|
+| `max_voltage` | Battery voltage is at most this many volts (also usable in `done_when`) |
+| `different_piece: true` | The touched piece is not the one being touched when the step was finished: "touch the other bulb" |

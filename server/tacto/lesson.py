@@ -11,10 +11,18 @@ import math
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Discriminator,
+    Field,
+    Tag,
+    ValidationError,
+    model_validator,
+)
 
 from tacto.contract import MAX_VOLTS, Circuit, CircuitStatus, LessonStep, Piece, PieceType, Touch
 from tacto.sim.feel import MIN_CURRENT_AMPS
@@ -45,6 +53,7 @@ class DoneWhen(_Strict):
     arrangement: Arrangement | None = None
     switch_closed: bool | None = None
     min_voltage: float | None = Field(None, ge=0, le=MAX_VOLTS)
+    max_voltage: float | None = Field(None, ge=0, le=MAX_VOLTS)
     # A piece type, or any piece carrying current. Touch goals always require current.
     touching: PieceType | Literal["current"] | None = None
 
@@ -55,12 +64,99 @@ class DoneWhen(_Strict):
         return self
 
 
+# ---------- a reflection as a funnel of narrowing questions ----------
+# The lab asks an open "why" question. An answer that misses gets a narrower question,
+# then a choice between two options, then the lab states the idea and asks for an action
+# on the mat. Every line the lab says is written in the lesson file; nothing is generated.
+
+_Line = Annotated[str, Field(min_length=1)]
+MAX_FUNNEL_LEVELS = 3
+
+
+class Misconception(_Strict):
+    """A wrong idea worth naming when an answer shows it."""
+
+    tag: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    description: _Line
+
+
+class FunnelLevel(_Strict):
+    """One question, and what a right answer to it sounds like."""
+
+    question: _Line
+    # Two or three answers that should be graded correct, said the way a learner would.
+    correct_examples: list[_Line] = Field(min_length=2, max_length=5)
+    # Said when this level is answered correctly; the funnel's own is used when left out.
+    confirmation: _Line | None = None
+
+
+class ExitGoal(DoneWhen):
+    """One thing to do on the mat once the lab has stated the idea."""
+
+    # The touched piece must not be the one the learner was touching when the step was
+    # finished: "touch the other bulb".
+    different_piece: bool = False
+
+
+class FunnelExit(_Strict):
+    """What happens when no answer landed: the lab says the idea and asks for an action."""
+
+    line: _Line
+    # Goals to meet one after another, in this order.
+    then: list[ExitGoal] = Field(min_length=1)
+    # The lesson moves on after this long whether or not the action was done.
+    timeout_seconds: float = Field(20.0, gt=0)
+
+
+class Funnel(_Strict):
+    # What the learner should come to say, in one sentence. The grader is given this.
+    target_idea: _Line
+    confirmation: _Line
+    misconceptions: list[Misconception] = []
+    levels: list[FunnelLevel] = Field(min_length=1, max_length=MAX_FUNNEL_LEVELS)
+    exit: FunnelExit
+
+    @model_validator(mode="after")
+    def _tags_are_unique(self) -> Funnel:
+        tags = [misconception.tag for misconception in self.misconceptions]
+        if len(set(tags)) != len(tags):
+            raise ValueError("misconception tags must be unique within a reflection")
+        return self
+
+    def confirmation_at(self, level: int) -> str:
+        return self.levels[level].confirmation or self.confirmation
+
+
+def _reflection_kind(value: Any) -> str:
+    # Chosen by shape, so a mistake inside a funnel is reported as that mistake and not
+    # as "this is not a string".
+    return "funnel" if isinstance(value, dict | Funnel) else "question"
+
+
+Reflection = Annotated[
+    Annotated[_Line, Tag("question")] | Annotated[Funnel, Tag("funnel")],
+    Discriminator(_reflection_kind),
+]
+
+
 class Step(_Strict):
     id: str
     prompt: str = Field(min_length=1)
-    reflection: str | None = Field(None, min_length=1)
+    # One question to answer out loud, or a funnel of them. Either waits for the learner.
+    reflection: Reflection | None = None
     done_when: DoneWhen
     linger_seconds: float | None = Field(None, ge=0)  # overrides the lesson's
+
+    @property
+    def funnel(self) -> Funnel | None:
+        return self.reflection if isinstance(self.reflection, Funnel) else None
+
+    @property
+    def reflection_question(self) -> str | None:
+        """The question the reflection opens with."""
+        if isinstance(self.reflection, Funnel):
+            return self.reflection.levels[0].question
+        return self.reflection
 
 
 class Lesson(_Strict):
@@ -135,6 +231,8 @@ def is_satisfied(
         if not switches or any(p.closed is not done_when.switch_closed for p in switches):
             return False
     if done_when.min_voltage is not None and circuit.voltage < done_when.min_voltage:
+        return False
+    if done_when.max_voltage is not None and circuit.voltage > done_when.max_voltage:
         return False
     if done_when.touching is not None:
         if touch is None or not touch.present:
@@ -215,7 +313,7 @@ class LessonRunner:
             lesson_done=(
                 last and self._done_at is not None and (step.reflection is None or self._continued)
             ),
-            reflection=step.reflection
+            reflection=step.reflection_question
             if self._done_at is not None and not self._continued
             else None,
         )

@@ -6,9 +6,9 @@ That is the whole product for now. This is a LauzHack 2026 project and the only 
 
 ## Parked: do not build, extend or wire in
 
-Not parked any more (Katie, 22 Nov 2026): speech-to-text for the lesson's spoken reflections. `server/tacto/speech.py` relays the learner's microphone to Together's transcription, only after they start it, and stores nothing. It transcribes; it does not judge or answer.
+Not parked any more (Katie, 22 Nov 2026): voice reflections, as planned in `docs/voice-reflections-plan.md`. That covers speech-to-text of the learner's answer, a language model that grades the answer into a fixed label, and text-to-speech of tutor lines. The limits are in that plan and are binding: the model only grades, code decides what happens next, every line the lab says is prewritten in the lesson file, and everything sits behind `VOICE_ENABLED` so the lesson runs unchanged without it.
 
-Voice tutor, text-to-speech, an agent loop, LLM hints and any LLM call (Together, OpenRouter or other), zone score, learner model, concept map, lab report, freehand sketch reading, 3D parts. If a request touches one of these, say so and ask first. The code that existed for them is at the git tag `pre-pivot`.
+A free-talking voice tutor, generated tutor speech, an agent loop, LLM-written hints, any LLM call outside the answer grader, zone score, learner model, concept map, lab report, freehand sketch reading, 3D parts. If a request touches one of these, say so and ask first. The code that existed for them is at the git tag `pre-pivot`.
 
 ## Read before you build
 
@@ -16,6 +16,7 @@ Voice tutor, text-to-speech, an agent loop, LLM hints and any LLM call (Together
 - `contract/README.md`: the state contract, the recorded sample and the mock, as the UI team sees them.
 - `docs/roadmap.md`: the build order, what is done, and what "done" means.
 - `docs/tech-stack.md`: every library decision and the hardware facts. Check it before adding a dependency.
+- `docs/voice-reflections-plan.md`: the plan for spoken reflections, its rules, and how far it has got.
 
 ## Who owns what
 
@@ -77,7 +78,7 @@ Tooling may import the product (`server/tacto/`); the product never imports tool
 
 1. **Reuse before build.** Before writing generic functionality or adding a dependency, check `docs/tech-stack.md`, then use the `reuse-first` skill and verify the package before relying on it.
 2. **The contract is `server/tacto/contract.py`.** Changes need Katie's sign-off. After a change run `make contract` and `make sample`, and tell the UI team.
-3. **The live loop runs without the network.** Camera → flatten → classify → solver → state → screen and haptics never touches it, so the lab keeps working if the Wi-Fi drops. The speech relay is the one thing that needs it, and the lesson must carry on without it.
+3. **The live loop runs without the network.** Camera → flatten → classify → solver → state → screen and haptics never touches it, so the lab keeps working if the Wi-Fi drops. The voice reflections are the one thing that needs it, and the lesson must carry on without them.
 4. **Every piece runs without hardware.** One camera and one mouse are shared. Vision code must run from recorded frames; the UI must run from `make mock`.
 5. **Do not claim hardware works unless a person confirmed it.** You cannot feel the mouse or see the desk. Say what you ran and what still needs a human check.
 6. **Small steps, tests with each one, results before moving on.** Report accuracy and latency as numbers, not impressions.
