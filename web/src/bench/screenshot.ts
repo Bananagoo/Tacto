@@ -18,7 +18,7 @@ const LOOK = [
 
 const SCALE = 2
 // The mat's green, drawn behind the circuit because the page's own background is not part of the svg.
-const MAT_GREEN = '#065f46'
+const MAT_GREEN = '#006045'
 
 /** Parts of the drawing that are not the circuit (the multimeter) carry this and are left out. */
 export const SKIP_IN_SCREENSHOT = 'data-skip-in-screenshot'
