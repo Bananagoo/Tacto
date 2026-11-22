@@ -14,11 +14,13 @@ const BOX_HEIGHT_PER_WIDTH = 0.8
 // The legs' middle sits this far (as a share of the width) above the pictures' bottom edge, so
 // they lie on the line between the dots.
 const LEG_DROP_PER_WIDTH = 0.036
-// Where the three pictures change, on the server's 0 to 1 brightness.
-// TODO(front end owner): tune by eye once real circuits run. Series bulbs sit at 0.25, a
-// single bulb or a parallel branch at 1.
+// Where the three pictures change, on the server's 0 to 1 brightness (the bulb's power, so it
+// goes with the square of the current: 1 is 0.6 A).
+// TODO(front end owner): tune by eye. At 6 V a single bulb or a parallel branch is 1 (bright)
+// and two bulbs in series 0.25 (dim). A bulb in series with the resistor reaches only 0.56 even
+// at 9 V; it was stuck on dim at 0.6 (22 Nov 2026), so bright now starts at 0.5, about 0.42 A.
 const OFF_BELOW = 0.02
-const BRIGHT_FROM = 0.6
+const BRIGHT_FROM = 0.5
 
 interface BulbProps {
   length: number
