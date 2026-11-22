@@ -20,4 +20,5 @@ GRADER_MODEL = "Qwen/Qwen3.5-9B"
 # Text to speech for the prewritten tutor lines. The cheapest on the list; it always
 # answers at 24 kHz whatever sample rate is asked for.
 TTS_MODEL = "hexgrad/Kokoro-82M"
-TTS_VOICE = "af_heart"
+# Picked by Katie by ear from ten voices on 22 Nov 2026.
+TTS_VOICE = "af_nova"
