@@ -8,7 +8,7 @@ import { CameraCorner } from './ui/CameraCorner'
 import { LessonStrip } from './ui/LessonStrip'
 import { StatusBar } from './ui/StatusBar'
 
-export default function App() {
+export default function App({ onHome }: { onHome: () => void }) {
   return (
     <HapticsProvider>
       <Instrument />
@@ -17,7 +17,7 @@ export default function App() {
       <div className="flex min-h-full flex-col gap-4 p-4 lg:h-full lg:p-6">
         <LessonStrip />
         <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-rows-[minmax(0,1fr)]">
-          <Bench>
+          <Bench onHome={onHome}>
             <CameraCorner />
           </Bench>
         </main>

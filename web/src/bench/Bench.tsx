@@ -29,7 +29,7 @@ const DRAW_SERVER_CIRCUIT = true
  * a layout: it draws whatever parts and wires the server lists. `children` are laid over the
  * mat's corner (the camera picture). The multimeter is the pointer over the mat.
  */
-export function Bench({ children }: { children?: ReactNode }) {
+export function Bench({ children, onHome }: { children?: ReactNode; onHome: () => void }) {
   const connected = useTacto((store) => store.connected)
   const serverCircuit = useTacto((store) => store.state?.circuit)
   const circuit = DRAW_SERVER_CIRCUIT ? serverCircuit : undefined
@@ -207,6 +207,7 @@ export function Bench({ children }: { children?: ReactNode }) {
         eraserRadius={eraserRadius}
         onEraserRadius={setEraserRadius}
         onScreenshot={takeScreenshot}
+        onHome={onHome}
       />
       {children}
     </figure>
