@@ -61,9 +61,15 @@ export default function CameraPanel() {
         const preferred = found.find((camera) => camera.name.includes(PREFERRED_CAMERA))
         if (preferred) setIndex(preferred.index)
       })
-      .catch((error: unknown) =>
-        setListError(`Could not reach the server (${String(error)}). Is make bench running?`),
-      )
+      .catch(async (error: unknown) => {
+        // The lab (make dev) holds the camera and port 8000, and has no bench routes: say so.
+        const lab = await fetch('/api/health')
+          .then((response) =>
+            response.ok ? (response.json() as Promise<{ source?: string }>) : null,
+          )
+          .catch(() => null)
+        setListError(lab ? 'lab' : `Could not reach the camera bench (${String(error)}).`)
+      })
   }
   useEffect(loadCameras, [])
 
@@ -167,7 +173,7 @@ export default function CameraPanel() {
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className={`flex flex-wrap items-center gap-3 ${listError === 'lab' ? 'hidden' : ''}`}>
         <span className="opacity-60">Exposure</span>
         {exposure?.available && exposure.camera_found ? (
           <>
@@ -201,7 +207,29 @@ export default function CameraPanel() {
         )}
       </div>
 
-      {listError && <p className="text-rose-400">{listError}</p>}
+      {listError === 'lab' ? (
+        <section className="flex flex-col gap-2 rounded-3xl border border-amber-300/40 bg-amber-300/10 p-6 text-amber-50">
+          <h2 className="m-0 font-['Patrick_Hand'] text-3xl">The lab has the camera</h2>
+          <p className="m-0 text-lg">
+            The lab (<code>make dev</code>) is running, and only one program can use the camera. The
+            camera bench needs it to itself: stop the lab with Ctrl+C, then run{' '}
+            <code>make bench</code> and reload this page.
+          </p>
+          <p className="m-0 text-lg">
+            To see what the camera sees while the lab runs, use the{' '}
+            <a href="#setup" className="underline">
+              Setup check
+            </a>
+            : it shows the live camera and what the reader makes of it.
+          </p>
+        </section>
+      ) : (
+        listError && (
+          <p className="text-rose-400">
+            {listError} Is <code>make bench</code> running?
+          </p>
+        )
+      )}
       {streamError && <p className="text-rose-400">{streamError}</p>}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
