@@ -14,10 +14,8 @@ const SCENE_ASPECT = 3593 / 1620
 const BOARD = { centreX: 52.5, centreY: 81.5, width: 27 } // percent of the scene
 // The play button, laid over the top edge of the circuit board: the only way into the lab.
 const PLAY = { centreX: BOARD.centreX, centreY: 65, width: 13 } // percent of the scene
-// The name, the logo and the play button share one centre line, top to bottom.
+// The word "Tacto" and the play button share one centre line; the small logo sits beside the word.
 const TITLE = { centreX: PLAY.centreX, centreY: 10 } // percent of the scene
-// The app's logo, in the middle of the wall between the name and the play button.
-const LOGO = { centreX: PLAY.centreX, centreY: 31, width: 13 } // percent of the scene
 // Where the sticky note hung in the picture before it was taken out and made a button. It is the
 // note's own picture put back in the same place.
 const NOTE = { centreX: 81.75, centreY: 21.7, width: 15.1 } // percent of the scene
@@ -48,25 +46,21 @@ export function Launch({
           draggable={false}
         />
 
-        <h1
-          className="absolute m-0 -translate-x-1/2 -translate-y-1/2 text-center text-[clamp(2rem,6vw,5rem)] font-bold tracking-tight text-[#1f2a14]"
+        {/* The word is centred on the play button's line; the small logo hangs off its left. */}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2"
           style={{ left: `${TITLE.centreX}%`, top: `${TITLE.centreY}%` }}
         >
-          Tacto
-        </h1>
-
-        <img
-          src={logo}
-          alt="Tacto logo"
-          draggable={false}
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 select-none"
-          style={{
-            left: `${LOGO.centreX}%`,
-            top: `${LOGO.centreY}%`,
-            width: `${LOGO.width}%`,
-          }}
-        />
-
+          <h1 className="m-0 text-center text-[clamp(2rem,6vw,5rem)] font-bold tracking-tight text-[#1f2a14]">
+            Tacto
+          </h1>
+          <img
+            src={logo}
+            alt="Tacto logo"
+            draggable={false}
+            className="absolute top-1/2 right-full mr-[clamp(0.5rem,1.2vw,1.2rem)] h-[clamp(2.5rem,6.5vw,5.5rem)] w-auto -translate-y-1/2 select-none"
+          />
+        </div>
         {/* Only a picture now: the play button is the way into the lab. */}
         <img
           src={pcb}
