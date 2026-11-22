@@ -1,6 +1,6 @@
 # The lab, step by step
 
-> **Status: proposal for the short demo, waiting for Katie's approval.** Nothing in the lab has changed yet. Once this is approved, the lesson file (`lessons/circuits-101.yaml`) and the few timings named below are changed to match, and the run is tested on the real mat.
+> **Status: approved by Katie and built on 22 Nov 2026.** The lab runs this lesson (`lessons/circuits-101.yaml`). The full six-step lesson is kept as `lessons/circuits-101-full.yaml`. Not yet run on the real mat.
 
 The current six-step lesson takes about three minutes on its own, and up to five if the learner struggles. The demo needs the key features shown in about **one minute of hands-on time**, inside a three-minute pitch.
 
@@ -92,7 +92,9 @@ Only step 2 has a reflection. It keeps the full funnel, so the adaptive part can
 - The exit still asks for 3 V then 6 V, so step 3 runs at the right current.
 - The exit gives up after **12 s** (was 20 s), counted from when its line has been said.
 
-The series and parallel questions stay in the lesson file but are not used.
+The series and parallel questions stay in `lessons/circuits-101-full.yaml` and are not used.
+
+Grader on these exact questions: 36 of 37 test answers right, no wrong answer graded right (`scripts/grade_fixtures.py --lesson circuits-101`).
 
 ---
 
@@ -111,9 +113,9 @@ Worst case (three misses and the exit): about 90 s.
 
 ---
 
-## 7. What changes from today
+## 7. What changed from the six-step lesson
 
-| | Today | Short demo |
+| | Six-step lesson | Short demo |
 |---|---|---|
 | Steps | 6 | 3 |
 | Starting layout | Loop with a gap | Loop with the open switch already in |
@@ -123,14 +125,14 @@ Worst case (three misses and the exit): about 90 s.
 | Exit time limit | 20 s from the start of the exit | 12 s from when its line has been said |
 | Closing line | *Same two bulbs, different connections…* | *Same battery, different paths…* |
 
-Changes to make once approved:
+Changes made (22 Nov 2026):
 
 1. **`lessons/circuits-101.yaml`:** the three steps, the shorter lines, `linger_seconds: 2.5`, exit `timeout_seconds: 12`.
-2. **The exit timer** starts once its line has been said (a small change in `server/tacto/lesson.py`).
+2. **The exit timer** starts once its line has been said (`server/tacto/lesson.py`).
 3. **The closing line** in the notebook (`web/src/ui/LessonStrip.tsx`).
-4. **Record the new spoken lines** (automatic on the next start, about 5 seconds).
-5. **Tests** that walk the lesson are updated to the three steps.
-6. **Test on the real mat,** with you.
+4. **The new spoken lines** are recorded (4 new; the exit line is now 6.8 s, was 9.4 s).
+5. **Tests:** `server/tests/test_short_lesson.py` walks the three steps; the engine's own tests run on the full lesson.
+6. **Still to do: test on the real mat,** with Katie.
 
 ---
 
@@ -206,7 +208,7 @@ At 3 V every current halves. The LED is **dim** below about 0.42 A and **bright*
 
 ## 10. Questions for you
 
-- [ ] **One spoken question, or two?** A second one after step 3 (*"Why is the pulse faster at the battery than at either bulb?"*) shows the grading on a harder idea, for about 15 more seconds.
+- [ ] **One spoken question, or two?** (Built with one.) A second one after step 3 (*"Why is the pulse faster at the battery than at either bulb?"*) shows the grading on a harder idea, for about 15 more seconds.
 - [ ] **Drop series entirely,** or keep it as a spare the presenter can run in Tinker mode if asked?
-- [ ] **Starting voltage 3 V?** It makes step 2's change bigger; starting at 6 V would skip the wheel.
+- [ ] **Starting voltage 3 V?** (Built at 3 V.) It makes step 2's change bigger; starting at 6 V would skip the wheel.
 - [ ] **Reconnect the camera automatically** after an unplug, so a bumped cable at the demo needs no restart?

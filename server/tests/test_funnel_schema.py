@@ -16,7 +16,7 @@ from tacto.lesson import (
     load_lesson,
 )
 
-LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml"
+LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101-full.yaml"
 
 
 def funnel(**changes) -> dict:

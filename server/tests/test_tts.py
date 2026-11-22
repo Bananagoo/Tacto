@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from tacto import tts, voice_models
 from tacto.lesson import load_lesson
 
-LESSON = load_lesson(Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml")
+LESSON = load_lesson(Path(__file__).resolve().parents[2] / "lessons" / "circuits-101-full.yaml")
 WAV = b"RIFF" + b"\x00" * 60
 
 

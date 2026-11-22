@@ -1,0 +1,127 @@
+# The full six-step version of Circuits 101, kept for reference and for the lesson engine's
+# tests. The lab runs the short demo version, circuits-101.yaml (docs/lab-flow.md).
+#
+# A 90-second hands-on sequence within the three-minute pitch.
+# Prearrange the loop with a switch slot and an empty side branch. Start at 3 V.
+# Use each six-second success pause for the presenter's explanation (see README.md).
+# Every done_when condition must hold for half a second on a visible mat.
+# A reflection is one question, or a funnel: an open question, a narrower one, a choice of
+# two, then the lab states the idea and asks for an action (lessons/README.md). Every line
+# the lab says is written here; the wording is a draft for the lesson author to edit.
+# Vibration represents current; the wheel controls voltage.
+
+id: circuits-101-full
+title: Feel the current
+# How long a finished step stays on screen before the next prompt appears.
+linger_seconds: 6
+
+steps:
+  - id: setup
+    prompt: "Place the open switch in the gap. Does the bulb light?"
+    done_when: { status: open, batteries: 1, bulbs: 1, switch_closed: false }
+
+  - id: close_the_loop
+    prompt: "Swap in the closed switch. Watch the bulb."
+    done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, switch_closed: true }
+
+  - id: feel_current
+    prompt: "Rest a finger on the bulb card. Feel the pulse in the mouse."
+    done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, touching: bulb }
+
+  - id: raise_voltage
+    prompt: "Keep your finger there. Turn the wheel up to 6 V."
+    reflection:
+      target_idea: "A higher voltage pushes more current through the bulb, and the pulse is the current."
+      confirmation: "Yes. More voltage pushes more current through the bulb, and the pulse is that current."
+      misconceptions:
+        - tag: pulse_is_voltage
+          description: "Thinks the pulse is the voltage itself, not the current it drives."
+        - tag: brightness_only
+          description: "Describes the bulb getting brighter with no mention of current."
+      levels:
+        - question: "Why did the pulse get faster when you raised the voltage?"
+          correct_examples:
+            - "more voltage pushes more current through the bulb"
+            - "the battery pushes harder so more flows and the pulse is the flow"
+            - "higher voltage means more current and thats what i feel"
+        - question: "The pulse is the current through the bulb. What does the battery's voltage do to that current?"
+          correct_examples:
+            - "it makes it bigger"
+            - "more voltage more current"
+            - "it pushes more of it through"
+        - question: "Does a higher voltage push more current round the loop, or less?"
+          correct_examples:
+            - "more"
+            - "more current"
+            - "it pushes more"
+      exit:
+        line: "A higher voltage pushes more current through the bulb, and the pulse is that current. Turn the wheel down to 3 volts and feel it slow, then back up to 6."
+        then:
+          - { touching: bulb, max_voltage: 3 }
+          - { touching: bulb, min_voltage: 6 }
+    done_when: { status: working, batteries: 1, bulbs: 1, lit_bulbs: 1, touching: bulb, min_voltage: 6 }
+
+  - id: series
+    prompt: "Replace the bottom wire with a second bulb. Touch the first bulb again."
+    reflection:
+      target_idea: "Two bulbs in a row resist more, so the same battery drives less current."
+      confirmation: "Yes. Two bulbs in a row resist more, so the same battery pushes less current."
+      misconceptions:
+        - tag: current_used_up
+          description: "Thinks the first bulb uses some of the current up, leaving less for the second."
+        - tag: current_shared
+          description: "Thinks the battery gives a fixed current that the two bulbs split between them."
+      levels:
+        - question: "Why did adding a second bulb make the pulse slower?"
+          correct_examples:
+            - "theres more resistance now so less current gets through"
+            - "two bulbs are harder to push through so the current drops"
+            - "its harder for the current with two in a row so less flows"
+        - question: "The current now has to go through both bulbs, one after the other. Is that easier or harder than going through one?"
+          correct_examples:
+            - "harder"
+            - "its harder so less gets through"
+            - "harder theres more in the way"
+        - question: "With two bulbs in a row, is the total resistance bigger or smaller?"
+          correct_examples:
+            - "bigger"
+            - "its bigger"
+            - "more resistance"
+      exit:
+        line: "Two bulbs in a row resist more, so the same battery pushes less current. Touch the other bulb: the pulse is the same there."
+        then:
+          - { touching: bulb, different_piece: true }
+    done_when: { status: working, batteries: 1, bulbs: 2, arrangement: series, lit_bulbs: 2, touching: bulb }
+
+  - id: parallel
+    prompt: "Move the second bulb to its own branch and restore the bottom wire. Touch a bulb, then the battery."
+    reflection:
+      target_idea: "Each branch carries its own current and the battery supplies both, so the currents add at the battery."
+      confirmation: "Yes. The battery feeds both branches, so its current is the two bulb currents added together."
+      misconceptions:
+        - tag: battery_is_stronger
+          description: "Says the battery is the source so it is simply stronger, with no adding of branch currents."
+        - tag: same_as_series
+          description: "Expects the same current everywhere, as in a single loop."
+      levels:
+        - question: "Why is the pulse faster at the battery than at either bulb?"
+          correct_examples:
+            - "the battery has to feed both bulbs so their currents add up there"
+            - "each bulb gets its own current and they join at the battery"
+            - "its both currents together at the battery"
+        - question: "Each bulb has its own path back to the battery. Where do the two currents meet?"
+          correct_examples:
+            - "at the battery"
+            - "they join up at the battery"
+            - "in the wire by the battery"
+        - question: "Is the current at the battery one bulb's current, or both added together?"
+          correct_examples:
+            - "both added together"
+            - "both"
+            - "the two added up"
+      exit:
+        line: "The battery feeds both branches, so its current is the two bulb currents added together. Touch one bulb, then the battery, once more."
+        then:
+          - { touching: bulb }
+          - { touching: battery }
+    done_when: { status: working, batteries: 1, bulbs: 2, arrangement: parallel, lit_bulbs: 2, touching: battery }

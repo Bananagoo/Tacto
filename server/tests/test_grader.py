@@ -197,12 +197,13 @@ def test_the_fixture_file_covers_every_question_with_all_four_labels():
     from tacto.lesson import load_lesson
 
     lessons = Path(__file__).resolve().parents[2] / "lessons"
+    graded = yaml.safe_load((lessons / "circuits-101.grading.yaml").read_text())
     funnels = {
         step.id: step.funnel
-        for step in load_lesson(lessons / "circuits-101.yaml").steps
+        for step in load_lesson(lessons / f"{graded['lesson']}.yaml").steps
         if step.funnel
     }
-    fixtures = yaml.safe_load((lessons / "circuits-101.grading.yaml").read_text())["steps"]
+    fixtures = graded["steps"]
     assert set(fixtures) == set(funnels)
     for step_id, levels in fixtures.items():
         tags = {m.tag for m in funnels[step_id].misconceptions}

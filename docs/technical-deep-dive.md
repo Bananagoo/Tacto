@@ -180,7 +180,7 @@ flowchart LR
 
 ## 6. The lesson as a state machine
 
-The lesson (`server/tacto/lesson.py`, content in `lessons/circuits-101.yaml`) is a **state machine** driven by the circuit, not by clicks.
+The lesson (`server/tacto/lesson.py`, content in `lessons/circuits-101.yaml`) is a **state machine** driven by the circuit, not by clicks. The lab runs the short demo: three steps (close the loop; feel the current and raise the voltage, with one spoken question; parallel), about a minute of hands-on time. The full six-step lesson is `lessons/circuits-101-full.yaml`.
 
 ```mermaid
 stateDiagram-v2
@@ -426,7 +426,8 @@ Measure twenty layouts on the real mat under venue lighting; reconnect the camer
 | `server/tacto/lesson.py`, `funnel.py` | The lesson and reflection state machines |
 | `server/tacto/grader.py`, `tts.py`, `listen.py`, `answers.py`, `voice_models.py` | The voice layer |
 | `server/tacto/contract.py`, `contract/` | The state contract and its generated schemas |
-| `lessons/circuits-101.yaml` | Every step, prompt and spoken line |
+| `lessons/circuits-101.yaml` | The short demo lesson: every step, prompt and spoken line |
+| `lessons/circuits-101-full.yaml` | The full six-step lesson, for reference and the engine's tests |
 | `web/src/` | The page: `bench/`, `ui/` (notebook, reflection, launch, gallery), `haptics/`, `voice/` |
 | `kit/` | The printable mat, piece colours, the printed sheets |
 | `scripts/` | Camera probes and the real-service checks |

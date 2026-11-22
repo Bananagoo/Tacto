@@ -205,7 +205,7 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
                   <p className="m-0 text-[1.25em] font-semibold">
                     {ready
                       ? lesson.lesson_done
-                        ? 'Same two bulbs, different connections—and a difference you can feel.'
+                        ? 'Same battery, different paths, and a difference you can feel.'
                         : lesson.prompt
                       : connected
                         ? 'Waiting for the lesson…'

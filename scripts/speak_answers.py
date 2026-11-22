@@ -30,7 +30,7 @@ from tacto.lab import Lab, MatView  # noqa: E402
 from tacto.lesson import LessonRunner, load_lesson  # noqa: E402
 from tacto_mock.scenario import BULB_A, loop  # noqa: E402
 
-LESSON = load_lesson(REPO / "lessons" / "circuits-101.yaml")
+LESSON = load_lesson(REPO / "lessons" / "circuits-101-full.yaml")
 SPEAKER = "am_adam"  # not the lab's voice
 # What a learner might say to "Why did the pulse get faster when you raised the voltage?",
 # and the label a teacher would give it.

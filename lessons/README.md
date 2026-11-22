@@ -2,8 +2,11 @@
 
 One YAML file per lesson. A lesson is a fixed list of steps; changing wording never needs a code change. The wording belongs to the lesson author.
 
-`circuits-101.yaml` is the six-step demo: open switch, closed switch, feel current,
-raise voltage, series, parallel. There is no short-circuit step.
+`circuits-101.yaml` is the lesson the lab runs: the short demo, three steps and one spoken
+question (close the loop; feel the current and raise the voltage; parallel). See
+`docs/lab-flow.md`. `circuits-101-full.yaml` is the full six-step version (open switch,
+closed switch, feel current, raise voltage, series, parallel), kept for reference and for
+the lesson engine's tests.
 
 The app starts in **Tinker**, where the circuit and wheel work freely and no lesson
 goals run. Choosing **Lab** starts at step one and 3 V. Returning to Tinker preserves

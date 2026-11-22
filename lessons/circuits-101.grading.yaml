@@ -1,4 +1,4 @@
-# Answers a learner might give to each reflection question in circuits-101.yaml, with the
+# Answers a learner might give to each reflection question in circuits-101-full.yaml, with the
 # label a careful teacher would give. `scripts/grade_fixtures.py` scores the answer grader
 # against them. Written the way speech recognition returns speech: lower case, no
 # punctuation, sometimes rambling.
@@ -12,7 +12,8 @@
 # An entry is [label, answer] or [label, answer, misconception tag].
 # If the grader gets one wrong, fix the grader's prompt, not the label here.
 
-lesson: circuits-101
+# The lesson whose questions these answer (its file in lessons/).
+lesson: circuits-101-full
 steps:
   raise_voltage:
     - level: 0   # Why did the pulse get faster when you raised the voltage?

@@ -1,7 +1,7 @@
 """Reflections driven end to end by answers and the mat, with a stand-in grader.
 
-The lesson is the real one (lessons/circuits-101.yaml); the circuits are solved for real;
-only the grading is faked: an answer's text is the label it gets.
+The lesson is the full six-step one (lessons/circuits-101-full.yaml); the circuits are
+solved for real; only the grading is faked: an answer's text is the label it gets.
 """
 
 import time
@@ -17,7 +17,7 @@ from tacto.lesson import CONFIRM_SECONDS, LessonRunner, circuit_summary, load_le
 from tacto.pieces import solve_pieces
 from tacto_mock.scenario import BATTERY, BOTTOM, BRANCH, BULB_A, branch, loop
 
-LESSON = load_lesson(Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml")
+LESSON = load_lesson(Path(__file__).resolve().parents[2] / "lessons" / "circuits-101-full.yaml")
 GRID = Grid(cols=9, rows=6)
 CIRCUITS = {
     "open": loop(closed=False),
@@ -208,11 +208,14 @@ def test_three_misses_state_the_idea_and_the_mat_finishes_it(step_id):
         assert state.step_id == STEP_IDS[STEP_IDS.index(step_id) + 1]
 
 
-def test_the_exit_moves_on_after_twenty_seconds_if_nothing_is_done():
+def test_the_exit_moves_on_twenty_seconds_after_its_line_if_nothing_is_done():
+    # Changed 22 Nov 2026: the limit counts from when the line has been said (3 s with no
+    # audio), not from when the exit began, so the whole limit is left for the action.
     session = Session()
     session.reach("raise_voltage")
     for label in ("partial", "partial", "partial"):
         session.say(label)
+    session.look(CONFIRM_SECONDS)
     assert session.look(19.0).step_id == "raise_voltage"
     assert session.look(1.5).step_id == "series"
 
@@ -581,6 +584,8 @@ def test_with_the_network_gone_mid_reflection_the_lesson_still_reaches_the_next_
         session.grade_now()
     lesson = session.lab.state().lesson
     assert lesson.reflection_status == "exit"  # every failure counted as "partial"
+    session.clock.t += CONFIRM_SECONDS  # the idea is stated
+    session.lab.state()
     session.clock.t += 20.5  # nobody does the action either
     assert session.lab.state().lesson.step_id == "series"
 
@@ -606,7 +611,8 @@ def test_an_exit_goal_already_met_does_not_cut_the_stated_idea_short():
     session.say("partial")
     # The idea is on screen; half a second is not long enough to read it.
     assert session.look(1.0).reflection_status == "exit"
-    assert session.look(CONFIRM_SECONDS).step_id == "parallel"
+    session.look(CONFIRM_SECONDS)  # read; now the goal must still hold for half a second
+    assert session.look(0.6).step_id == "parallel"
 
 
 def test_a_spoken_exit_line_is_heard_before_its_goals_count():
@@ -618,7 +624,8 @@ def test_a_spoken_exit_line_is_heard_before_its_goals_count():
     state = session.say("partial")
     assert session.look(CONFIRM_SECONDS + 2.0).reflection_status == "exit"  # still being said
     session.runner.line_heard("series", state.reflection_line_id)
-    assert session.look(1.2).step_id == "parallel"
+    session.look(1.2)  # said; now the goal must still hold for half a second
+    assert session.look(0.6).step_id == "parallel"
 
 
 def test_an_answer_names_the_line_it_answers_and_a_late_one_is_dropped():

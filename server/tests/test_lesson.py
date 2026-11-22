@@ -17,7 +17,7 @@ from tacto.lesson import (
 from tacto.pieces import solve_pieces
 from tacto_mock.scenario import BATTERY, BULB_A, SWITCH, branch, loop
 
-LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml"
+LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101-full.yaml"
 GRID = Grid(cols=9, rows=6)
 
 CIRCUITS = {

@@ -30,7 +30,6 @@ from tacto.grader import LABELS, grade, together_client  # noqa: E402
 from tacto.lesson import load_lesson  # noqa: E402
 
 FIXTURES = REPO / "lessons" / "circuits-101.grading.yaml"
-LESSON = REPO / "lessons" / "circuits-101.yaml"
 PASS_FRACTION = 0.9
 # What the grader is told about the mat for each step, as the lab would say it.
 CIRCUIT = {
@@ -45,17 +44,27 @@ def main() -> None:
     parser.add_argument("--step", help="only this step id")
     parser.add_argument("--show", choices=["misses", "all"], default="misses")
     parser.add_argument("--workers", type=int, default=6)
+    parser.add_argument(
+        "--lesson",
+        help="grade against this lesson's questions (a file name in lessons/, no .yaml); "
+        "by default the one the fixture file names",
+    )
     args = parser.parse_args()
 
     load_dotenv(REPO / ".env")
     client = together_client()
     if client is None:
         raise SystemExit("grade_fixtures: TOGETHER_API_KEY is not set in .env")
-    funnels = {step.id: step.funnel for step in load_lesson(LESSON).steps if step.funnel}
+    fixtures = yaml.safe_load(FIXTURES.read_text())
+    lesson_file = REPO / "lessons" / f"{args.lesson or fixtures['lesson']}.yaml"
+    funnels = {step.id: step.funnel for step in load_lesson(lesson_file).steps if step.funnel}
+    print(f"grading against {lesson_file.name}")
     cases = []
-    for step_id, levels in yaml.safe_load(FIXTURES.read_text())["steps"].items():
+    for step_id, levels in fixtures["steps"].items():
         if args.step and step_id != args.step:
             continue
+        if step_id not in funnels:
+            continue  # a question the chosen lesson does not ask
         for entry in levels:
             for answer in entry["answers"]:
                 expected, text, *tag = answer

@@ -24,7 +24,7 @@ from tacto.pieces import Placed, solve_pieces, touch_for
 
 GRID = Grid(cols=9, rows=6)
 FRAMES_PER_SECOND = 15
-LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101.yaml"
+LESSON_FILE = Path(__file__).resolve().parents[2] / "lessons" / "circuits-101-full.yaml"
 
 BATTERY = segment_id((1, 1), (1, 2))
 BULB_A = segment_id((2, 1), (3, 1))

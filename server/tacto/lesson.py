@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -339,6 +339,7 @@ class LessonRunner:
         self._goal_since: float | None = None
         self._resolved_at: float | None = None
         self._heard_at: float | None = None
+        self._exit_clock_started = False
         # Any answer still being graded belongs to a question that is no longer asked.
         self._attempt += 1
 
@@ -495,6 +496,16 @@ class LessonRunner:
         state = self._asking
         assert state is not None
         if state.status == "exit":
+            # The exit's goals and its time limit both start once its line has been said:
+            # a learner who missed three times gets to hear the idea, and the whole limit.
+            if not self._exit_clock_started:
+                began = state.exit_started_s if state.exit_started_s is not None else now
+                said = self._said_by(began)
+                if now < said:
+                    return False
+                # From here on the exit's clock runs from the moment the line was said.
+                self._exit_clock_started = True
+                self._asking = state = replace(state, exit_started_s=said)
             goal = asked.exit.then[state.exit_goal]
             met = mat_visible and is_satisfied(goal, pieces, circuit, touch)
             if met and goal.different_piece:
@@ -506,11 +517,7 @@ class LessonRunner:
             # Held, like a step's own goal, so a hand passing over does not count. And not
             # before the idea has been stated: a finger already resting on the right piece
             # must not end the exit while the lab is still saying why.
-            held = (
-                self._goal_since is not None
-                and now - self._goal_since >= SETTLE_SECONDS
-                and now >= self._said_by(state.exit_started_s or now)
-            )
+            held = self._goal_since is not None and now - self._goal_since >= SETTLE_SECONDS
             after, _ = funnel_rules.on_mat(asked, state, goal_met=held, now=now)
             if after.exit_goal != state.exit_goal:
                 self._goal_since = None
