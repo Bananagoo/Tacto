@@ -1,18 +1,22 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useTacto } from '../useTacto'
 import type { HapticsDriver } from './driver'
+import { strengthPercent } from './strength'
 import { pulsePeriodMs, useBeat } from './usePulse'
 
 // The mouse has no continuous vibration, so the buzz of a short is one preset looped fast
 // enough to run together.
-// TODO(haptics owner): both values are untested by feel; tune them on the real mouse.
-const BUZZ_WAVEFORM = 3
-const BUZZ_HZ = 25
+// The preset is the `short` waveform in driver.ts.
+// Ananya Maheshwari asked for it "super fast" on 2026-11-21, so it is well above MAX_PULSE_HZ,
+// which is the rate of separate ticks. If the mouse drops presses at this rate it will feel
+// weaker, not faster: lower it.
+// TODO(haptics owner): BUZZ_HZ is untested by feel; tune it on the real mouse.
+const BUZZ_HZ = 40
 
 /**
- * What the mouse does about the fingertip: separate ticks at the server's pulse rate on a
- * wire carrying current (the vibration is the current, in amps), one hard buzz on a shorted
- * path, nothing otherwise. It stops when the fingertip leaves, when the socket drops (the
+ * What the mouse does about the fingertip: separate ticks at the server's pulse rate and
+ * strength on a piece carrying current (both follow the current, in amps: more current is
+ * faster and harder), one hard buzz on a shorted path, nothing otherwise. It stops when the fingertip leaves, when the socket drops (the
  * last state is then stale) and when the page goes away.
  */
 export function useProbeHaptics(driver: HapticsDriver) {
@@ -21,13 +25,22 @@ export function useProbeHaptics(driver: HapticsDriver) {
   const touching = useTacto((store) => store.connected && (store.state?.probe.present ?? false))
   const buzz = useTacto((store) => store.state?.probe.buzz ?? false)
   const pulseHz = useTacto((store) => store.state?.probe.pulse_hz ?? 0)
+  const percent = useTacto((store) => strengthPercent(store.state?.probe.strength ?? 0))
 
   const buzzing = touching && buzz
   const fire = useCallback(() => {
-    if (buzzing) driver.playRaw(BUZZ_WAVEFORM)
+    if (buzzing) driver.play('short')
     else driver.play('tick')
   }, [driver, buzzing])
 
   const periodMs = buzzing ? 1000 / BUZZ_HZ : touching ? pulsePeriodMs(pulseHz) : 0
+  // Strength is a setting on the mouse: sent when it changes, not on every tick.
+  const sent = useRef<{ driver: HapticsDriver; percent: number } | null>(null)
+  useEffect(() => {
+    if (periodMs === 0 || !driver.canSetStrength) return
+    if (sent.current?.driver === driver && sent.current.percent === percent) return
+    sent.current = { driver, percent }
+    void driver.setStrength(percent).catch(() => undefined)
+  }, [driver, periodMs, percent])
   useBeat(fire, periodMs)
 }

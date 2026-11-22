@@ -157,6 +157,11 @@
           "title": "Current",
           "type": "number"
         },
+        "voltage": {
+          "default": 0.0,
+          "title": "Voltage",
+          "type": "number"
+        },
         "brightness": {
           "anyOf": [
             {

@@ -70,6 +70,11 @@ Format:
 - Measured, squares' hue at gain 0: blue 226, cyan 204, green 148, yellow 50, red 6, magenta 340 degrees. Black reads value 31 against paper 181.
 - Decision: gain stays 0. The server kicks the autofocus when no corner marker has been readable for 2 seconds, at most every 5 seconds (`vision/focus.py`).
 
+## 2026-11-21, haptic patterns trimmed, decided by Ananya Maheshwari
+- Decision: the `nudge` and `success` patterns are removed from the contract (`HapticPattern` is now `tick` and `short`). `short` = waveform 14, and the shorted-wire buzz now plays it through `play('short')` instead of a separate constant (it was waveform 3). Nothing sent `nudge` or `success`; the connect cue in `HapticsContext.tsx` now plays `tick`.
+- Not yet felt: waveform 14 looped at `BUZZ_HZ` as a short.
+- Decision: the shorted-wire buzz is `short` (waveform 14) looped faster: `BUZZ_HZ` raised from 25 to 40, at Ananya Maheshwari's request ("super fast"). Not felt yet; if the mouse drops presses at 40 Hz, lower it.
+
 ## 2026-11-22, piece reader on the printed mat, measured by script (Claude), layout laid by Katherine
 - Setup: v2 reference mat, camera behind the laptop, gain 0, nobody's hands in view. Eight pieces on the mat.
 - Passed: all 8 read right (bulb, closed switch, open switch, three wires, resistor, battery with its positive end at the red half), checked against the flattened picture by eye (Claude, from the frame). All 7 colour squares read. The reading was identical in 33 of 33 samples over 8 seconds.

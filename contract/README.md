@@ -25,6 +25,8 @@ and `t` counting up. It needs no camera, mouse or solver. It accepts
 - Dots are `[col, row]`, origin top-left. `grid` gives the number of dots.
 - Every piece lies between two neighbouring dots, `a` and `b`. Its `id` is that
   segment, `"c,r-c,r"` with the top-left dot first.
+- `voltage` is the volts across the piece: what a multimeter would read on it. A wire
+  and a closed switch read 0.
 - `current` is in amps, positive from `a` to `b`. A battery's `a` is its positive
   end, so its own current reads negative; use `circuit.total_current` for the size.
 - `brightness` (bulbs only) runs 0 to 1. `closed` is set on switches only.

@@ -6,10 +6,10 @@ const DOTS: Point[] = Array.from({ length: GRID_COLS * GRID_ROWS }, (_, index) =
   dotToPoint([index % GRID_COLS, Math.floor(index / GRID_COLS)]),
 )
 
-/** The printed mat's dots: a quiet backdrop that shows where parts and wires can go. */
+/** The mat's dots, like the gold pads on a circuit board: where parts and wires can go. */
 export const DotGrid = memo(function DotGrid() {
   return (
-    <g className="fill-stone-100/30">
+    <g className="fill-amber-300/70">
       {DOTS.map(({ x, y }) => (
         <circle key={`${x},${y}`} cx={x} cy={y} r={5} />
       ))}

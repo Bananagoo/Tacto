@@ -25,6 +25,7 @@ from tacto.pieces import warm_up_solver
 from tacto.vision import camera, hands
 from tacto.vision.focus import FocusKeeper
 from tacto.vision.frames import FolderFrames, FramesOnAClock
+from tacto.vision.preview import preview_router
 from tacto.vision.source import CameraMatSource
 
 load_dotenv()
@@ -90,6 +91,11 @@ lab = Lab(
     lesson=LessonRunner(load_lesson(LESSON_FILE)),
 )
 app = create_lab_app(lab, source=SOURCE)
+
+
+if SOURCE == "camera":
+    # The page's corner picture of the desk. It shares the camera the reader has open.
+    app.include_router(preview_router(hub))
 
 
 @app.get("/debug/reader")

@@ -49,6 +49,7 @@ class Piece(BaseModel):
     b: Dot
     closed: bool | None = None  # switches only: True lets current through
     current: float = 0.0  # amps, signed: positive flows a -> b
+    voltage: float = 0.0  # volts across the piece; 0 for a wire and for a closed switch
     brightness: float | None = Field(None, ge=0.0, le=1.0)  # bulbs only; 1 is full
     shorted: bool = False  # this piece is on the shorted path
 

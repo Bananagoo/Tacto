@@ -143,6 +143,31 @@ def test_touch_on_a_shorted_piece_buzzes():
     assert touch.buzz is True and touch.pulse_hz == 0
 
 
+# The volts across each piece, for the multimeter on screen. Hand-worked at 6 V.
+
+
+def test_volts_across_each_piece_one_bulb():
+    solved = by_id(solve_pieces(loop(), 6.0)[0])
+    assert abs(solved["2,1-3,1"].voltage) == pytest.approx(6.0, abs=0.02)  # the bulb takes it all
+    assert abs(solved["1,1-1,2"].voltage) == pytest.approx(6.0, abs=0.02)  # the battery
+    assert solved["1,1-2,1"].voltage == 0.0  # a wire drops nothing
+    assert solved["4,1-4,2"].voltage == 0.0  # nor does a closed switch
+
+
+def test_two_bulbs_in_series_share_the_volts_and_in_parallel_each_gets_them_all():
+    series = by_id(solve_pieces(loop(bottom="bulb"), 6.0)[0])
+    assert abs(series["2,1-3,1"].voltage) == pytest.approx(3.0, abs=0.02)
+    assert abs(series["2,3-3,3"].voltage) == pytest.approx(3.0, abs=0.02)
+    parallel = by_id(solve_pieces(loop() + branch("bulb"), 6.0)[0])
+    assert abs(parallel["2,1-3,1"].voltage) == pytest.approx(6.0, abs=0.02)
+    assert abs(parallel["2,2-3,2"].voltage) == pytest.approx(6.0, abs=0.02)
+
+
+def test_an_open_circuit_has_no_volts_across_its_bulb():
+    opened = by_id(solve_pieces(loop(switch_closed=False), 6.0)[0])
+    assert opened["2,1-3,1"].voltage == 0.0
+
+
 # How hard the mouse vibrates follows the current through the touched piece, like the tick
 # rate. Hand-worked at 6 V with 10 ohm bulbs; full strength is 1.2 A.
 

@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DRIVERS } from '../../src/haptics/driver'
+import { strengthPercent } from '../../src/haptics/strength'
 import { pulsePeriodMs, useBeat } from '../../src/haptics/usePulse'
 
 type Dot = [number, number]
@@ -49,19 +50,8 @@ interface State {
 const PITCH = 100 // drawing units between neighbouring dots
 const MARGIN = 60
 const RETRY_MS = 1000
-// TODO(Katie): tune all three by feel on the real mouse.
-// The mouse's strength setting runs 0 to 100. The faintest current still has to be felt,
-// so the state's strength (0 to 1) is spread over this floor up to 100.
-const MIN_STRENGTH_PERCENT = 25
-// Strength is a setting stored on the mouse, written over HID: only send a change this big.
-const STRENGTH_STEP_PERCENT = 5
 // A short is one preset looped fast enough to run together into a buzz.
-const BUZZ_HZ = 25
-
-function strengthPercent(strength: number): number {
-  const percent = MIN_STRENGTH_PERCENT + strength * (100 - MIN_STRENGTH_PERCENT)
-  return Math.round(percent / STRENGTH_STEP_PERCENT) * STRENGTH_STEP_PERCENT
-}
+const BUZZ_HZ = 40
 // The printed pieces' own colours (kit/pieces.yaml), so the picture looks like the desk.
 const COLOUR = {
   wire: 'rgb(30,70,210)',

@@ -28,7 +28,7 @@ LogiInsight camera ──colour frames──> server (Python) ──state, 15 a 
 | Server and transport | FastAPI + uvicorn, one WebSocket, pydantic v2 models as the contract; JSON schema exported to `contract/` | FastAPI, pydantic | **verified** by tests and a live run |
 | Lesson and mat content | YAML files in `lessons/` and `kit/mats/`, validated by pydantic | PyYAML | **verified** by tests |
 | Printable mat | Script renders the A4 page (dots, corner markers, 50 mm check bar) to PDF from the mat file, so the print matches the reader's geometry | `cv2.aruco.generateImageMarker`, Pillow | **verified** by tests. **test**: printed and measured |
-| Lab UI | Vite + React + TypeScript, Tailwind, zustand, `motion` | — | Owned by the UI team |
+| Lab UI | Vite + React + TypeScript, Tailwind, zustand, `motion`; Space Grotesk font from `@fontsource-variable/space-grotesk` (bundled, no network) | — | Owned by the UI team; font checked by eye |
 | Haptics | WebHID to the MX Master 4 through the Logi Bolt receiver: a preset tick looped at `pulse_hz`, a hard preset looped fast for the short buzz | [mx-master-4-webhid](https://github.com/mario-gutierrez/mx-master-4-webhid) (MIT); function numbers from the Solaar project | **verified** 21 Nov: speed and strength sliders both felt on the real mouse. Owned by the UI team |
 | Tooling | `uv`, `ruff`, `pytest`; `pnpm`, `tsc`, `oxlint`, `prettier`; `make` | — | **verified** |
 

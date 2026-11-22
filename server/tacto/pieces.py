@@ -66,6 +66,7 @@ def solve_pieces(placed: Sequence[Placed], volts: float) -> tuple[list[Piece], C
                 b=p.b,
                 closed=p.closed if p.type == "switch" else None,
                 current=_tidy(part.current if part else wire.current if wire else 0.0),
+                voltage=_tidy(part.voltage) if part else 0.0,
                 brightness=_tidy(part.brightness) if part and p.type == "bulb" else None,
                 shorted=(wire is not None and wire.overloaded)
                 or (status == "shorted" and p.id == battery_id),

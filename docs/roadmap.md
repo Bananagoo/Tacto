@@ -35,7 +35,7 @@ Removed on 22 Nov: the hand-set mat (`make manual`). The UI team builds against 
 | A mark for the battery's positive end | Kit owner | Current direction on screen |
 | Camera mounted straight above the mat, paper filling the frame | Kit owner | Any real-camera number |
 | Lesson wording | Kit owner | Nothing; edit `lessons/circuits-101.yaml` |
-| Adopting the new contract in `web/src/` | UI team | Merging `core-lab` to `main` |
+| Adopting the new contract in `web/src/` | Done on the branch `ui-merge` (22 Nov): `web/src/fromServer.ts` turns the state message into the shapes the bench already drew. Waiting for the UI team to look at it | Merging `ui-merge` into `core-lab` and `main` |
 
 ## Needs a person on the hardware
 

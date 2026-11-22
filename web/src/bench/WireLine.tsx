@@ -13,12 +13,15 @@ interface WireLineProps {
   /** Amps, signed a -> b. */
   current: number
   overloaded: boolean
+  /** The multimeter is on this wire. */
+  touched: boolean
 }
 
 /**
  * One drawn wire. Dead: a dim line. Carrying current: dashes run along it, faster for more
  * current, in the direction it flows. Overloaded: more than twice as thick, hot orange and
- * pulsing, so a shorted path stands out by shape and movement as well as colour.
+ * pulsing, so a shorted path stands out by shape and movement as well as colour. Under the
+ * multimeter: a wide white halo behind it, so the room sees which wire it is reading.
  */
 export const WireLine = memo(function WireLine({
   aCol,
@@ -27,6 +30,7 @@ export const WireLine = memo(function WireLine({
   bRow,
   current,
   overloaded,
+  touched,
 }: WireLineProps) {
   const a = dotToPoint([aCol, aRow])
   const b = dotToPoint([bCol, bRow])
@@ -38,9 +42,10 @@ export const WireLine = memo(function WireLine({
 
   return (
     <g strokeLinecap="round">
+      {touched && <line {...ends} className="stroke-white/70" strokeWidth={26} />}
       <line
         {...ends}
-        className={overloaded ? 'animate-overload stroke-orange-500' : 'stroke-stone-100/30'}
+        className={overloaded ? 'animate-overload stroke-orange-500' : 'stroke-amber-200/50'}
         strokeWidth={overloaded ? 16 : 6}
       />
       {speed !== 0 && (
