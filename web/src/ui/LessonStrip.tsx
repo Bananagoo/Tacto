@@ -87,7 +87,7 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
   if (part === 'bar')
     return (
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 font-['Patrick_Hand']">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-5">
           {/* Back to the opening page (Root.tsx shows it whenever the address is not #lab).
               Always its pink tab with the house: a way out, not a mode to choose. */}
           <TabButton
@@ -102,7 +102,7 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
           >
             Home
           </TabButton>
-          <div role="group" aria-label="Learning mode" className="flex gap-1">
+          <div role="group" aria-label="Learning mode" className="flex gap-5">
             {(['tinker', 'lab'] as const).map((choice) => (
               <TabButton
                 key={choice}
