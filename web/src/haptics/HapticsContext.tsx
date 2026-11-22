@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { DRIVERS, onMousePlugged, PICKER_CLOSED, WebHidHaptics, type HapticsDriver } from './driver'
 import { HapticsContext, type Haptics } from './useHaptics'
 
+// While in front and without the mouse, try to connect this often.
+const RETRY_MS = 2000
+
 /**
  * Owns the one haptics driver. The page starts on the console driver, so the whole lesson
  * runs with no mouse, and connects to the mouse on its own (Katie, 22 Nov 2026): at start, and
@@ -62,6 +65,7 @@ export function HapticsProvider({ children }: { children: ReactNode }) {
         else {
           setDriver(mouse)
           setMouseError('')
+          console.log('haptics: mouse connected')
         }
       } catch {
         mouse.close()
@@ -85,9 +89,15 @@ export function HapticsProvider({ children }: { children: ReactNode }) {
       if (!document.hidden) void reconnect()
     })
     document.addEventListener('visibilitychange', onVisibility)
+    // And keep trying while in front without the mouse: another tab may have held it and let
+    // go without any event reaching this one (closing a tab sends none).
+    const retry = setInterval(() => {
+      if (!document.hidden) void reconnect()
+    }, RETRY_MS)
     return () => {
       stopped = true
       stop()
+      clearInterval(retry)
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
