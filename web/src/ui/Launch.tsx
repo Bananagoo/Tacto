@@ -1,7 +1,8 @@
-// The first screen: a drawn workbench with a circuit board on the mat. Clicking the board or
-// the play button opens the lab, and clicking the sticky note on the wall opens the gallery. Nothing here
+// The first screen: a drawn workbench with a circuit board on the mat. Clicking the play button
+// opens the lab, and clicking the sticky note on the wall opens the gallery. Nothing here
 // talks to the server.
 
+import logo from '../assets/Logo.png'
 import pcb from '../assets/Pcb.png'
 import playButton from '../assets/PlayButton.png'
 import stickyNote from '../assets/StickyNote.png'
@@ -11,11 +12,12 @@ import workspace from '../assets/WorkspaceNoStickyNote.png'
 // stays on the blue desk mat at any window size. If the picture changes, update both.
 const SCENE_ASPECT = 3593 / 1620
 const BOARD = { centreX: 52.5, centreY: 81.5, width: 27 } // percent of the scene
-// The play button, just above the circuit board it opens: same centre, so they read as a pair.
-const PLAY = { centreX: BOARD.centreX, centreY: 59, width: 13 } // percent of the scene
-// The name sits just above the play button, on the same centre line. The middle of the wall is
-// left free for the logo.
-const TITLE = { centreX: PLAY.centreX, centreY: 42 } // percent of the scene
+// The play button, laid over the top edge of the circuit board: the only way into the lab.
+const PLAY = { centreX: BOARD.centreX, centreY: 65, width: 13 } // percent of the scene
+// The name, the logo and the play button share one centre line, top to bottom.
+const TITLE = { centreX: PLAY.centreX, centreY: 10 } // percent of the scene
+// The app's logo, in the middle of the wall between the name and the play button.
+const LOGO = { centreX: PLAY.centreX, centreY: 31, width: 13 } // percent of the scene
 // Where the sticky note hung in the picture before it was taken out and made a button. It is the
 // note's own picture put back in the same place.
 const NOTE = { centreX: 81.75, centreY: 21.7, width: 15.1 } // percent of the scene
@@ -53,24 +55,30 @@ export function Launch({
           Tacto
         </h1>
 
-        <button
-          type="button"
-          onClick={onOpen}
-          aria-label="Open the circuit lab"
-          className="group absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-xl focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-yellow-300"
+        <img
+          src={logo}
+          alt="Tacto logo"
+          draggable={false}
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 select-none"
+          style={{
+            left: `${LOGO.centreX}%`,
+            top: `${LOGO.centreY}%`,
+            width: `${LOGO.width}%`,
+          }}
+        />
+
+        {/* Only a picture now: the play button is the way into the lab. */}
+        <img
+          src={pcb}
+          alt=""
+          draggable={false}
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 select-none"
           style={{
             left: `${BOARD.centreX}%`,
             top: `${BOARD.centreY}%`,
             width: `${BOARD.width}%`,
           }}
-        >
-          <img
-            src={pcb}
-            alt=""
-            draggable={false}
-            className="w-full transition-transform duration-200 ease-out select-none group-hover:scale-110 group-focus-visible:scale-110 motion-reduce:transition-none"
-          />
-        </button>
+        />
 
         <button
           type="button"
