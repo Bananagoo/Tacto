@@ -13,4 +13,4 @@ paths:
 - Animate with `motion` or CSS. Keep anything that runs per state message (15 per second) cheap: no layout thrash, no new objects in render that break memoisation of large subtrees.
 - The projected screen is what judges see from two metres away: large type, high contrast, one focal point at a time. The lesson prompt is always visible as text.
 - No chat UI. The one text input for the learner is the answer box on a reflection question (`web/src/ui/Reflection.tsx`), the fallback when speaking does not work. No other text input. (Agreed by Katie, 22 Nov 2026.)
-- Tooling pages (camera bench, haptics page) live in `web/devtools/`, served at `/devtools/` by `make bench`. Nothing under `web/src/` may import from `web/devtools/`.
+- Tooling pages (setup check, camera bench, haptics page) live in `web/devtools/`, served at `/devtools/` by `make dev` and `make bench`. Nothing under `web/src/` may import from `web/devtools/`; the home page only links to it (the Dev tools button, agreed by Katie 22 Nov 2026).

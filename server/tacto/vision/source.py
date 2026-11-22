@@ -99,6 +99,9 @@ class CameraMatSource:
         self._brightness = brightness
         self._clock = clock
         self._unsure = 0
+        # The last confirmed look at the mat, for the setup check's live view.
+        self._last_look: tuple[np.ndarray, dict] | None = None
+        self._last_frame: np.ndarray | None = None
         self._lock = threading.Lock()
         self._view = MatView(mat_visible=False)
         self._placed: tuple[Placed, ...] = ()
@@ -196,6 +199,7 @@ class CameraMatSource:
                 self._brightness.saw(*paper_level(flattened.image))
             readings = self._reader.read(flattened)
             self._unsure = sum(reading.piece == "unsure" for reading in readings.values())
+            look = (flattened.image, readings)
             lap("read")
             stable = self._stable.update(
                 readings,
@@ -206,6 +210,11 @@ class CameraMatSource:
             lap("smooth")
 
         with self._lock:
+            self._last_frame = frame
+            if flattened is not None and self._tracker.confirmed:
+                self._last_look = look
+            elif flattened is None:
+                self._last_look = None
             self._frames_seen += 1
             self._seen = {
                 "corners_seen": self._tracker.corners_seen,
@@ -217,6 +226,17 @@ class CameraMatSource:
             for stage, ms in timings.items():
                 old = self._timings_ms.get(stage, ms)
                 self._timings_ms[stage] = TIMING_SMOOTHING * old + (1 - TIMING_SMOOTHING) * ms
+
+    def last_look(self) -> tuple[np.ndarray, dict] | None:
+        """The last flattened mat the reader read, and what it read on it; None while the
+        mat is not found. The picture is not copied: draw on a copy."""
+        with self._lock:
+            return self._last_look
+
+    def last_frame(self) -> np.ndarray | None:
+        """The last camera frame as it came in, for the setup check's live view. Not copied."""
+        with self._lock:
+            return self._last_frame
 
     def _brightness_report(self) -> dict:
         auto = self._brightness

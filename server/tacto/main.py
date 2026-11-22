@@ -17,10 +17,13 @@ and Continue, and nothing here uses the network.
 
 from __future__ import annotations
 
+import asyncio
 import os
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
 
 from tacto import grader, listen, setup_check, tts
 from tacto.answers import AnswerLedger
@@ -31,6 +34,7 @@ from tacto.mat import load_default_mat
 from tacto.pieces import warm_up_solver
 from tacto.vision import camera, exposure, hands
 from tacto.vision.brightness import AutoGain
+from tacto.vision.debug_view import camera_view, encode_jpeg, setup_view
 from tacto.vision.focus import FocusKeeper
 from tacto.vision.frames import FolderFrames, FramesOnAClock
 from tacto.vision.preview import preview_router
@@ -182,6 +186,42 @@ def _voice_state() -> dict:
 async def check_setup() -> dict:
     """The pre-demo check behind /devtools/#setup. Takes about 3 to 8 seconds."""
     return await setup_check.run(source.report, _voice_state)
+
+
+# What the reader sees, for the setup page: the flattened mat with its readings, a few
+# times a second. Drawn from the reader's last look; it opens nothing and stores nothing.
+SETUP_VIEW_FPS = 5
+SETUP_VIEW_WIDTH = 900
+
+
+def _picture_stream(draw) -> StreamingResponse:
+    async def frames() -> AsyncIterator[bytes]:
+        while True:
+            picture = await asyncio.to_thread(draw)
+            jpeg = await asyncio.to_thread(encode_jpeg, picture, SETUP_VIEW_WIDTH)
+            yield (
+                b"--frame\r\nContent-Type: image/jpeg\r\n"
+                + f"Content-Length: {len(jpeg)}\r\n\r\n".encode()
+                + jpeg
+                + b"\r\n"
+            )
+            await asyncio.sleep(1 / SETUP_VIEW_FPS)
+
+    return StreamingResponse(
+        frames(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/setup/view")
+async def setup_view_stream() -> StreamingResponse:
+    return _picture_stream(lambda: setup_view(source.last_look(), mat))
+
+
+@app.get("/setup/camera")
+async def setup_camera_stream() -> StreamingResponse:
+    return _picture_stream(lambda: camera_view(source.last_frame()))
 
 
 @app.get("/debug/reflect")

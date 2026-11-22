@@ -300,3 +300,37 @@ def test_a_piece_laid_far_from_the_hand_still_appears_while_the_hand_is_there(ma
         clock[0] += 1 / 24
         source.step(frame)
     assert Placed("resistor", (6, 1), (7, 1)) in source.view().placed
+
+
+# ---------- what the reader sees, for the setup check ----------
+
+
+def test_the_reader_keeps_its_last_look_for_the_setup_view(mat):
+    source = CameraMatSource(mat, NoFrames())
+    assert source.last_look() is None
+    feed(source, loop(mat).photograph(TILTED))
+    page, readings = source.last_look()
+    assert page.shape[1] > page.shape[0] > 500  # the flattened A4 page, landscape
+    assert readings["2,3-3,3"].piece == "bulb"
+
+
+def test_the_setup_view_draws_the_readings_or_says_the_mat_is_not_found(mat):
+    from tacto.vision.debug_view import setup_view
+
+    empty = setup_view(None, mat)
+    assert empty.ndim == 3 and empty.mean() < 80  # a dark placeholder
+    source = CameraMatSource(mat, NoFrames())
+    feed(source, loop(mat).photograph(TILTED))
+    drawn = setup_view(source.last_look(), mat)
+    page, _ = source.last_look()
+    assert drawn.shape == page.shape and not np.array_equal(drawn, page)  # labels drawn on it
+
+
+def test_the_camera_view_shows_the_last_frame_or_waits_for_one(mat):
+    from tacto.vision.debug_view import camera_view
+
+    source = CameraMatSource(mat, NoFrames())
+    assert camera_view(source.last_frame()).shape == (720, 1280, 3)
+    photo = loop(mat).photograph(TILTED)
+    feed(source, photo)
+    assert camera_view(source.last_frame()).shape[:2] == photo.shape[:2]

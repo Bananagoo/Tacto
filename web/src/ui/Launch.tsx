@@ -26,7 +26,7 @@ export function Launch({
   onOpenGallery: () => void
 }) {
   return (
-    <div className="flex h-full items-center justify-center overflow-hidden bg-[#dcefb0]">
+    <div className="relative flex h-full items-center justify-center overflow-hidden bg-[#dcefb0]">
       <div
         className="relative"
         style={{
@@ -102,6 +102,26 @@ export function Launch({
           </div>
         </button>
       </div>
+
+      {/* For the people running the demo: the setup check and the other tools. Small and in
+          the corner, so a judge's eye goes to the workbench. */}
+      <a
+        href="/devtools/#setup"
+        title="Dev tools: the setup check, the live state, the camera bench"
+        className="absolute right-4 bottom-4 z-10 flex items-center gap-2 rounded-full bg-[#1f2a14]/75 px-4 py-2 font-['Patrick_Hand'] text-lg text-[#f4f1e6] shadow-md backdrop-blur-sm transition hover:bg-[#1f2a14] focus-visible:outline-4 focus-visible:outline-yellow-300"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="h-5 w-5 fill-none stroke-current"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" />
+        </svg>
+        Dev tools
+      </a>
     </div>
   )
 }
