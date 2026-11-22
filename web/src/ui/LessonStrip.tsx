@@ -132,6 +132,7 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               </button>
             ))}
           </div>
+          <StatusBar />
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <p className="m-0 text-lg text-stone-300">
@@ -139,7 +140,6 @@ function LessonStrip({ part }: { part: 'bar' | 'panel' }) {
               ? 'Build freely. Touch a piece to feel its current.'
               : 'Build, feel, then explain out loud.'}
           </p>
-          <StatusBar />
         </div>
       </header>
     )
